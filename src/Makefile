@@ -1,6 +1,6 @@
 CC = g++
 
-GSL_DIR = /home/grad/samee1/packages/gsl-1.14
+GSL_DIR = /home/grad/bjlunt2/usr/include
 
 INC = -I$(GSL_DIR)
 CFLAGS = -O3 $(INC) 
@@ -14,7 +14,7 @@ BIN = seq2expr
 all: $(BIN)
 
 clean:
-	rm -f $(BIN)
+	rm -f *.o $(BIN)
 
 Tools.o : Tools.h Tools.cpp
 	$(CC) $(CFLAGS) -g -c Tools.cpp

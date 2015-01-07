@@ -21,6 +21,8 @@
  *     where repression is optional, and the coop. lines are optional.
  * Note that (5), (6), (7) and (8) may be empty
  ******************************************************/
+#include "Utils.h"
+
 #include "ExprPredictor.h"
 
 int main( int argc, char* argv[] )
@@ -129,25 +131,25 @@ int main( int argc, char* argv[] )
     vector< Sequence > seqs;
     vector< string > seqNames;
     rval = readSequences( seqFile, seqs, seqNames );
-    assert( rval != RET_ERROR );
+    ASSERT_MESSAGE(rval != RET_ERROR, "Could not read the sequence file.");
     int nSeqs = seqs.size();
 
     //read the random sequences
     vector< Sequence > r_seqs;
     vector< string > r_seqNames;
     rval = readSequences( r_seqFile, r_seqs, r_seqNames );
-    assert( rval != RET_ERROR );
+    ASSERT_MESSAGE( rval != RET_ERROR , "Coule not read the random sequences file.");
     int r_nSeqs = r_seqs.size();
 
     // read the expression data
     vector< string > condNames;
     rval = readMatrix( exprFile, labels, condNames, data );
-    assert( rval != RET_ERROR );
-    assert( labels.size() == nSeqs );
+    ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the expression data file.");
+    ASSERT_MESSAGE( labels.size() == nSeqs , "Mismatch between number of labels and number of sequences");
     for ( int i = 0; i < nSeqs; i++ )
     {
         if( labels[ i ] != seqNames[ i ] ) cout << labels[i] << seqNames[i] << endl;
-        assert( labels[i] == seqNames[i] );
+        ASSERT_MESSAGE( labels[i] == seqNames[i] , "A label and a sequence name did not agree.");
     }
     Matrix exprData( data );
     int nConds = exprData.nCols();
@@ -159,7 +161,7 @@ int main( int argc, char* argv[] )
     vector< string > motifNames;
     vector< double > background = createNtDistr( gcContent );
     rval = readMotifs( motifFile, background, motifs, motifNames );
-    assert( rval != RET_ERROR );
+    ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the motifs.");
     int nFactors = motifs.size();
 
     // factor name to index mapping
@@ -173,12 +175,13 @@ int main( int argc, char* argv[] )
     labels.clear();
     data.clear();
     rval = readMatrix( factorExprFile, labels, condNames, data );
-    assert( rval != RET_ERROR );
+    ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the factor expression matrix");
     cout << labels.size() << " " << nFactors << " " << condNames.size() << " " << nConds << endl;
-    assert( labels.size() == nFactors && condNames.size() == nConds );
-    for ( int i = 0; i < nFactors; i++ ) assert( labels[i] == motifNames[i] );
+    ASSERT_MESSAGE( labels.size() == nFactors, "Number of labels and number of transcriptions factors differ.");
+    ASSERT_MESSAGE( condNames.size() == nConds, "Number of condition-names and number of conditions differ.");
+    for ( int i = 0; i < nFactors; i++ ){ ASSERT_MESSAGE( labels[i] == motifNames[i], "A label and a motif name disagree in the factor expression file." ); }
     Matrix factorExprData( data );
-    assert( factorExprData.nCols() == nConds );
+    ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors;
@@ -194,7 +197,7 @@ int main( int argc, char* argv[] )
     else
     {
         ifstream factor_thr_input( factor_thr_file.c_str() );
-        assert( factor_thr_input.is_open() );
+        ASSERT_MESSAGE( factor_thr_input.is_open() , "Difficulty opening the factor_thr_input file.");
         for( int index = 0; index < nFactors; index++ )
         {
             double temp;

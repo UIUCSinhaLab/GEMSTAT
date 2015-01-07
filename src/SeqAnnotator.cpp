@@ -75,7 +75,7 @@ Sequence::Sequence( const string& str )
         else
         {
             cerr << "Illegal symbol: " << nt << " in " << str << endl;
-            exit( 0 );
+            exit( 1 );
         }
     }
 }
@@ -184,7 +184,7 @@ int readSequences( const string& file, vector< Sequence >& seqs, vector< string 
 
     // 	open the file
     ifstream fin( file.c_str() );
-    if ( !fin ) { cerr << "Cannot open" << file << endl; exit( 1 ); }
+    if ( !fin ) { cerr << "Cannot open" << file << endl; return RET_ERROR; }
 
     string line;
     Sequence seq;
@@ -227,7 +227,7 @@ int readSequences( const string& file, vector< Sequence >& seqs, vector< string 
                     }
                     else
                     {
-                        //cerr << "Illegal symbol: " << nt << " in " << file << endl;
+                        cerr << "Illegal symbol: " << nt << " in " << file << endl;
                         return RET_ERROR;
                     }
                 }
@@ -450,7 +450,7 @@ int readMotifs( const string& file, const vector< double >& background, vector< 
 {
     // 	open the file
     ifstream fin( file.c_str() );
-    if ( !fin ) { cerr << "Cannot open" << file << endl; exit( 1 ); }
+    if ( !fin ) { cerr << "Cannot open" << file << endl; return RET_ERROR; }
     motifs.clear();
     names.clear();
 

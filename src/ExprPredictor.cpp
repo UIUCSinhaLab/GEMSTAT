@@ -958,6 +958,7 @@ double ExprFunc::compPartFuncOn() const
     if ( modelOption == QUENCHING ) return compPartFuncOnQuenching();
     if ( modelOption == CHRMOD_UNLIMITED) return compPartFuncOnChrMod_Unlimited();
     if ( modelOption == CHRMOD_LIMITED ) return compPartFuncOnChrMod_Limited();
+//TODO: A compiler warning is generated here. Shouldn't there be some defensive coding?
 }
 
 
