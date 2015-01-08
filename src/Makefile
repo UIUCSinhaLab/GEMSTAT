@@ -1,11 +1,11 @@
 CC = g++
 
-GSL_DIR = /home/grad/bjlunt2/usr/include
+GSL_DIR = /usr/local/include
 
 INC = -I$(GSL_DIR)
 CFLAGS = -O3 $(INC) 
 
-LIB_DIRS = -L/usr/lib64
+LIB_DIRS = -L/usr/lib
 LIBS = -lgsl -lgslcblas -lm
 LFLAGS = -O3 $(LIB_DIRS) $(LIBS)
 
