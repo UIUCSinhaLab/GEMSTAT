@@ -37,7 +37,8 @@ int main( int argc, char* argv[] )
     double repressionDistThr = 250;
     int maxContact = 1;
     double eTF = 0.60;
-
+    unsigned long initialSeed = time(0);
+    
     string free_fix_indicator_filename;
     ExprPredictor::one_qbtm_per_crm = false;
     ExprPar::one_qbtm_per_crm = false;
@@ -98,11 +99,13 @@ int main( int argc, char* argv[] )
             dnase_file = argv[ ++i ];
         else if ( !strcmp( "-ft", argv[ i ]))
             factor_thr_file = argv[ ++i ];
+	else if ( !strcmp( "--seed", argv[ i ]))
+	    initialSeed = atol( argv[++i] );
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_UNLIMITED || ExprPredictor::modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( ExprPredictor::modelOption == QUENCHING && repressionFile.empty() ) )
     {
-        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -e exprFile -m motifFile -f factorExprFile -fo outFile [-a annFile -o modelOption -c coopFile -i factorInfoFile -r repressionFile -oo objOption -mc maxContact -p parFile -rt repressionDistThr -na nAlternations -ct coopDistThr -sigma factorIntSigma]" << endl;
+        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -e exprFile -m motifFile -f factorExprFile -fo outFile [-a annFile -o modelOption -c coopFile -i factorInfoFile -r repressionFile -oo objOption -mc maxContact -p parFile -rt repressionDistThr -na nAlternations -ct coopDistThr -sigma factorIntSigma --seed RNG_SEED]" << endl;
         cerr << "modelOption: Logistic, Direct, Quenching, ChrMod_Unlimited, ChrMod_Limited" << endl;
         exit( 1 );
     }
@@ -515,7 +518,7 @@ int main( int argc, char* argv[] )
     gsl_rng_env_setup();
     const gsl_rng_type * T = gsl_rng_default;     // create rng type
     rng = gsl_rng_alloc( T );
-    gsl_rng_set( rng, time( 0 ) );                // set the seed equal to simulTime(0)
+    gsl_rng_set( rng, initialSeed );                // set the seed equal to simulTime(0)
 
     // model fitting
 
