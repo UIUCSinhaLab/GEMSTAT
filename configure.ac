@@ -5,12 +5,10 @@ AC_PREREQ([2.69])
 AC_INIT(gemstat, 0.2)
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_SRCDIR([src/seq2expr.cpp])
-#AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 
 # Checks for programs.
 AC_PROG_CXX
-#AC_PROG_CC
 
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-lgsl':

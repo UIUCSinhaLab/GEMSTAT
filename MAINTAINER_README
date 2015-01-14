@@ -1,0 +1,5 @@
+# To create a distributable source tree, with a configure script and everything, run these commands
+
+aclocal
+autoconf
+automake --add-missing
