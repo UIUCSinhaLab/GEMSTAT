@@ -3,9 +3,9 @@
 
 AC_PREREQ([2.69])
 AC_INIT(gemstat, 0.2)
-AC_CONFIG_HEADERS
+AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_SRCDIR([src/seq2expr.cpp])
-AM_CONFIG_HEADER([config.h])
+#AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 
 # Checks for programs.
@@ -30,5 +30,6 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 AC_CHECK_FUNCS([floor pow sqrt strchr])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile
+		 src/Makefile])
 AC_OUTPUT
