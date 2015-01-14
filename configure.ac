@@ -9,6 +9,7 @@ AM_INIT_AUTOMAKE
 
 # Checks for programs.
 AC_PROG_CXX
+AC_LANG(C++)
 
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-lgsl':
@@ -19,6 +20,11 @@ AC_CHECK_LIB([gslcblas], [main])
 AC_CHECK_LIB([m], [main])
 
 # Checks for header files.
+AC_CHECK_HEADERS([gsl/gsl_linalg.h gsl/gsl_math.h gsl/gsl_multimin.h gsl/gsl_randist.h], [GSLINC=-I/usr/include])
+
+AC_SUBST([GSLINC])
+
+
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
