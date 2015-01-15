@@ -22,6 +22,7 @@
  * Note that (5), (6), (7) and (8) may be empty
  ******************************************************/
 #include "Utils.h"
+#include "IO.h"
 
 #include "ExprPredictor.h"
 
@@ -310,25 +311,14 @@ int main( int argc, char* argv[] )
     IntMatrix coopMat( nFactors, nFactors, false );
     if ( !coopFile.empty() )
     {
-        ifstream fcoop( coopFile.c_str() );
-        if ( !fcoop )
+	int readRet = readEdgelistGraph(coopFile, factorIdxMap, coopMat, false);
+        if ( 0 != readRet )
         {
             cerr << "Cannot open the cooperativity file " << coopFile << endl;
             exit( 1 );
         }
-        while ( fcoop >> factor1 >> factor2 )
-        {
-            assert( factorIdxMap.count( factor1 ) && factorIdxMap.count( factor2 ) );
-            int idx1 = factorIdxMap[factor1];
-            int idx2 = factorIdxMap[factor2];
-            if( coopMat( idx1, idx2 ) == false && coopMat( idx2, idx1 ) == false )
-            {
-                coopMat( idx1, idx2 ) = true;
-                coopMat( idx2, idx1 ) = true;
-                num_of_coop_pairs ++;
-            }
-        }
     }
+    num_of_coop_pairs = sum( coopMat );
 
     // read the roles of factors
     vector< bool > actIndicators( nFactors, false );
@@ -356,19 +346,11 @@ int main( int argc, char* argv[] )
     IntMatrix repressionMat( nFactors, nFactors, false );
     if ( !repressionFile.empty() )
     {
-        ifstream frepr( repressionFile.c_str() );
-        if ( !frepr )
-        {
+	int readRet = readEdgelistGraph(repressionFile, factorIdxMap, repressionMat, true);
+	if(0 != readRet){
             cerr << "Cannot open the repression file " << repressionFile << endl;
             exit( 1 );
-        }
-        while ( frepr >> factor1 >> factor2 )
-        {
-            assert( factorIdxMap.count( factor1 ) && factorIdxMap.count( factor2 ) );
-            int idx1 = factorIdxMap[factor1];
-            int idx2 = factorIdxMap[factor2];
-            repressionMat( idx1, idx2 ) = true;
-        }
+	}
     }
 
     // read the axis wt file

@@ -278,6 +278,20 @@ inline T sum( const vector< T >& v )
     return result;
 }
 
+inline int sum( const IntMatrix& v )
+{
+	int result = 0;
+	int nRows = v.nRows();
+	int nCols = v.nCols();
+
+
+	for( int i = 0; i < nRows; i++){
+		for(int j = 0; j < nCols; j++){
+			result += v(i, j);
+		}
+	}
+	return result;
+}
 
 // max and min
 double max( const vector< double >& v, int &arg );
