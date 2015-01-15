@@ -3,12 +3,12 @@ Author: Xin He <xinhe2@illinois.edu>
 --------------------------------------------------------------------------
 INSTALLATION
 
-The program needs GSL (GNU Scientific Library). After installing GSL, change the GSL directory in src/Makefile. Then type: 
-cd src
+The program needs GSL (GNU Scientific Library). After installing GSL, go to the main distribution directory, and type:
+./configure
 make
 
-The main executable will be generates: 
-seq2expr: the main program to fit a sequence-to-expression model
+The main executable will be generated: 
+src/seq2expr: the main program to fit a sequence-to-expression model
 
 Type the program name without parameters will print usage information. 
 --------------------------------------------------------------------------
