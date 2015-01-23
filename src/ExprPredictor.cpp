@@ -1737,6 +1737,8 @@ double ExprPredictor::compRMSE( const ExprPar& par )
 
     double rmse = sqrt( squaredErr / ( nSeqs() * nConds() ) );//use this line if least_square() is used 
 	double penalty = 0;
+
+	//TODO: R_SEQ Either remove this dead code, or make this a conditional option.
 	//for the random sequences: start
         /*double sum_max_rand = 0;
     for ( int i = 0; i < nSeqs(); i++ ) {

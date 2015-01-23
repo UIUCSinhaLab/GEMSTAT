@@ -140,8 +140,10 @@ int main( int argc, char* argv[] )
     //read the random sequences
     vector< Sequence > r_seqs;
     vector< string > r_seqNames;
-    rval = readSequences( r_seqFile, r_seqs, r_seqNames );
-    ASSERT_MESSAGE( rval != RET_ERROR , "Coule not read the random sequences file.");
+    if( !r_seqFile.empty() ){
+    	rval = readSequences( r_seqFile, r_seqs, r_seqNames );
+    	ASSERT_MESSAGE( rval != RET_ERROR , "Coule not read the random sequences file.");
+    }
     int r_nSeqs = r_seqs.size();
 
     // read the expression data
@@ -294,9 +296,13 @@ int main( int argc, char* argv[] )
             seqLengths[i] = seqs[i].size();
         }
     }
+
+    //TODO: R_SEQ Either remove this feature or un-comment it.
     //site representation of the random sequences
     vector< SiteVec > r_seqSites( r_nSeqs );
     vector< int > r_seqLengths( r_nSeqs );
+
+    if( r_seqs.size() > 0){
     /*SeqAnnotator r_ann( motifs, energyThrFactors );
         for ( int i = 0; i < r_nSeqs; i++ ) {
         //cout << "Annotated sites for CRM: " << seqNames[i] << endl;
@@ -304,6 +310,7 @@ int main( int argc, char* argv[] )
                 r_seqLengths[i] = r_seqs[i].size();
         }
     */
+    }
 
     // read the cooperativity matrix
     int num_of_coop_pairs = 0;
@@ -591,6 +598,8 @@ int main( int argc, char* argv[] )
         else if ( ExprPredictor::objOption == PGP )
             cout << pgp_score << endl;
     }
+
+    //TODO: R_SEQ Either remove this feature or make it conditional.
     /*
         cout << "Max expressions of the random sequences:" << endl;
 
