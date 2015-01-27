@@ -57,13 +57,13 @@ int readFactorRoleFile(const string& filename, const map<string, int>& factorIdx
 	int i = 0, actRole, repRole;
 	while( finfo >> name >> actRole >> repRole )
 	{
-		if( factorIdxMap[name] != i){
+		if( factorIdxMap.at(name) != i){
 			cerr << "An entry in the factor information file was out of order or otherwise invalid: " << filename << ":" << i+1 << endl;
 			return RET_ERROR;
 		}
 		
 		if( (actRole != 0 && actRole != 1) || (repRole != 0 && repRole !=1) ){
-			cerr << "An invalid role setting was provided in the factor information file: " << filename << ":" << i+1 << end;
+			cerr << "An invalid role setting was provided in the factor information file: " << filename << ":" << i+1 << endl;
 		}
 
 		actIndicators[i] = (1 == actRole);//This does not rely on outside initialization of the actIndicators or repIndicators, other than instantiation.
