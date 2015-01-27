@@ -308,7 +308,7 @@ int main( int argc, char* argv[] )
     vector< bool > repIndicators( nFactors, false );
     if ( !factorInfoFile.empty() )
     {
-	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators)
+	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators);
         ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");    
     }
 
