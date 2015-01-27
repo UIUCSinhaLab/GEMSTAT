@@ -188,28 +188,14 @@ int main( int argc, char* argv[] )
     ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
 
     //initialize the energy threshold factors
-    vector < double > energyThrFactors;
-    energyThrFactors.clear( );
+    vector < double > energyThrFactors(nFactors, eTF);
+    
+    if( ! factor_thr_file.empty() )
+    {
+	int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
+	ASSERT_MESSAGE( 0==readFactorRet , "Difficulty opening the factor_thr_input file.");
+    }
 
-    if( factor_thr_file.empty() )
-    {
-        for ( int index = 0; index < nFactors; index++ )
-        {
-            energyThrFactors.push_back( eTF );
-        }
-    }
-    else
-    {
-        ifstream factor_thr_input( factor_thr_file.c_str() );
-        ASSERT_MESSAGE( factor_thr_input.is_open() , "Difficulty opening the factor_thr_input file.");
-        for( int index = 0; index < nFactors; index++ )
-        {
-            double temp;
-            factor_thr_input >> temp;
-            energyThrFactors.push_back( temp );
-        }
-        factor_thr_input.close();
-    }
     // site representation of the sequences
 
     vector< SiteVec > seqSites( nSeqs );
@@ -295,6 +281,7 @@ int main( int argc, char* argv[] )
             seqLengths[i] = seqs[i].size();
         }
     }
+	
     //site representation of the random sequences
     vector< SiteVec > r_seqSites( r_nSeqs );
     vector< int > r_seqLengths( r_nSeqs );
@@ -312,34 +299,17 @@ int main( int argc, char* argv[] )
     if ( !coopFile.empty() )
     {
 	int readRet = readEdgelistGraph(coopFile, factorIdxMap, coopMat, false);
-        if ( 0 != readRet )
-        {
-            cerr << "Cannot open the cooperativity file " << coopFile << endl;
-            exit( 1 );
-        }
+	ASSERT_MESSAGE(0 == readRet, "Error reading the cooperativity file");
+    	num_of_coop_pairs = sum( coopMat ) / 2;
     }
-    num_of_coop_pairs = sum( coopMat );
 
     // read the roles of factors
     vector< bool > actIndicators( nFactors, false );
     vector< bool > repIndicators( nFactors, false );
     if ( !factorInfoFile.empty() )
     {
-        ifstream finfo( factorInfoFile.c_str() );
-        if ( !finfo )
-        {
-            cerr << "Cannot open the factor information file " << factorInfoFile << endl;
-            exit( 1 );
-        }
-        string name;
-        int i = 0, actRole, repRole;
-        while ( finfo >> name >> actRole >> repRole )
-        {
-            assert( name == motifNames[i] );
-            if ( actRole ) actIndicators[i] = true;
-            if ( repRole ) repIndicators[i] = true;
-            i++;
-        }
+	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators)
+        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");    
     }
 
     // read the repression matrix
@@ -347,10 +317,7 @@ int main( int argc, char* argv[] )
     if ( !repressionFile.empty() )
     {
 	int readRet = readEdgelistGraph(repressionFile, factorIdxMap, repressionMat, true);
-	if(0 != readRet){
-            cerr << "Cannot open the repression file " << repressionFile << endl;
-            exit( 1 );
-	}
+	ASSERT_MESSAGE(0 == readRet, "Error reading the repression file.");
     }
 
     // read the axis wt file
@@ -388,8 +355,16 @@ int main( int argc, char* argv[] )
         axis_end.push_back( condNames.size() - 1 );
         axis_wts.push_back( 100 );
     }
+
     //read the free fix indicator information
-    vector <bool> indicator_bool;
+    int num_indicators = 0;
+    num_indicators += nFactors + num_of_coop_pairs + nFactors; //for binding weights, coop pairs and transcriptional effects
+    num_indicators += ExprPredictor::one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
+    num_indicators += nSeqs; //for the pi parameters
+    num_indicators += nSeqs; //for the beta pars per seqs
+    num_indicators += nFactors; //for the energyThrFactors
+
+    vector <bool> indicator_bool(num_indicators, true);
     indicator_bool.clear();
     if( !free_fix_indicator_filename.empty() )
     {
@@ -400,41 +375,6 @@ int main( int argc, char* argv[] )
             free_fix_indicator_file >> indicator_var;
             assert ( indicator_var == 0 || indicator_var == 1 );
             indicator_bool.push_back( indicator_var );
-        }
-    }
-    else
-    {
-        //for binding weights, coop pairs and transcriptional effects
-        for( int index = 0; index < nFactors + num_of_coop_pairs + nFactors; index++ )
-        {
-            indicator_bool.push_back( true );
-        }
-        //for q_btm parameter(s)
-        if( ExprPredictor::one_qbtm_per_crm )
-        {
-            for( int index = 0; index < nSeqs; index++ )
-            {
-                indicator_bool.push_back( true );
-            }
-        }
-        else
-        {
-            indicator_bool.push_back( true );
-        }
-        //for the pi parameters
-        for( int index = 0; index < nSeqs; index++ )
-        {
-            indicator_bool.push_back( true );
-        }
-        //for the beta pars per seqs:
-        for( int index = 0; index < nSeqs; index++ )
-        {
-            indicator_bool.push_back( true );
-        }
-        //for the energyThrFactors:
-        for( int index = 0; index < nFactors; index ++ )
-        {
-            indicator_bool.push_back( true );
         }
     }
 
@@ -474,6 +414,10 @@ int main( int argc, char* argv[] )
         if ( intOption == GAUSSIAN ) cout << "Sigma = " << factorIntSigma << endl;
     }
     cout << "Search_Option = " << getSearchOptionStr( ExprPar::searchOption ) << endl;
+
+
+
+
     // create the expression predictor
     FactorIntFunc* intFunc;
     if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
