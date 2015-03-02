@@ -23,6 +23,8 @@
 *     where repression is optional, and the coop. lines are optional.
 * Note that (5), (6), (7) and (8) may be empty
 ******************************************************/
+#include "Utils.h"
+
 #include "ExprPredictor.h"
 
 
@@ -33,8 +35,6 @@ int main( int argc, char* argv[] )
     string outFile;     // output file
     string dnase_file;
     string factor_thr_file;
-    string dperk_file;
-    string dperk_file;
     string dperk_file;
     double coopDistThr = 50;
     double factorIntSigma = 50.0;   // sigma parameter for the Gaussian interaction function
