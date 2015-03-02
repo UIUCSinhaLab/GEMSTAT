@@ -33,6 +33,9 @@ int main( int argc, char* argv[] )
     string outFile;     // output file
     string dnase_file;
     string factor_thr_file;
+    string dperk_file;
+    string dperk_file;
+    string dperk_file;
     double coopDistThr = 50;
     double factorIntSigma = 50.0;   // sigma parameter for the Gaussian interaction function
     double repressionDistThr = 250;
@@ -99,12 +102,13 @@ int main( int argc, char* argv[] )
 	else if ( !strcmp( "-ft", argv[ i ]))
 		factor_thr_file = argv[ ++i ];
 	else if ( !strcmp( "--seed", argv[ i ]))
-	    initialSeed = atol( argv[++i] );
+		initialSeed = atol( argv[++i] );
+	else if ( !strcmp( "-dp", argv[ i ]))
+		dperk_file = argv[ ++i ];
     }
 
-    if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_UNLIMITED || ExprPredictor::modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( ExprPredictor::modelOption == QUENCHING && repressionFile.empty() ) )
-    {
-        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -e exprFile -m motifFile -f factorExprFile -fo outFile [-a annFile -o modelOption -c coopFile -i factorInfoFile -r repressionFile -oo objOption -mc maxContact -p parFile -rt repressionDistThr -na nAlternations -ct coopDistThr -sigma factorIntSigma --seed RNG_SEED]" << endl;
+    if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_UNLIMITED || ExprPredictor::modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( ExprPredictor::modelOption == QUENCHING && repressionFile.empty() ) ) {
+        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -e exprFile -m motifFile -f factorExprFile -fo outFile [-a annFile -o modelOption -c coopFile -i factorInfoFile -r repressionFile -oo objOption -mc maxContact -p parFile -rt repressionDistThr -na nAlternations -ct coopDistThr -sigma factorIntSigma]" << endl;
         cerr << "modelOption: Logistic, Direct, Quenching, ChrMod_Unlimited, ChrMod_Limited" << endl;
         exit( 1 );
     }           
@@ -183,7 +187,17 @@ int main( int argc, char* argv[] )
     ASSERT_MESSAGE( condNames.size() == nConds, "Number of condition-names and number of conditions differ.");
     for ( int i = 0; i < nFactors; i++ ){ ASSERT_MESSAGE( labels[i] == motifNames[i], "A label and a motif name disagree in the factor expression file." ); }
     Matrix factorExprData( data );
-    ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
+ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
+
+	//read dperk expression data
+	labels.clear();
+	data.clear();
+	rval = readMatrix( dperk_file, labels, condNames, data );
+	assert( rval != RET_ERROR );
+    	assert( labels.size() == 1 && condNames.size() == nConds );
+    	Matrix dperk_ExprData( data ); 
+    	assert( dperk_ExprData.nCols() == nConds ); 
+
 
 	//initialize the energy threshold factors
 	vector < double > energyThrFactors;
@@ -209,25 +223,21 @@ int main( int argc, char* argv[] )
     vector< SiteVec > seqSites( nSeqs );
     vector< int > seqLengths( nSeqs );
     SeqAnnotator ann( motifs, energyThrFactors );
-    if ( annFile.empty() )                        // construct site representation
-    {
+    if ( annFile.empty() ) {        // construct site representation
 
-        if( dnase_file.empty() )
-        {
-            for ( int i = 0; i < nSeqs; i++ )
-            {
+	if( dnase_file.empty() ){
+        	for ( int i = 0; i < nSeqs; i++ ) {
                 //cout << "Annotated sites for CRM: " << seqNames[i] << endl;
                 ann.annot( seqs[ i ], seqSites[ i ] );
                 seqLengths[i] = seqs[i].size();
             }
         }
-        else
-        {
-            for ( int i = 0; i < nSeqs; i++ )
-            {
+	else{
+	        for ( int i = 0; i < nSeqs; i++ ) {
                 //cout << "Annotated sites for CRM: " << seqNames[i] << endl;
                 ifstream dnase_input( dnase_file.c_str() );
                 assert( dnase_input.is_open());
+
 
                 string temp_s;
                 string temp_gen;
@@ -237,13 +247,11 @@ int main( int argc, char* argv[] )
                 vector < double > dnase_end;
                 vector < double > scores;
 
-                while( dnase_input >> temp_s )
-                {
+			while( dnase_input >> temp_s ){
                     dnase_input >> temp_gen >> temp_gen >> temp_gen >> temp_gen >> temp_gen;
                     dnase_input >> chr;
                     dnase_input >> temp_gen >> temp_start >> temp_end >> temp_gen;
-                    if( temp_s == seqNames[ i ] )
-                    {
+				if( temp_s == seqNames[ i ] ){
                         //cout << "Processing for:\t" << temp_s << endl;
                         dnase_start.clear();
                         dnase_end.clear();
@@ -254,14 +262,11 @@ int main( int argc, char* argv[] )
                         double chr_start, chr_end, chr_score;
                         //cout << "Starting location on chromosome: " << (long long int)temp_start << endl;
                         //cout << "Ending location on chromosome: " << (long long int)temp_end << endl;
-                        while( chr_input >> temp_gen >> chr_start >> chr_end >> temp_gen >> chr_score )
-                        {
-                            if( ( chr_start < temp_start && chr_end < temp_start ) || ( chr_start > temp_end && chr_end > temp_end ) )
-                            {
+					while( chr_input >> temp_gen >> chr_start >> chr_end >> temp_gen >> chr_score ){
+						if( ( chr_start < temp_start && chr_end < temp_start ) || ( chr_start > temp_end && chr_end > temp_end ) ){
                                 ;
                             }
-                            else
-                            {
+						else{
                                 dnase_start.push_back( chr_start );
                                 dnase_end.push_back( chr_end );
                                 scores.push_back( chr_score );
@@ -278,9 +283,7 @@ int main( int argc, char* argv[] )
                 seqLengths[i] = seqs[i].size();
             }
         }
-    }                                             // read the site representation and compute the energy of sites
-    else
-    {
+    } else {    // read the site representation and compute the energy of sites
         rval = readSites( annFile, factorIdxMap, seqSites, true );
         assert( rval != RET_ERROR );
         for ( int i = 0; i < nSeqs; i++ ) {
@@ -365,19 +368,16 @@ int main( int argc, char* argv[] )
     axis_end.clear();
     axis_wts.clear();
 
-    if( !axis_wtFile.empty() )
-    {
+	if( !axis_wtFile.empty() ){
         ifstream axis_wtInfo ( axis_wtFile.c_str() );
-        if( !axis_wtInfo )
-        {
+		if( !axis_wtInfo ){
             cerr << "Cannot open the axis weight information file " << axis_wtFile << endl;
             exit( 1 );
         }
         int temp1, temp2;
         double temp3;
         double temp3_sum = 0;
-        while( axis_wtInfo >> temp1 >> temp2 >> temp3 )
-        {
+		while( axis_wtInfo >> temp1 >> temp2 >> temp3 ){
             axis_start.push_back( temp1 );
             axis_end.push_back( temp2 );
             axis_wts.push_back( temp3 );
@@ -385,8 +385,7 @@ int main( int argc, char* argv[] )
         }
         assert( !( temp3_sum > 100 ) && !( temp3_sum < 100 ));
     }
-    else
-    {
+	else{
         axis_start.push_back( 0 );
         axis_end.push_back( condNames.size() - 1 );
         axis_wts.push_back( 100 );
@@ -394,51 +393,43 @@ int main( int argc, char* argv[] )
     //read the free fix indicator information
     vector <bool> indicator_bool;
     indicator_bool.clear();
-    if( !free_fix_indicator_filename.empty() )
-    {
+	if( !free_fix_indicator_filename.empty() ){
         ifstream free_fix_indicator_file ( free_fix_indicator_filename.c_str() );
-        while( !free_fix_indicator_file.eof( ) )
-        {
+		while( !free_fix_indicator_file.eof( ) ){
             int indicator_var;
             free_fix_indicator_file >> indicator_var;
             assert ( indicator_var == 0 || indicator_var == 1 );
             indicator_bool.push_back( indicator_var );
         }
     }
-    else
-    {
+	else{
         //for binding weights, coop pairs and transcriptional effects
-        for( int index = 0; index < nFactors + num_of_coop_pairs + nFactors; index++ )
-        {
+		for( int index = 0; index < nFactors + num_of_coop_pairs + nFactors; index++ ){
             indicator_bool.push_back( true );
         }
         //for q_btm parameter(s)
-        if( ExprPredictor::one_qbtm_per_crm )
-        {
-            for( int index = 0; index < nSeqs; index++ )
-            {
+		if( ExprPredictor::one_qbtm_per_crm ){
+			for( int index = 0; index < nSeqs; index++ ){
                 indicator_bool.push_back( true );
             }
         }
-        else
-        {
+		else{
             indicator_bool.push_back( true );
         }
         //for the pi parameters
-        for( int index = 0; index < nSeqs; index++ )
-        {
+		for( int index = 0; index < nSeqs; index++ ){
             indicator_bool.push_back( true );
         }
         //for the beta pars per seqs:
-        for( int index = 0; index < nSeqs; index++ )
-        {
+		for( int index = 0; index < nSeqs; index++ ){
             indicator_bool.push_back( true );
         }
         //for the energyThrFactors:
-        for( int index = 0; index < nFactors; index ++ )
-        {
+		for( int index = 0; index < nFactors; index ++ ){
             indicator_bool.push_back( true );
         }
+		//for cic_att
+		indicator_bool.push_back( true );
     }
 
     // CHECK POINT
@@ -466,7 +457,7 @@ int main( int argc, char* argv[] )
     else {
         cerr << "Interaction Function is invalid " << endl; exit( 1 ); 
     }
-    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, intFunc, coopMat, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
+    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, dperk_ExprData, intFunc, coopMat, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
     // read the initial parameter values
     ExprPar par_init( nFactors, nSeqs );
     if ( !parFile.empty() ) {
@@ -487,9 +478,7 @@ int main( int argc, char* argv[] )
     // model fitting
     predictor->train( par_init, rng );
 
-    gsl_rng_free( rng );
     // print the training results
-    cout << "Estimated values of parameters:" << endl;
     ExprPar par = predictor->getPar();
     par.print( cout, motifNames, coopMat );
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
@@ -515,22 +504,20 @@ int main( int argc, char* argv[] )
 
         double pgp_score;
         double corr_score;
-        double beta;                              //= par.betas[ i ];
+        double beta= par.betas[ i ]; 
         double error;
-        if( ExprPredictor::objOption == SSE )
-        {
+        if( ExprPredictor::objOption == SSE ){
             error = sqrt( least_square( targetExprs, observedExprs, beta ) / nConds );
         }
-        if( ExprPredictor::objOption == PGP )
-        {
+	if( ExprPredictor::objOption == PGP ){
             pgp_score = pgp( targetExprs, observedExprs, beta );
         }
-        if( ExprPredictor::objOption == CORR )
-        {
+	if( ExprPredictor::objOption == CORR ){
             corr_score = corr( targetExprs, observedExprs, beta );
         }
-                                                  // predictions
-        for ( int j = 0; j < nConds; j++ ) fout << "\t" << ( beta * targetExprs[j] );
+        if(ExprPredictor::nAlternations == 0)
+		beta= par.betas[ i ]; 
+        for ( int j = 0; j < nConds; j++ ) fout << "\t" << ( beta * targetExprs[j] > 1 ? 1 : beta * targetExprs[j] );       // predictions
         fout << endl;
 	
 	/*if( ExprPredictor::objOption == PGP ){
