@@ -2,6 +2,9 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_statistics.h>
 
+#include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_complex_math.h>
+
 #include "Tools.h"
 
 const log_add_table table( -10.0, 0, 500 );       // global variable
@@ -1386,13 +1389,12 @@ double infty_transform( double x, double a, double b )
     // assert x \in [a,b]
     // assert( x >= a && x <= b );
     //cout << x << "\t" << a << "\t" << b << endl;
-    assert( !( x < a ) && !( x > b ) );
+    //assert( !( x < a ) && !( x > b ) );
+    //TODO: Commenting makes patching/merging easier, remove all of this after the merge
+    assert(a <= b);
 
     // transformation
-    double y = ( x - a ) / ( b - a );
-    double z = log( y / ( 1.0 - y ) );
-
-    return z;
+    return GSL_REAL(gsl_complex_arcsin_real((x-a)/(b-a)))*M_2_PI;
 }
 
 
@@ -1401,13 +1403,12 @@ double inverse_infty_transform( double z, double a, double b )
     //if( a > b ){
     //cout <<  z << "\t" << a << "\t" << b << endl;
     //}
-    assert( a <= b );
-    assert( !(a > b) );
+    //assert( a <= b );
+    //assert( !(a > b) );
+    //TODO: Commenting makes patchign/merging easier, remove all of this after the merge
+    assert(a <= b);
 
-    double y = exp( z ) / ( 1.0 + exp( z ) );
-    double x = a + y * ( b - a );
-
-    return x;
+    return (b-a)*gsl_sf_sin(z*M_PI_2) + a;
 }
 
 
