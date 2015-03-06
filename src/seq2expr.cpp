@@ -306,7 +306,11 @@ int main( int argc, char* argv[] )
     {
 	int readRet = readEdgelistGraph(coopFile, factorIdxMap, coopMat, false);
 	ASSERT_MESSAGE(0 == readRet, "Error reading the cooperativity file");
-    	num_of_coop_pairs = sum( coopMat ) / 2;
+
+	//Calculate the number of cooperative pairs.
+	for(int i = 0;i < nFactors;i++)
+		for(int j=i;j<nFactors;j++)
+			num_of_coop_pairs += coopMat.getElement(i,j);
     }
 
     // read the roles of factors
