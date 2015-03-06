@@ -371,9 +371,9 @@ int main( int argc, char* argv[] )
     num_indicators += nFactors; //for the energyThrFactors
 
     vector <bool> indicator_bool(num_indicators, true);
-    indicator_bool.clear();
     if( !free_fix_indicator_filename.empty() )
     {
+    	indicator_bool.clear();
         ifstream free_fix_indicator_file ( free_fix_indicator_filename.c_str() );
         while( !free_fix_indicator_file.eof( ) )
         {
