@@ -4,8 +4,8 @@ int readEdgelistGraph( const string& filename, const map<string, int>& factorIdx
 	string factor1, factor2;
 
 	ifstream matrix_infile(filename.c_str());
-	if( !matrix_infile ){
-		return 1;
+	if( !matrix_infile.is_open() ){
+		return RET_ERROR;
 	}
 
 	while( matrix_infile >> factor1 >> factor2 ){
@@ -13,9 +13,9 @@ int readEdgelistGraph( const string& filename, const map<string, int>& factorIdx
 		int idx1 = factorIdxMap.at(factor1);
 		int idx2 = factorIdxMap.at(factor2);
 
-		destination( idx1, idx2 ) = true;
+		destination.setElement( idx1, idx2, true);
 		if(!directed){
-			destination( idx2, idx1 ) = true;
+			destination.setElement( idx2, idx1, true);
 		}
 	}
 	
@@ -64,12 +64,15 @@ int readFactorRoleFile(const string& filename, const map<string, int>& factorIdx
 		
 		if( (actRole != 0 && actRole != 1) || (repRole != 0 && repRole !=1) ){
 			cerr << "An invalid role setting was provided in the factor information file: " << filename << ":" << i+1 << endl;
+			return RET_ERROR;
 		}
 
 		actIndicators[i] = (1 == actRole);//This does not rely on outside initialization of the actIndicators or repIndicators, other than instantiation.
 		repIndicators[i] = (1 == repRole);
 		i++;
 	}
+
+	finfo.close();
 	
 	return 0;
 }	
