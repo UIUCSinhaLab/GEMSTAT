@@ -349,8 +349,9 @@ public:
 private:
         // training data
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
-        const vector <SiteVec>& r_seqSites;
         const vector< int >& seqLengths;          // lengths of all sequences
+        //TODO: R_SEQ Either remove this dead feature or revive it and make it conditional.
+	const vector <SiteVec>& r_seqSites;
         const vector< int >& r_seqLengths;        // lengths of all sequences
         const Matrix& exprData;                   // expressions of the corresponding sequences across multiple conditions
         const vector< Motif >& motifs;            // TF binding motifs

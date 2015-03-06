@@ -24,6 +24,7 @@
 * Note that (5), (6), (7) and (8) may be empty
 ******************************************************/
 #include "Utils.h"
+#include "IO.h"
 
 #include "ExprPredictor.h"
 
@@ -143,8 +144,10 @@ int main( int argc, char* argv[] )
     //read the random sequences
     vector< Sequence > r_seqs;
     vector< string > r_seqNames;
-    rval = readSequences( r_seqFile, r_seqs, r_seqNames );
-    ASSERT_MESSAGE( rval != RET_ERROR , "Coule not read the random sequences file.");
+    if( !r_seqFile.empty() ){
+    	rval = readSequences( r_seqFile, r_seqs, r_seqNames );
+    	ASSERT_MESSAGE( rval != RET_ERROR , "Coule not read the random sequences file.");
+    }
     int r_nSeqs = r_seqs.size();
 
     // read the expression data
@@ -187,7 +190,7 @@ int main( int argc, char* argv[] )
     ASSERT_MESSAGE( condNames.size() == nConds, "Number of condition-names and number of conditions differ.");
     for ( int i = 0; i < nFactors; i++ ){ ASSERT_MESSAGE( labels[i] == motifNames[i], "A label and a motif name disagree in the factor expression file." ); }
     Matrix factorExprData( data );
-ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
+	ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
 
 	//read dperk expression data
 	labels.clear();
@@ -198,26 +201,15 @@ ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor 
     	Matrix dperk_ExprData( data ); 
     	assert( dperk_ExprData.nCols() == nConds ); 
 
+    //initialize the energy threshold factors
+    vector < double > energyThrFactors(nFactors, eTF);
+    
+    if( ! factor_thr_file.empty() )
+    {
+	int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
+	ASSERT_MESSAGE( 0==readFactorRet , "Difficulty opening the factor_thr_input file.");
+    }
 
-	//initialize the energy threshold factors
-	vector < double > energyThrFactors;
-	energyThrFactors.clear( );
-	
-	if( factor_thr_file.empty() ){
-		for ( int index = 0; index < nFactors; index++ ){
-			energyThrFactors.push_back( eTF );
-		}
-	}
-	else{
-		ifstream factor_thr_input( factor_thr_file.c_str() );
-		assert( factor_thr_input.is_open() );
-		for( int index = 0; index < nFactors; index++ ){
-			double temp;
-			factor_thr_input >> temp;
-			energyThrFactors.push_back( temp );
-		}
-		factor_thr_input.close();
-	}
     // site representation of the sequences
 	
     vector< SiteVec > seqSites( nSeqs );
@@ -291,72 +283,52 @@ ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor 
             seqLengths[i] = seqs[i].size();
         }
     }
-	//site representation of the random sequences
+
+    //TODO: R_SEQ Either remove this feature or un-comment it.
+    //site representation of the random sequences
     vector< SiteVec > r_seqSites( r_nSeqs );
     vector< int > r_seqLengths( r_nSeqs );
+
+    if( r_seqs.size() > 0){
     /*SeqAnnotator r_ann( motifs, energyThrFactors );
         for ( int i = 0; i < r_nSeqs; i++ ) {
 		//cout << "Annotated sites for CRM: " << seqNames[i] << endl;
             	r_ann.annot( r_seqs[ i ], r_seqSites[ i ] );
             	r_seqLengths[i] = r_seqs[i].size();
         }
-	*/	
+    */
+    }
 
 
     // read the cooperativity matrix 
     int num_of_coop_pairs = 0;
     IntMatrix coopMat( nFactors, nFactors, false );
-    if ( !coopFile.empty() ) {
-        ifstream fcoop( coopFile.c_str() );
-        if ( !fcoop ) {
-            cerr << "Cannot open the cooperativity file " << coopFile << endl;
-            exit( 1 );
-        }  
-        while ( fcoop >> factor1 >> factor2 ) {
-            assert( factorIdxMap.count( factor1 ) && factorIdxMap.count( factor2 ) );
-            int idx1 = factorIdxMap[factor1];
-            int idx2 = factorIdxMap[factor2];
-            if( coopMat( idx1, idx2 ) == false && coopMat( idx2, idx1 ) == false ){
-	    	coopMat( idx1, idx2 ) = true;
-	    	coopMat( idx2, idx1 ) = true;
-	    	num_of_coop_pairs ++;
-	    }
-        }        
-    } 
+    if ( !coopFile.empty() )
+    {
+	int readRet = readEdgelistGraph(coopFile, factorIdxMap, coopMat, false);
+	ASSERT_MESSAGE(0 == readRet, "Error reading the cooperativity file");
+
+	//Calculate the number of cooperative pairs.
+	for(int i = 0;i < nFactors;i++)
+		for(int j=i;j<nFactors;j++)
+			num_of_coop_pairs += coopMat.getElement(i,j);
+    }
 
     // read the roles of factors
     vector< bool > actIndicators( nFactors, false );
     vector< bool > repIndicators( nFactors, false );
-    if ( !factorInfoFile.empty() ) {
-        ifstream finfo( factorInfoFile.c_str() );
-        if ( !finfo ) {
-            cerr << "Cannot open the factor information file " << factorInfoFile << endl;
-            exit( 1 );
-        }      
-        string name;
-        int i = 0, actRole, repRole;
-        while ( finfo >> name >> actRole >> repRole ) {
-            assert( name == motifNames[i] );
-            if ( actRole ) actIndicators[i] = true;
-            if ( repRole ) repIndicators[i] = true;
-            i++;
-        }
+    if ( !factorInfoFile.empty() )
+    {
+	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators);
+        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");    
     }
     
     // read the repression matrix 
     IntMatrix repressionMat( nFactors, nFactors, false );
-    if ( !repressionFile.empty() ) {
-        ifstream frepr( repressionFile.c_str() );
-        if ( !frepr ) {
-            cerr << "Cannot open the repression file " << repressionFile << endl;
-            exit( 1 );
-        }        
-        while ( frepr >> factor1 >> factor2 ) {
-            assert( factorIdxMap.count( factor1 ) && factorIdxMap.count( factor2 ) );
-            int idx1 = factorIdxMap[factor1];
-            int idx2 = factorIdxMap[factor2];
-            repressionMat( idx1, idx2 ) = true;
-        }        
+    if ( !repressionFile.empty() )
+    {
+	int readRet = readEdgelistGraph(repressionFile, factorIdxMap, repressionMat, true);
+	ASSERT_MESSAGE(0 == readRet, "Error reading the repression file.");
     }
 
     // read the axis wt file
@@ -368,32 +340,30 @@ ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor 
     axis_end.clear();
     axis_wts.clear();
 
-	if( !axis_wtFile.empty() ){
-        ifstream axis_wtInfo ( axis_wtFile.c_str() );
-		if( !axis_wtInfo ){
-            cerr << "Cannot open the axis weight information file " << axis_wtFile << endl;
-            exit( 1 );
-        }
-        int temp1, temp2;
-        double temp3;
-        double temp3_sum = 0;
-		while( axis_wtInfo >> temp1 >> temp2 >> temp3 ){
-            axis_start.push_back( temp1 );
-            axis_end.push_back( temp2 );
-            axis_wts.push_back( temp3 );
-            temp3_sum += temp3;
-        }
-        assert( !( temp3_sum > 100 ) && !( temp3_sum < 100 ));
+    if( !axis_wtFile.empty() )
+    {
+	    int readRet = readAxisWeights(axis_wtFile, axis_start, axis_end, axis_wts);
+	    ASSERT_MESSAGE(0 == readRet, "Error reading the axis weights (-aw) file.");
     }
-	else{
+    else
+    {//Alternative intialization.
         axis_start.push_back( 0 );
         axis_end.push_back( condNames.size() - 1 );
         axis_wts.push_back( 100 );
     }
+
     //read the free fix indicator information
-    vector <bool> indicator_bool;
-    indicator_bool.clear();
-	if( !free_fix_indicator_filename.empty() ){
+    int num_indicators = 0;
+    num_indicators += nFactors + num_of_coop_pairs + nFactors; //for binding weights, coop pairs and transcriptional effects
+    num_indicators += ExprPredictor::one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
+    num_indicators += nSeqs; //for the pi parameters
+    num_indicators += nSeqs; //for the beta pars per seqs
+    num_indicators += nFactors; //for the energyThrFactors
+
+    vector <bool> indicator_bool(num_indicators, true);
+    if( !free_fix_indicator_filename.empty() )
+    {
+    	indicator_bool.clear();
         ifstream free_fix_indicator_file ( free_fix_indicator_filename.c_str() );
 		while( !free_fix_indicator_file.eof( ) ){
             int indicator_var;
@@ -401,35 +371,6 @@ ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor 
             assert ( indicator_var == 0 || indicator_var == 1 );
             indicator_bool.push_back( indicator_var );
         }
-    }
-	else{
-        //for binding weights, coop pairs and transcriptional effects
-		for( int index = 0; index < nFactors + num_of_coop_pairs + nFactors; index++ ){
-            indicator_bool.push_back( true );
-        }
-        //for q_btm parameter(s)
-		if( ExprPredictor::one_qbtm_per_crm ){
-			for( int index = 0; index < nSeqs; index++ ){
-                indicator_bool.push_back( true );
-            }
-        }
-		else{
-            indicator_bool.push_back( true );
-        }
-        //for the pi parameters
-		for( int index = 0; index < nSeqs; index++ ){
-            indicator_bool.push_back( true );
-        }
-        //for the beta pars per seqs:
-		for( int index = 0; index < nSeqs; index++ ){
-            indicator_bool.push_back( true );
-        }
-        //for the energyThrFactors:
-		for( int index = 0; index < nFactors; index ++ ){
-            indicator_bool.push_back( true );
-        }
-		//for cic_att
-		indicator_bool.push_back( true );
     }
 
     // CHECK POINT
@@ -484,60 +425,8 @@ ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor 
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    ofstream fout( outFile.c_str() );
-    if ( !fout ) {
-        cerr << "Cannot open file " << outFile << endl;
-        exit( 1 );
-    }
-    fout << "Rows\t" << expr_condNames << endl;
-
-
-    for ( int i = 0; i < nSeqs; i++ ) {
-        vector< double > targetExprs;
-        predictor->predict( seqSites[i], seqLengths[i], targetExprs, i );
-        vector< double > observedExprs = exprData.getRow( i );
-        
-        // error
-        // print the results
-        fout << seqNames[i] << "\t" << observedExprs << endl;      // observations
-        fout << seqNames[i];
-
-        double pgp_score;
-        double corr_score;
-        double beta= par.betas[ i ]; 
-        double error;
-        if( ExprPredictor::objOption == SSE ){
-            error = sqrt( least_square( targetExprs, observedExprs, beta ) / nConds );
-        }
-	if( ExprPredictor::objOption == PGP ){
-            pgp_score = pgp( targetExprs, observedExprs, beta );
-        }
-	if( ExprPredictor::objOption == CORR ){
-            corr_score = corr( targetExprs, observedExprs, beta );
-        }
-        if(ExprPredictor::nAlternations == 0)
-		beta= par.betas[ i ]; 
-        for ( int j = 0; j < nConds; j++ ) fout << "\t" << ( beta * targetExprs[j] > 1 ? 1 : beta * targetExprs[j] );       // predictions
-        fout << endl;
-	
-	/*if( ExprPredictor::objOption == PGP ){
-		for( int j = 0; j < nConds; j++ ){
-			targetExprs[ j ] = beta * targetExprs[ j ];
-		}
-	}*/
-        
-	// print the agreement bewtween predictions and observations
-        cout << seqNames[i] << "\t" << beta << "\t"; 
-        if ( ExprPredictor::objOption == SSE ) {
-            cout << error << endl;
-	}
-        else if ( ExprPredictor::objOption == CORR ) 
-            cout << corr_score << endl;
-        else if ( ExprPredictor::objOption == CROSS_CORR )
-            cout << ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs ) << endl; 
-        else if ( ExprPredictor::objOption == PGP )
-            cout << pgp_score << endl; 
-    }
+    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, false);
+    
     return 0;	
 }
 

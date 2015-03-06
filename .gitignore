@@ -2,3 +2,4 @@ seq2expr
 autom4te.cache
 *.o
 *~
+*.swp
