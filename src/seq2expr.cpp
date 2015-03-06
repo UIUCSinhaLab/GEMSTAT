@@ -337,26 +337,11 @@ int main( int argc, char* argv[] )
 
     if( !axis_wtFile.empty() )
     {
-        ifstream axis_wtInfo ( axis_wtFile.c_str() );
-        if( !axis_wtInfo )
-        {
-            cerr << "Cannot open the axis weight information file " << axis_wtFile << endl;
-            exit( 1 );
-        }
-        int temp1, temp2;
-        double temp3;
-        double temp3_sum = 0;
-        while( axis_wtInfo >> temp1 >> temp2 >> temp3 )
-        {
-            axis_start.push_back( temp1 );
-            axis_end.push_back( temp2 );
-            axis_wts.push_back( temp3 );
-            temp3_sum += temp3;
-        }
-        assert( !( temp3_sum > 100 ) && !( temp3_sum < 100 ));
+	    int readRet = readAxisWeights(axis_wtFile, axis_start, axis_end, axis_wts);
+	    ASSERT_MESSAGE(0 == readRet, "Error reading the axis weights (-aw) file.");
     }
     else
-    {
+    {//Alternative intialization.
         axis_start.push_back( 0 );
         axis_end.push_back( condNames.size() - 1 );
         axis_wts.push_back( 100 );
@@ -464,66 +449,9 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    ofstream fout( outFile.c_str() );
-    if ( !fout )
-    {
-        cerr << "Cannot open file " << outFile << endl;
-        exit( 1 );
-    }
-    fout << "Rows\t" << expr_condNames << endl;
-
-    for ( int i = 0; i < nSeqs; i++ )
-    {
-        vector< double > targetExprs;
-        predictor->predict( seqSites[i], seqLengths[i], targetExprs, i );
-        vector< double > observedExprs = exprData.getRow( i );
-
-        // error
-        // print the results
-                                                  // observations
-        fout << seqNames[i] << "\t" << observedExprs << endl;
-        fout << seqNames[i];
-
-        double pgp_score;
-        double corr_score;
-        double beta;                              //= par.betas[ i ];
-        double error;
-        if( ExprPredictor::objOption == SSE )
-        {
-            error = sqrt( least_square( targetExprs, observedExprs, beta ) / nConds );
-        }
-        if( ExprPredictor::objOption == PGP )
-        {
-            pgp_score = pgp( targetExprs, observedExprs, beta );
-        }
-        if( ExprPredictor::objOption == CORR )
-        {
-            corr_score = corr( targetExprs, observedExprs, beta );
-        }
-                                                  // predictions
-        for ( int j = 0; j < nConds; j++ ) fout << "\t" << ( beta * targetExprs[j] );
-        fout << endl;
-
-        /*if( ExprPredictor::objOption == PGP ){
-            for( int j = 0; j < nConds; j++ ){
-                targetExprs[ j ] = beta * targetExprs[ j ];
-            }
-        }*/
-
-        // print the agreement bewtween predictions and observations
-        cout << seqNames[i] << "\t" << beta << "\t";
-        if ( ExprPredictor::objOption == SSE )
-        {
-            cout << error << endl;
-        }
-        else if ( ExprPredictor::objOption == CORR )
-            cout << corr_score << endl;
-        else if ( ExprPredictor::objOption == CROSS_CORR )
-            cout << ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs ) << endl;
-        else if ( ExprPredictor::objOption == PGP )
-            cout << pgp_score << endl;
-    }
-
+    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, false);
+    
+    
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*
         cout << "Max expressions of the random sequences:" << endl;
