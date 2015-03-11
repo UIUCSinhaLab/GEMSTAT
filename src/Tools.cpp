@@ -941,6 +941,8 @@ double std_dev( const vector< double >& x )
 double corr( const vector< double >& x, const vector< double >& y, double& beta )
 {
 
+    //This learns a beta parameter for corr, but is otherwise the same as the other one
+    //The price of an additional stack frame every time this gets called is very small compared to the price of having repeat code and the associated maintainability problems.
     double max_x = -DBL_MAX, max_y = -DBL_MAX;
     for( int index = 0; index < x.size(); index++ )
     {
@@ -954,42 +956,8 @@ double corr( const vector< double >& x, const vector< double >& y, double& beta 
         }
     }
     beta = max_y / max_x;
-
-    if ( x.size() != y.size() ) return RET_ERROR;
-    if ( x.size() == 0 ) return RET_ERROR;
-
-    // means of X and Y
-    double x_bar = mean( x );
-    double y_bar = mean( y );
-
-    // pseudo-observation at tau = 0
-    vector< double > X( x );
-    vector< double > Y( y );
-    X.insert( X.begin(), 0.0 );
-    Y.insert( Y.begin(), 0.0 );
-    int n = X.size() - 1;
-
-    // variance of X and Y
-    double sum_x = 0;
-    double sum_y = 0;
-    for ( int s = 1; s <= n; s++ )
-    {
-        sum_x += ( X[s] - x_bar ) * ( X[s] - x_bar );
-        sum_y += ( Y[s] - y_bar ) * ( Y[s] - y_bar );
-    }
-    double x_var = sum_x / n;
-    double y_var = sum_y / n;
-
-    // covariance and correlation
-    double sum = 0;
-    for ( int s = 1; s <= n ; s++ )
-    {
-        sum += ( X[s] - x_bar ) * ( Y[s] - y_bar );
-    }
-    double cov_xy = sum / n;
-    double corr_xy = cov_xy / sqrt( x_var * y_var );
-
-    return corr_xy;
+    
+    return corr( x, y);
 }
 
 
