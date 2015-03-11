@@ -3,6 +3,18 @@
 /* Define to 1 if you have the `floor' function. */
 #undef HAVE_FLOOR
 
+/* Define to 1 if you have the <gsl/gsl_linalg.h> header file. */
+#undef HAVE_GSL_GSL_LINALG_H
+
+/* Define to 1 if you have the <gsl/gsl_math.h> header file. */
+#undef HAVE_GSL_GSL_MATH_H
+
+/* Define to 1 if you have the <gsl/gsl_multimin.h> header file. */
+#undef HAVE_GSL_GSL_MULTIMIN_H
+
+/* Define to 1 if you have the <gsl/gsl_randist.h> header file. */
+#undef HAVE_GSL_GSL_RANDIST_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -48,8 +60,8 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to 1 if the system has the type `_Bool'. */
-#undef HAVE__BOOL
+/* Name of package */
+#undef PACKAGE
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -63,14 +75,14 @@
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
 
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
-
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Version number of package */
+#undef VERSION
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */
@@ -78,5 +90,5 @@
 #undef inline
 #endif
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to `unsigned' if <sys/types.h> does not define. */
 #undef size_t
