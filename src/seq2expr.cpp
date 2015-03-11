@@ -425,7 +425,7 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, false);
+    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, ExprPredictor::nAlternations == 0);
     
     return 0;	
 }
