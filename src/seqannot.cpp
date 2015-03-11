@@ -55,7 +55,7 @@ int main( int argc, char* argv[] )
 
     if ( seqFile.empty() || motifFile.empty() || outFile.empty() ) 
     {
-        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -m motifFile -fo outFile" << endl;
+        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -m motifFile -fo outFile [ -et default_factor_energy=<" << eTF << "> -ft <factorThresholdsFile -df <dnase_file> ]" << endl;
         exit( 1 );
     }
 
@@ -67,7 +67,7 @@ int main( int argc, char* argv[] )
     // read the sequences
     vector< Sequence > seqs;
     vector< string > seqNames;
-    rval = readSequences( seqFile, seqs, seqNames );
+    int rval = readSequences( seqFile, seqs, seqNames );
     ASSERT_MESSAGE(rval != RET_ERROR, "Could not read the sequence file.");
     int nSeqs = seqs.size();
 
