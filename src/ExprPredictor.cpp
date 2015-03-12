@@ -417,8 +417,7 @@ int ExprPar::load( const string& file, const int num_of_coop_pairs )
     //read the pi values
 	for( int i = 0; i < nSeqs; i++ ){
 		fin >> value;
-		//pis[ i ] = atof( value.c_str() );
-		pis[ i ] = 1E-5;
+		pis[ i ] = atof( value.c_str() );
 	}
 
 	//read the beta values
@@ -1508,15 +1507,19 @@ double ExprPredictor::compPGP( const ExprPar& par )
         for ( int j = 0; j < nConds(); j++ ) {
             double predicted = -1;
             vector< double > concs = factorExprData.getCol( j );
-		for( int _i = 0; _i < sizeof ( indices_of_crm_in_gene ) / sizeof ( int ); _i++ ){
+		 vector <double> t_dperk_conc = dperk_ExprData.getCol( j );
+                double _cic_att = par.cic_att;
+               double _dperk_conc = t_dperk_conc[0];
+    
+    for( int _i = 0; _i < sizeof ( indices_of_crm_in_gene ) / sizeof ( int ); _i++ ){
 			if( i == indices_of_crm_in_gene[ _i ] ){
 				//gene_crm_fout << i << "\t" << j << "\t";
-            predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i );
+            predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i, _dperk_conc, _cic_att );
 				break;
 			}
             }
 		if ( predicted < 0 ){
-            		predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i );
+            		predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i, _dperk_conc, _cic_att );
 		}
 		
             
