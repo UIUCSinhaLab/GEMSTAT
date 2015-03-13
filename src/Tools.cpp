@@ -814,9 +814,10 @@ double std_dev( const vector< double >& x )
     return gsl_stats_sd( data, 1, x.size() );
 }
 
-double corr( const vector< double >& x, const vector< double >& y, double& beta )
+double corr( const vector< double >& x, const vector< double >& y, double& beta , bool fix_beta /* = false */)
 {
 
+	if(!fix_beta){
 	double max_x = -DBL_MAX, max_y = -DBL_MAX;
 	for( int index = 0; index < x.size(); index++ ){
 		if( x[ index ] > max_x ){
@@ -827,41 +828,11 @@ double corr( const vector< double >& x, const vector< double >& y, double& beta 
 		}
 	}
 	beta = max_y / max_x;
+	}
 
-    if ( x.size() != y.size() ) return RET_ERROR; 
-    if ( x.size() == 0 ) return RET_ERROR;
-
-    // means of X and Y
-    double x_bar = mean( x );
-    double y_bar = mean( y );
-    
-    // pseudo-observation at tau = 0
-    vector< double > X( x );
-    vector< double > Y( y );
-    X.insert( X.begin(), 0.0 );
-    Y.insert( Y.begin(), 0.0 );
-    int n = X.size() - 1;
-
-    // variance of X and Y
-    double sum_x = 0; 
-    double sum_y = 0;
-    for ( int s = 1; s <= n; s++ ) {
-        sum_x += ( X[s] - x_bar ) * ( X[s] - x_bar );
-        sum_y += ( Y[s] - y_bar ) * ( Y[s] - y_bar );
-    }
-    double x_var = sum_x / n;
-    double y_var = sum_y / n; 
-    
-    // covariance and correlation
-    double sum = 0;
-    for ( int s = 1; s <= n ; s++ ) {
-        sum += ( X[s] - x_bar ) * ( Y[s] - y_bar );
-    }
-    double cov_xy = sum / n;
-    double corr_xy = cov_xy / sqrt( x_var * y_var );
-    
-    return corr_xy;
+	return corr(x,y);
 }
+
 double corr( const vector< double >& x, const vector< double >& y )
 {
     if ( x.size() != y.size() ) return RET_ERROR; 
@@ -899,7 +870,7 @@ double corr( const vector< double >& x, const vector< double >& y )
     return corr_xy;
 }
 
-double pgp( const vector<double>& profile1, const vector<double>& profile2, double& beta )
+double pgp( const vector<double>& profile1, const vector<double>& profile2, double& beta , bool fix_beta /* = false */)
 {
 	double max2 = 0;
 	for ( int i = 0; i < profile2.size(); i++ ) {
@@ -911,9 +882,11 @@ double pgp( const vector<double>& profile1, const vector<double>& profile2, doub
 		if( profile1[ i ] > max1 ) max1 = profile1[ i ];
 	}
 
-	beta = max2/max1;
-	const int max_beta = 10;
-	if( beta > max_beta ) beta = max_beta;
+	if(!fix_beta){
+		beta = max2/max1;
+		const int max_beta = 10;
+		if( beta > max_beta ) beta = max_beta;
+	}
 
 	vector < double > scaled_profile1 = profile1;
 
@@ -1012,7 +985,7 @@ int cross_corr( const vector< double >& x, const vector< double >& y, const vect
     return 0;
 }
 
-double least_square( const vector< double >& x, const vector< double >& y, double& beta )
+double least_square( const vector< double >& x, const vector< double >& y, double& beta, bool fix_beta /* = false */ )
 {
     assert( x.size() == y.size() );
     int n = x.size();
@@ -1022,9 +995,12 @@ double least_square( const vector< double >& x, const vector< double >& y, doubl
         numerator += x[i] * y[i];
         denom += x[i] * x[i];
     }
-    beta = numerator / denom;
-    const double beta_max = 2;
-    if (beta > beta_max ) beta = beta_max;
+
+    if(!fix_beta){
+	    beta = numerator / denom;
+	    const double beta_max = 2;
+	    if (beta > beta_max ) beta = beta_max;
+    }
     double rss = 0;
     for ( int i = 0; i < n; i++ ) {
         rss += ( y[i] - beta * x[i] ) * ( y[i] - beta * x[i] );
@@ -1033,7 +1009,7 @@ double least_square( const vector< double >& x, const vector< double >& y, doubl
     return rss;
 }
 
-double wted_least_square( const vector< double >& x, const vector< double >& y, double& beta, double on_thr )
+double wted_least_square( const vector< double >& x, const vector< double >& y, double& beta, double on_thr, bool fix_beta /* = false */ )
 {
 
 //we assume: x is predicted, y is observed
@@ -1070,8 +1046,10 @@ double wted_least_square( const vector< double >& x, const vector< double >& y, 
 	w_on = w_on / on_count;
 	w_off = w_off / off_count;
 
-    beta = ( w_off * off_xy + w_on * on_xy ) / ( w_off * off_x2 + w_on * on_x2 );
-    //beta = 1;
+    if(! fix_beta){
+	    beta = ( w_off * off_xy + w_on * on_xy ) / ( w_off * off_x2 + w_on * on_x2 );
+	    //beta = 1;
+	}
     double rss = 0;
     double rss_off = 0;
     double rss_on = 0;

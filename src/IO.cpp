@@ -132,13 +132,13 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 
 		if( ExprPredictor::objOption == SSE )
 		{
-			error_or_score = sqrt( least_square( targetExprs, observedExprs, beta ) / predictor.nConds() );
+			error_or_score = sqrt( least_square( targetExprs, observedExprs, beta , fix_beta) / predictor.nConds() );
 		}
         	if( ExprPredictor::objOption == PGP ){
-			error_or_score = pgp( targetExprs, observedExprs, beta );
+			error_or_score = pgp( targetExprs, observedExprs, beta, fix_beta );
 		}
         	if( ExprPredictor::objOption == CORR ){
-			error_or_score = corr( targetExprs, observedExprs, beta );
+			error_or_score = corr( targetExprs, observedExprs, beta, fix_beta );
         	}
 		if( ExprPredictor::objOption == CROSS_CORR ){
 			error_or_score = ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs );
