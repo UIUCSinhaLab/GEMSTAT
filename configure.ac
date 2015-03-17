@@ -35,7 +35,7 @@ AC_PROG_CXX
 AC_LANG(C++)
 
 # Checks for libraries.
-AX_PATH_GSL([1.14], [], [AC_MSG_ERROR(Could not find the required version of GSL)])
+AX_PATH_GSL([1.13], [], [AC_MSG_ERROR(Could not find the required version of GSL)])
 
 # Order matters here.
 AC_CHECK_LIB([m], [cos])
