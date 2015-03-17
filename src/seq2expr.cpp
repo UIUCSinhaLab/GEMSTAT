@@ -430,7 +430,7 @@ int main( int argc, char* argv[] )
     #ifdef BETAOPTTOGETHER
     fix_beta = true;
     #endif
-    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, fix_beta);
+    writePredictions(outFile, *predictor, exprData, expr_condNames, seqNames, fix_beta);
     
     return 0;	
 }

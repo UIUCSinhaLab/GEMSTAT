@@ -1904,7 +1904,6 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
 }
 
 int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
-	cout << "CALLING OPTIMIZE BETA: " << par_model.betas << endl;
 	SiteVec unuzedSV = SiteVec();
 
 	for ( int i = 0; i < nSeqs(); i++ ){
@@ -1934,7 +1933,6 @@ int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
 		par_result.betas[i] = beta;
 		
 	}
-	cout << "ENDING OPTIMIZE BETA: " << par_result.betas << endl;
 }
 
 double gsl_obj_f( const gsl_vector* v, void* params )
