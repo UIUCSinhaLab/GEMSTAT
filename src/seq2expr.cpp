@@ -425,7 +425,12 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, ExprPredictor::nAlternations == 0);
+    //seqSites gets ignored in the predictor, so it is fine that this is a stale copy.
+    bool fix_beta = (ExprPredictor::nAlternations == 0);
+    #ifdef BETAOPTTOGETHER
+    fix_beta = true;
+    #endif
+    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, fix_beta);
     
     return 0;	
 }

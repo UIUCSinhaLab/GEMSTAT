@@ -8,6 +8,28 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_SRCDIR([src/seq2expr.cpp])
 AM_INIT_AUTOMAKE
 
+AC_ARG_ENABLE([debug],
+[  --enable-debug	Turn on debugging],
+[case "${enableval}" in
+yes) debug=true ;;
+no) debug=false ;;
+*) AC_MSG_ERROR([bad value ${enablevar} for --enable-debug]) ;;
+esac], [debug=false])
+AM_CONDITIONAL([DEBUG], [test x${debug} = xtrue])
+
+AC_ARG_WITH([beta-optimize],
+[  --with-beta-optimize	How to optimize beta, one of 'broken' (traditional), 'separate', 'together'],
+[case "${withval}" in
+broken) betaopt="broken" ;;
+separate) betaopt="separate" ;;
+together) betaopt="together" ;;
+*) AC_MSG_ERROR([bad value ${withvar} for --with-beta-optimize])  ;;
+esac], [betaopt="broken"])
+AM_CONDITIONAL([BETAOPTBROKEN], [test "x${betaopt}" = "xbroken"])
+AM_CONDITIONAL([BETAOPTSEPARATE], [test "x${betaopt}" = "xseparate"])
+AM_CONDITIONAL([BETAOPTTOGETHER], [test "x${betaopt}" = "xtogether"])
+
+
 # Checks for programs.
 AC_PROG_CXX
 AC_LANG(C++)
