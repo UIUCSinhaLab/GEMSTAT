@@ -1057,7 +1057,10 @@ int ExprPredictor::train( const ExprPar& par_init )
 	optimize_beta( par_model, obj_result );
 	#endif
     }
-	
+    
+    #ifdef BETAOPTBROKEN
+    optimize_beta( par_model, obj_result );
+    #endif
     // commit the parameters and the value of the objective function
     //par_model = par_result; 
     obj_model = obj_result;

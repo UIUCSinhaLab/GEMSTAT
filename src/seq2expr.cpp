@@ -445,11 +445,7 @@ int main( int argc, char* argv[] )
 
     // print the predictions
     //seqSites gets ignored in the predictor, so it is fine that this is a stale copy.
-    bool fix_beta = (ExprPredictor::nAlternations == 0);
-    #ifdef BETAOPTTOGETHER
-    fix_beta = true;
-    #endif
-    writePredictions(outFile, *predictor, exprData, expr_condNames, seqNames, fix_beta);
+    writePredictions(outFile, *predictor, exprData, expr_condNames, seqNames, true);
     
     return 0;	
 }
