@@ -30,6 +30,7 @@ Explanation of parameters:
 
 -f <factor_expr_file>: required, the expression data of the TFs. Must match the format of expr_file, and the order of TFs in motif_file. See data/factor_expr.tab. 
 
+Note that for ind version, cic profiles need to be on the third line of <factor_expr_file> file.
 -fo <output_file>: required, the output file, the predicted expression patterns of all sequences as well as the observed expression patterns (alternating, the first row is the observed and the second the predicted). 
 
 -o <model_option>: the sequence-to-expression model. Options are: Logistic, Direct (DirectInt model), ChrMod_Unlimited (SRR model with N_MA = inf), ChrMod_Limited (SRR model with finite N_MA). 
