@@ -465,12 +465,11 @@ int main( int argc, char* argv[] )
         par_out_stream.close();
     }
     cout << "Estimated values of parameters:" << endl;
-    ExprPar par = predictor->getPar();
     par.print( cout, motifNames, coopMat );
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, exprData, expr_condNames, seqSites, seqNames, true);
+    writePredictions(outFile, *predictor, exprData, expr_condNames, seqNames, true);
     
     
     //TODO: R_SEQ Either remove this feature or make it conditional.
