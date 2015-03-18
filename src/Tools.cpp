@@ -2,6 +2,9 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_statistics.h>
 
+#include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_complex_math.h>
+
 #include "Tools.h"
 
 const log_add_table table( -10.0, 0, 500 );       // global variable
