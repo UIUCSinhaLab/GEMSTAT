@@ -375,10 +375,10 @@ void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntM
     }
 
     for( int i = 0; i < energyThrFactors.size(); i++ ){
-    	cout << energyThrFactors[ i ] << "\t";
+    	os << energyThrFactors[ i ] << "\t";
     }
-    cout << endl << cic_att;
-    cout << endl;
+    os << endl << cic_att;
+    os << endl;
 
 }
 

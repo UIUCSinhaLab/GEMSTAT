@@ -435,6 +435,7 @@ int main( int argc, char* argv[] )
     ExprPar par = predictor->getPar();
     if( par_out_stream){
 	par.print( par_out_stream, motifNames, coopMat );
+	par_out_stream.close();
     }  
     //printing the par to stdout
     cout << "#BEGIN PAR" << endl;
