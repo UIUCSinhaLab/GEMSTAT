@@ -937,29 +937,24 @@ double std_dev( const vector< double >& x )
     return ret_result;
 }
 
-
-double corr( const vector< double >& x, const vector< double >& y, double& beta )
+double corr( const vector< double >& x, const vector< double >& y, double& beta , bool fix_beta /* = false */)
 {
 
-    //This learns a beta parameter for corr, but is otherwise the same as the other one
-    //The price of an additional stack frame every time this gets called is very small compared to the price of having repeat code and the associated maintainability problems.
-    double max_x = -DBL_MAX, max_y = -DBL_MAX;
-    for( int index = 0; index < x.size(); index++ )
-    {
-        if( x[ index ] > max_x )
-        {
-            max_x = x[ index ];
-        }
-        if( y[ index ] > max_y )
-        {
-            max_y = y[ index ];
-        }
-    }
-    beta = max_y / max_x;
-    
-    return corr( x, y);
-}
+	if(!fix_beta){
+	double max_x = -DBL_MAX, max_y = -DBL_MAX;
+	for( int index = 0; index < x.size(); index++ ){
+		if( x[ index ] > max_x ){
+			max_x = x[ index ];
+		}
+		if( y[ index ] > max_y ){
+			max_y = y[ index ];
+		}
+	}
+	beta = max_y / max_x;
+	}
 
+	return corr(x,y);
+}
 
 double corr( const vector< double >& x, const vector< double >& y )
 {
@@ -980,8 +975,7 @@ double corr( const vector< double >& x, const vector< double >& y )
     // variance of X and Y
     double sum_x = 0;
     double sum_y = 0;
-    for ( int s = 1; s <= n; s++ )
-    {
+    for ( int s = 1; s <= n; s++ ) {
         sum_x += ( X[s] - x_bar ) * ( X[s] - x_bar );
         sum_y += ( Y[s] - y_bar ) * ( Y[s] - y_bar );
     }
@@ -990,8 +984,7 @@ double corr( const vector< double >& x, const vector< double >& y )
 
     // covariance and correlation
     double sum = 0;
-    for ( int s = 1; s <= n ; s++ )
-    {
+    for ( int s = 1; s <= n ; s++ ) {
         sum += ( X[s] - x_bar ) * ( Y[s] - y_bar );
     }
     double cov_xy = sum / n;
@@ -1000,69 +993,66 @@ double corr( const vector< double >& x, const vector< double >& y )
     return corr_xy;
 }
 
-
-double pgp( const vector<double>& profile1, const vector<double>& profile2, double& beta )
+double pgp( const vector<double>& profile1, const vector<double>& profile2, double& beta , bool fix_beta /* = false */)
 {
-    double max2 = 0;
-    for ( int i = 0; i < profile2.size(); i++ )
-    {
-        if (profile2[i] > max2) max2 = profile2[i];
-    }
+	double max2 = 0;
+	for ( int i = 0; i < profile2.size(); i++ ) {
+		if (profile2[i] > max2) max2 = profile2[i];
+	}
+	
+	double max1 = 0;
+	for( int i = 0; i < profile1.size(); i++ ){
+		if( profile1[ i ] > max1 ) max1 = profile1[ i ];
+	}
 
-    double max1 = 0;
-    for( int i = 0; i < profile1.size(); i++ )
-    {
-        if( profile1[ i ] > max1 ) max1 = profile1[ i ];
-    }
+	if(!fix_beta){
+		beta = max2/max1;
+		const int max_beta = 10;
+		if( beta > max_beta ) beta = max_beta;
+	}
 
-    beta = max2/max1;
+	vector < double > scaled_profile1 = profile1;
 
-    vector < double > scaled_profile1 = profile1;
+	for( int i = 0; i < profile1.size(); i++ ){
+		scaled_profile1[ i ] *= beta;
+	}
 
-    for( int i = 0; i < profile1.size(); i++ )
-    {
-        scaled_profile1[ i ] *= beta;
-    }
+	double reward = 0;
+	double rewardnorm = 0;
+	for ( int i = 0; i < profile2.size(); i++ ) {
+		double p1 = scaled_profile1[i]; // prediction
+		double p2 = profile2[i]; // real
+		if (p1 > max2) p1 = max2;
+		double minp12 = p1;
+		if (p2 < minp12) minp12 = p2;
+		reward += p2*minp12;
+		//cout << "DEBUG: " << p2 << "\t" << p1 <<"\t" << max2 << "\t" << minp12 << "\t" << reward << endl;
+		rewardnorm += p2*p2;
+	}
+	//cout << "DEBUG 1: " << reward << "\t" << rewardnorm << endl;
+	if (rewardnorm > 1e-10) reward /= rewardnorm;
+	else reward = 0;
+	//cout << "DEBUG 2: " << reward << endl;
+	double penalty = 0;
+	double penaltynorm = 0;
+	for ( int i = 0; i < profile2.size(); i++ ) {
+		double p1 = scaled_profile1[i]; // prediction
+		double p2 = profile2[i]; // real
+		if (p1 > max2) p1 = max2;
+		double diff12 = p1 - p2;
+		if (diff12 < 0) diff12 = 0;
+		penalty += (max2-p2)*diff12;
+		penaltynorm += (max2-p2)*(max2-p2);
+	}
+	//cout << "DEBUG 3: " << penalty << "\t" << penaltynorm << endl;
+	if (penaltynorm > 1e-10) penalty /= penaltynorm;
+	else penalty = 0;
+	//cout << "DEBUG 4: " << penalty << endl;
 
-    double reward = 0;
-    double rewardnorm = 0;
-    for ( int i = 0; i < profile2.size(); i++ )
-    {
-        double p1 = scaled_profile1[i];           // prediction
-        double p2 = profile2[i];                  // real
-        if (p1 > max2) p1 = max2;
-        double minp12 = p1;
-        if (p2 < minp12) minp12 = p2;
-        reward += p2*minp12;
-        //cout << "DEBUG: " << p2 << "\t" << p1 <<"\t" << max2 << "\t" << minp12 << "\t" << reward << endl;
-        rewardnorm += p2*p2;
-    }
-    //cout << "DEBUG 1: " << reward << "\t" << rewardnorm << endl;
-    if (rewardnorm > 1e-10) reward /= rewardnorm;
-    else reward = 0;
-    //cout << "DEBUG 2: " << reward << endl;
-    double penalty = 0;
-    double penaltynorm = 0;
-    for ( int i = 0; i < profile2.size(); i++ )
-    {
-        double p1 = scaled_profile1[i];           // prediction
-        double p2 = profile2[i];                  // real
-        if (p1 > max2) p1 = max2;
-        double diff12 = p1 - p2;
-        if (diff12 < 0) diff12 = 0;
-        penalty += (max2-p2)*diff12;
-        penaltynorm += (max2-p2)*(max2-p2);
-    }
-    //cout << "DEBUG 3: " << penalty << "\t" << penaltynorm << endl;
-    if (penaltynorm > 1e-10) penalty /= penaltynorm;
-    else penalty = 0;
-    //cout << "DEBUG 4: " << penalty << endl;
-
-    double pgp = reward - penalty;
-    if (pgp < 0) pgp = 0;
-
-    assert(pgp >= 0 && pgp <= 1);
-    return (1-pgp);
+	double pgp = reward - penalty;
+	if (pgp < 0) pgp = 0;
+	assert(pgp >= 0 && pgp <= 1);
+	return (1-pgp);
 }
 
 
@@ -1126,33 +1116,30 @@ int cross_corr( const vector< double >& x, const vector< double >& y, const vect
     return 0;
 }
 
-
-double least_square( const vector< double >& x, const vector< double >& y, double& beta )
+double least_square( const vector< double >& x, const vector< double >& y, double& beta, bool fix_beta /* = false */ )
 {
-	cout << "in LS" << endl;
     assert( x.size() == y.size() );
     int n = x.size();
 
     double numerator = 0, denom = 0;
-    for ( int i = 0; i < n; i++ )
-    {
+    for ( int i = 0; i < n; i++ ) {
         numerator += x[i] * y[i];
         denom += x[i] * x[i];
     }
-    beta = numerator / denom;
-    beta = 1;
+
+    if(!fix_beta){
+	    beta = numerator / denom;
+    }
     double rss = 0;
     for ( int i = 0; i < n; i++ )
     {
         rss += ( y[i] - beta * x[i] ) * ( y[i] - beta * x[i] );
     }
 
-	cout << "out LS" << endl;
     return rss;
 }
 
-
-double wted_least_square( const vector< double >& x, const vector< double >& y, double& beta, double on_thr )
+double wted_least_square( const vector< double >& x, const vector< double >& y, double& beta, double on_thr, bool fix_beta /* = false */ )
 {
 
     //we assume: x is predicted, y is observed
@@ -1160,53 +1147,49 @@ double wted_least_square( const vector< double >& x, const vector< double >& y, 
     assert( x.size() == y.size() );
     int n = x.size();
 
-    double w_on = 0.5;
-    double w_off = 1 - w_on;
+	double w_on = 0.5;
+	double w_off = 1 - w_on;
 
-    double off_xy, on_xy, off_x2, on_x2;
-    off_xy = 0;
-    on_xy = 0;
-    off_x2 = 0;
-    on_x2 = 0;
+	double off_xy, on_xy, off_x2, on_x2;
+	off_xy = 0;
+	on_xy = 0;
+	off_x2 = 0;
+	on_x2 = 0;
+	
+	int off_count = 0;
+	int on_count;
+	for( int i = 0; i < n; i++ ){
+		
+		if( y[ i ] < on_thr ){
+			off_xy += x[ i ] * y[ i ];
+			off_x2 += x[ i ] * x[ i ];
+			off_count ++;
+		}
+		else{
+			on_xy += x[ i ] * y[ i ];
+			on_x2 += x[ i ] * x[ i ];
+		}
+		
+	}
+	on_count = n - off_count;
 
-    int off_count = 0;
-    int on_count;
-    for( int i = 0; i < n; i++ )
-    {
+	w_on = w_on / on_count;
+	w_off = w_off / off_count;
 
-        if( y[ i ] < on_thr )
-        {
-            off_xy += x[ i ] * y[ i ];
-            off_x2 += x[ i ] * x[ i ];
-            off_count ++;
-        }
-        else
-        {
-            on_xy += x[ i ] * y[ i ];
-            on_x2 += x[ i ] * x[ i ];
-        }
-
-    }
-    on_count = n - off_count;
-
-    w_on = w_on / on_count;
-    w_off = w_off / off_count;
-
-    beta = ( w_off * off_xy + w_on * on_xy ) / ( w_off * off_x2 + w_on * on_x2 );
-    //beta = 1;
+    if(! fix_beta){
+	    beta = ( w_off * off_xy + w_on * on_xy ) / ( w_off * off_x2 + w_on * on_x2 );
+	    //beta = 1;
+	}
     double rss = 0;
     double rss_off = 0;
     double rss_on = 0;
-    for ( int i = 0; i < n; i++ )
-    {
-        if( y[ i ] < on_thr )
-        {
-            rss_off += ( y[ i ] - beta * x[ i ] ) * ( y[ i ] - beta * x[ i ] );
-        }
-        else
-        {
-            rss_on += ( y[ i ] - beta * x[ i ] ) * ( y[ i ] - beta * x[ i ] );
-        }
+    for ( int i = 0; i < n; i++ ) {
+    	if( y[ i ] < on_thr ){
+		rss_off += ( y[ i ] - beta * x[ i ] ) * ( y[ i ] - beta * x[ i ] );
+	}    
+	else{
+		rss_on += ( y[ i ] - beta * x[ i ] ) * ( y[ i ] - beta * x[ i ] );
+	}
     }
     rss = w_off * rss_off + w_on * rss_on;
 
@@ -1357,10 +1340,7 @@ double infty_transform( double x, double a, double b )
     assert( !( x < a ) && !( x > b ) );
 
     // transformation
-    double y = ( x - a ) / ( b - a );
-    double z = log( y / ( 1.0 - y ) );
-
-    return z;
+    return GSL_REAL(gsl_complex_arcsin_real((x-a)/(b-a)))*M_2_PI;
 }
 
 
@@ -1369,13 +1349,11 @@ double inverse_infty_transform( double z, double a, double b )
     //if( a > b ){
     //cout <<  z << "\t" << a << "\t" << b << endl;
     //}
-    assert( a <= b );
-    assert( !(a > b) );
+    //assert( a <= b );
+    //assert( !(a > b) );
+    //TODO: Commenting makes patchign/merging easier, remove all of this after the merge
 
-    double y = exp( z ) / ( 1.0 + exp( z ) );
-    double x = a + y * ( b - a );
-
-    return x;
+    return (b-a)*gsl_sf_sin(z*M_PI_2) + a;
 }
 
 

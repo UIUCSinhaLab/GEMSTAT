@@ -101,7 +101,7 @@ int readAxisWeights(const string& filename, vector< int >& axis_start, vector< i
 	return 0;
 }
 
-int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, vector< SiteVec >& seqSites, vector< string >& seqNames, bool fix_beta /*= false*/){
+int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, vector< string >& seqNames, bool fix_beta /*= false*/){
 	// print the predictions
 	ofstream fout( filename.c_str() );
 	if ( !fout )
@@ -111,13 +111,14 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 	}
 
 	ExprPar par = predictor.getPar();
+	SiteVec unusedSV = SiteVec();//This is unused in the deeper prediction fuction, but is still required by the API. This makes that more explicit.
 
 	fout << "Rows\t" << expr_condNames << endl;
 
 	for ( int i = 0; i < predictor.nSeqs(); i++ )
     {
         vector< double > targetExprs;
-        predictor.predict( seqSites[i], predictor.seqs[i].size(), targetExprs, i );
+        predictor.predict( unusedSV, predictor.seqs[i].size(), targetExprs, i );
         vector< double > observedExprs = exprData.getRow( i );
 
         // error
@@ -132,13 +133,13 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 
 		if( ExprPredictor::objOption == SSE )
 		{
-			error_or_score = sqrt( least_square( targetExprs, observedExprs, beta ) / predictor.nConds() );
+			error_or_score = sqrt( least_square( targetExprs, observedExprs, beta , fix_beta) / predictor.nConds() );
 		}
         	if( ExprPredictor::objOption == PGP ){
-			error_or_score = pgp( targetExprs, observedExprs, beta );
+			error_or_score = pgp( targetExprs, observedExprs, beta, fix_beta );
 		}
         	if( ExprPredictor::objOption == CORR ){
-			error_or_score = corr( targetExprs, observedExprs, beta );
+			error_or_score = corr( targetExprs, observedExprs, beta, fix_beta );
         	}
 		if( ExprPredictor::objOption == CROSS_CORR ){
 			error_or_score = ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs );

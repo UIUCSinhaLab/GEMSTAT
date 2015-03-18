@@ -17,6 +17,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <limits>
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_matrix.h>
@@ -323,18 +324,18 @@ double median( const vector< double >& x );
 double std_dev( const vector< double >& x );
 
 // Pearson correlation of v1 and v2, they must have equal sizes
-double corr( const vector< double >& x, const vector< double >& y, double& beta );
+double corr( const vector< double >& x, const vector< double >& y, double& beta , bool fix_beta = false);
 double corr( const vector< double >& x, const vector< double >& y );
 
-// Cross correlation of two time series (vectors): x and y. The vector t stores the values of the time lag to be evaluted.
+// Cross correlation of two time series (vectors): x and y. The vector t stores the values of the time lag to be evaluted. 
 int cross_corr( const vector< double >& x, const vector< double >& y, const vector< int >& lag, vector< double >& cov, vector< double >& corr );
 
-// pgp of v1 and v2. they must have equal sizes
-double pgp ( const vector< double >& x, const vector< double >& y, double& beta );
+// pgp of v1 and v2. they must have equal sizes 
+double pgp ( const vector< double >& x, const vector< double >& y, double& beta , bool fix_beta = false);
 
 // least-square fit of two vectors: beta - coefficient, return RSS
-double least_square( const vector< double >& x, const vector< double >& y, double& beta );
-double wted_least_square( const vector< double >& x, const vector< double >& y, double& beta, double on_thr );
+double least_square( const vector< double >& x, const vector< double >& y, double& beta , bool fix_beta = false);
+double wted_least_square( const vector< double >& x, const vector< double >& y, double& beta, double on_thr , bool fix_beta = false);
 
 // check if a vector of real numbers is probablity mass function
 bool isPmf( const vector< double > &p );
