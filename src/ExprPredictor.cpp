@@ -1276,10 +1276,20 @@ int ExprPredictor::train( const ExprPar& par_init )
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
         par_model.adjust( coopMat );
+	#ifdef BETAOPTSEPARATE
+        optimize_beta( par_model, obj_result );
+        #endif
         gradient_minimize( par_result, obj_result );
         par_model = par_result;
         par_model.adjust( coopMat);
+	#ifdef BETAOPTSEPARATE
+        optimize_beta( par_model, obj_result );
+        #endif
     }
+
+    #ifdef BETAOPTBROKEN
+    optimize_beta( par_model, obj_result );
+    #endif
 
     // commit the parameters and the value of the objective function
     par_model = par_result;
@@ -2187,6 +2197,37 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     return 0;
 }
 
+int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
+        SiteVec unuzedSV = SiteVec();
+
+        for ( int i = 0; i < nSeqs(); i++ ){
+                vector< double > targetExprs;
+                vector< double > observedExprs = exprData.getRow( i );
+
+                predict( unuzedSV, seqs[i].size(), targetExprs, i );
+
+                double beta = par_model.betas[ i ];
+                double error_or_score;
+
+                if( ExprPredictor::objOption == SSE )
+                {
+                        error_or_score = sqrt( least_square( targetExprs, observedExprs, beta , false) / nConds() );
+                }
+                if( ExprPredictor::objOption == PGP ){
+                        error_or_score = pgp( targetExprs, observedExprs, beta, false );
+                }
+                if( ExprPredictor::objOption == CORR ){
+                        error_or_score = corr( targetExprs, observedExprs, beta, false);
+                }
+                if( ExprPredictor::objOption == CROSS_CORR ){
+                        error_or_score = ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs );
+                }
+
+                //TODO: Check for the appropriate indicator value to see if this beta is an optimization parameter or not.
+                par_result.betas[i] = beta;
+
+        }
+}
 
 double gsl_obj_f( const gsl_vector* v, void* params )
 {

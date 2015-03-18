@@ -419,6 +419,7 @@ class ExprPredictor
                                                   // gradient: BFGS or conjugate gradient
         int gradient_minimize( ExprPar& par_result, double& obj_result );
         //  	int SA_minimize( ExprPar& par_result, double& obj_result ) const;	// simulated annealing
+	int optimize_beta( ExprPar& par_result, double& obj_result); // find the current best beta with one-step otimization.
 };
 
 // the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize
