@@ -37,6 +37,8 @@ int main( int argc, char* argv[] )
     string dnase_file;
     string factor_thr_file;
     string dperk_file;
+    string par_out_file; // the learned parameters will get stored here
+    ofstream par_out_stream; // Uninitialized at first.
     double coopDistThr = 50;
     double factorIntSigma = 50.0;   // sigma parameter for the Gaussian interaction function
     double repressionDistThr = 250;
@@ -106,6 +108,8 @@ int main( int argc, char* argv[] )
 		initialSeed = atol( argv[++i] );
 	else if ( !strcmp( "-dp", argv[ i ]))
 		dperk_file = argv[ ++i ];
+	else if ( !strcmp("-po", argv[ i ]))
+		par_out_file = argv[ ++i ]; //output file for pars at the end
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_UNLIMITED || ExprPredictor::modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( ExprPredictor::modelOption == QUENCHING && repressionFile.empty() ) ) {
@@ -373,6 +377,14 @@ int main( int argc, char* argv[] )
         }
     }
 
+    //Check that we can access and write to the par outfile now, so that we can warn the user before a lot of time was spent on the optimization
+    if( !par_out_file.empty() ){
+	par_out_stream.open( par_out_file.c_str() );
+	if( ! par_out_stream ){
+		cerr << "Cannot open the parameter output file " << par_out_file << " for writing." << endl;
+		exit(1);
+	}
+    }
     // CHECK POINT
 //     cout << "Sequences:" << endl;
 //     for ( int i = 0; i < seqs.size(); i++ ) cout << seqNames[i] << endl << seqs[i] << endl;
@@ -421,7 +433,13 @@ int main( int argc, char* argv[] )
 
     // print the training results
     ExprPar par = predictor->getPar();
+    if( par_out_stream){
+	par.print( par_out_stream, motifNames, coopMat );
+    }  
+    //printing the par to stdout
+    cout << "#BEGIN PAR" << endl;
     par.print( cout, motifNames, coopMat );
+    cout << "#END PAR" << endl;
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
