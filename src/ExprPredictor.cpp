@@ -463,9 +463,9 @@ void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntM
 
     for( int i = 0; i < energyThrFactors.size(); i++ )
     {
-        cout << energyThrFactors[ i ] << "\t";
+        os << energyThrFactors[ i ] << "\t";
     }
-    cout << endl;
+    os << endl;
 
 }
 
