@@ -363,6 +363,7 @@ int main( int argc, char* argv[] )
     num_indicators += nSeqs; //for the pi parameters
     num_indicators += nSeqs; //for the beta pars per seqs
     num_indicators += nFactors; //for the energyThrFactors
+    num_indicators += 1; //for cic_att, duh!
 
     vector <bool> indicator_bool(num_indicators, true);
     if( !free_fix_indicator_filename.empty() )
