@@ -424,8 +424,8 @@ void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, con
 
 void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const
 {
-    os.setf( ios::fixed );
-    os.precision( 50 );
+//    os.setf( ios::fixed );
+//    os.precision( 50 );
 
     // print the factor information
     for ( int i = 0; i < nFactors(); i++ )
