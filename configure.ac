@@ -34,4 +34,11 @@ AC_CHECK_FUNCS([floor pow sqrt strchr])
 
 AC_CONFIG_FILES([Makefile
 		 src/Makefile])
+
+# Setup the test suite.
+AC_CONFIG_TESTDIR(tests)
+AC_CONFIG_FILES([tests/Makefile tests/atlocal])
+AC_CONFIG_FILES([tests/testexec], [chmod +x tests/testexec])
+AM_MISSING_PROG([AUTOM4TE], [autom4te])
+
 AC_OUTPUT
