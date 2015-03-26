@@ -6,8 +6,7 @@ AT_BANNER([[Demo Test.]])
 #test1
 AT_SETUP([First Test])
 
-AT_CHECK([echo foobar], [1], [],
-[[foobar
-]])
+AT_CHECK([echo foobar], [0], [[foobar
+]],[[]])
 
 AT_CLEANUP
