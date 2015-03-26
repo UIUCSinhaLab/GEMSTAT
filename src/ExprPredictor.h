@@ -224,8 +224,6 @@ class ExprFunc
 
         // predict the expression value of a given sequence (its site representation, sorted by the start positions) under given TF concentrations
         double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, int TFid );
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, std::ofstream& fout );
         const ExprPar& getPar() const { return par; }
 
         static ModelType modelOption;             // model option
@@ -372,7 +370,7 @@ class ExprPredictor
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
         const vector< int >& seqLengths;          // lengths of all sequences
         //TODO: R_SEQ Either remove this dead feature or revive it and make it conditional.
-	const vector <SiteVec>& r_seqSites;
+        const vector <SiteVec>& r_seqSites;
         const vector< int >& r_seqLengths;        // lengths of all sequences
         const Matrix& exprData;                   // expressions of the corresponding sequences across multiple conditions
         const vector< Motif >& motifs;            // TF binding motifs

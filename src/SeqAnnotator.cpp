@@ -114,6 +114,15 @@ Sequence Sequence::compRevCompl() const
     return Sequence( *this, 0, size(), false );
 }
 
+const string Sequence::getName() const
+{
+    return name;
+}
+
+void Sequence::setName(const string iname)
+{
+    name = iname;
+}
 
 void Sequence::getNtCounts( vector< int >& counts ) const
 {
@@ -208,6 +217,7 @@ int readSequences( const string& file, vector< Sequence >& seqs, vector< string 
                 string name;
                 ss >> name;
                 names.push_back( name );
+                seq.setName( string(name) );
             }
             else
             {

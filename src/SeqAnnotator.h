@@ -45,7 +45,7 @@ class Sequence
         Sequence( const vector< int >& _nts ) : nts( _nts ) {}
         Sequence( const string& str );
         Sequence( const Sequence& other, int start, int length, bool strand = true );
-        void copy( const Sequence& other ) { nts = other.nts; }
+        void copy( const Sequence& other ) { name = other.name ; nts = other.nts; }
         Sequence( const Sequence& other ) { copy( other ); }
 
         // assignment
@@ -89,9 +89,13 @@ class Sequence
         int load( const string& file, string& name, int format = FASTA );
         int load( const string& file, int format = FASTA );
 
+        const string getName() const;
+        void setName(const string iname);
+
         // output
         friend ostream& operator<<( ostream& os, const Sequence& seq );
     private:
+        string name;
         vector< int > nts;                        // nts[ i ]: the i-th nt.
 };
 
