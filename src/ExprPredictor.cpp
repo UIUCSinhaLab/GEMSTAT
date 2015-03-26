@@ -1669,7 +1669,12 @@ double ExprPredictor::compRMSE( const ExprPar& par )
             observedExprs.push_back( observed );
         }
         double beta;
+	#ifdef BETAOPTTOGETHER
+	beta = par.betas[i];
+        squaredErr += least_square( predictedExprs, observedExprs, beta, true );
+	#else
         squaredErr += least_square( predictedExprs, observedExprs, beta );
+	#endif
 	//(func -> getPar()).betas[ i ] = beta;
     }
 
@@ -1739,6 +1744,7 @@ double ExprPredictor::compAvgCorr( const ExprPar& par )
             double observed = exprData( i, j );
             observedExprs.push_back( observed );
         }
+	//BETAOPTOGETHER has no meaning for correlation
         totalSim += corr( predictedExprs, observedExprs );
         //         cout << "Sequence " << i << "\t" << corr( predictedExprs, observedExprs ) << endl;
     }
@@ -1784,7 +1790,12 @@ double ExprPredictor::compPGP( const ExprPar& par )
             observedExprs.push_back( observed );
         }
         double beta;
-        totalSim += pgp( predictedExprs, observedExprs, beta );
+	#ifdef BETAOPTTOGETHER
+	beta = par.betas[i];
+        totalSim += pgp( predictedExprs, observedExprs, beta, true);
+	#else
+	totalSim += pgp( predictedExprs, observedExprs, beta );
+	#endif
     }
     delete func;
     return totalSim / nSeqs();
