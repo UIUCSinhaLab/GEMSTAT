@@ -101,7 +101,7 @@ int readAxisWeights(const string& filename, vector< int >& axis_start, vector< i
 	return 0;
 }
 
-int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, vector< string >& seqNames, bool fix_beta /*= false*/){
+int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, bool fix_beta /*= false*/){
 	// print the predictions
 	ofstream fout( filename.c_str() );
 	if ( !fout )
@@ -124,8 +124,8 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
         // error
         // print the results
 	// observations
-        fout << seqNames[i] << "\t" << observedExprs << endl;
-        fout << seqNames[i];
+        fout << predictor.seqs[i].getName() << "\t" << observedExprs << endl;
+        fout << predictor.seqs[i].getName();
 
         double beta = par.betas[ i ];
         
@@ -162,7 +162,7 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
         }*/
 
         // print the agreement bewtween predictions and observations
-        cout << seqNames[i] << "\t" << beta << "\t" << error_or_score << endl;
+        cout << predictor.seqs[i].getName() << "\t" << beta << "\t" << error_or_score << endl;
     }	
 
 	return 0;

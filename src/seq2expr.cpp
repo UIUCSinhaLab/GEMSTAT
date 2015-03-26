@@ -446,7 +446,7 @@ int main( int argc, char* argv[] )
 
     // print the predictions
     //seqSites gets ignored in the predictor, so it is fine that this is a stale copy.
-    writePredictions(outFile, *predictor, exprData, expr_condNames, seqNames, true);
+    writePredictions(outFile, *predictor, exprData, expr_condNames, true);
     
     return 0;	
 }
