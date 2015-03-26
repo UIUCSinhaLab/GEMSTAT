@@ -1,3 +1,4 @@
 # @configure_input@					-*- shell-script -*-
 # Configurable variable values for Bison test suite.
 # Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
+PACKAGE_VERSION=@PACKAGE_VERSION@

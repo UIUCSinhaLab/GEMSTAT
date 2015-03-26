@@ -1,0 +1,31 @@
+
+#Test that it can do basic learning of a very simplified input
+AT_SETUP([Simple learning base version])
+#This test is only appropriate for the 1.1 branch
+AT_SKIP_IF([test "x${PACKAGE_VERSION}" != "x1.1"])
+AT_DATA([seqs.fa],[>test
+AAAAAAAATGGT
+])
+
+AT_DATA([expr.tab],[ROWS	1	2
+test	1.0	0.1
+])
+
+AT_DATA([factors.wtmx],[[>foo	4	1.0
+10	0	0	0
+10	0	0	0
+10	0	0	0
+10	0	0	0
+<
+]])
+
+AT_DATA([factor_expr.tab],[[Rows	1	2
+foo	1.0	0.0
+]])
+
+AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -na 1 -fo 1.out -po 1.par > /dev/null 2>/dev/null ; cat 1.out], [0], [[Rows	1	2
+test	1	0.1
+test	1	0.1
+]])
+
+AT_CLEANUP
