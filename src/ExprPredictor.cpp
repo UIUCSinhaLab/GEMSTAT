@@ -1292,7 +1292,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     #endif
 
     // commit the parameters and the value of the objective function
-    par_model = par_result;
+    //par_model = par_result;
     obj_model = obj_result;
 
     return 0;

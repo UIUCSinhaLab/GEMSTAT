@@ -1340,7 +1340,8 @@ double infty_transform( double x, double a, double b )
     // assert x \in [a,b]
     // assert( x >= a && x <= b );
     //cout << x << "\t" << a << "\t" << b << endl;
-    assert( !( x < a ) && !( x > b ) );
+    //assert( !( x < a ) && !( x > b ) );
+    assert(a <= b);
 
     // transformation
     return GSL_REAL(gsl_complex_arcsin_real((x-a)/(b-a)))*M_2_PI;
