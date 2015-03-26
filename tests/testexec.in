@@ -1,0 +1,5 @@
+#! @SHELL@
+# @configure_input@
+# Wraps seq2expr to ensure we use the one we compiled, not something somewhere else on the path
+
+exec '@abs_top_builddir@/src/'"${1}" ${2+"$@"}

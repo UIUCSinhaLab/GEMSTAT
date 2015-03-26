@@ -1,12 +1,11 @@
 
 AT_INIT
 
-AT_BANNER([[Demo Test.]])
+AT_BANNER([[Basic Tests]])
 
-#test1
-AT_SETUP([First Test])
+#test the the program executes
+AT_SETUP([Program Executes])
 
-AT_CHECK([echo foobar], [0], [[foobar
-]],[[]])
+AT_CHECK([testexec seq2expr > /dev/null 2> /dev/null ], [1])
 
 AT_CLEANUP
