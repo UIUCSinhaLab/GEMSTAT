@@ -421,6 +421,8 @@ int main( int argc, char* argv[] )
             exit( 1 );
         } 
     }
+    //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor the
+    par_init.energyThrFactors = energyThrFactors;
 
     // random number generator
 	gsl_rng* rng;
