@@ -18,6 +18,7 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
      
 EXTRA_DIST = testsuite.at $(srcdir)/package.m4 $(TESTSUITE) atlocal.in
 TESTSUITE = $(srcdir)/testsuite
+MAINTAINERCLEANFILES = $(TESTSUITE) atconfig atlocal
 
 check-local: atconfig atlocal $(TESTSUITE)
 	$(SHELL) '$(TESTSUITE)' $(TESTSUITEFLAGS)
