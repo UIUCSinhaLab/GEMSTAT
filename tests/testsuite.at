@@ -8,6 +8,10 @@ AT_SETUP([Program Executes and fails with no input])
 AT_CHECK([testexec seq2expr > /dev/null 2> /dev/null ], [1])
 AT_CLEANUP
 
-m4_include([basic11.at])
+m4_define([version_tests],m4_cond([AT_PACKAGE_VERSION],[1.1],
+[basic11.at],
+[AT_PACKAGE_VERSION],[1.2],
+[basic12.at],
+[]))
 
-m4_include([basic12.at])
+m4_include(version_tests)

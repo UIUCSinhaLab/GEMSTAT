@@ -1,8 +1,7 @@
 
 #Test that it can do basic learning of a very simplified input
 AT_SETUP([Simple learning IND version])
-#This test is only appropriate for the 1.1 branch
-AT_SKIP_IF([test "x${PACKAGE_VERSION}" != "x1.2"])
+
 AT_DATA([seqs.fa],[>test
 AAAAAAAATGGT
 ])
