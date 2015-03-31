@@ -370,12 +370,14 @@ int main( int argc, char* argv[] )
     {
     	indicator_bool.clear();
         ifstream free_fix_indicator_file ( free_fix_indicator_filename.c_str() );
-		while( !free_fix_indicator_file.eof( ) ){
-            int indicator_var;
-            free_fix_indicator_file >> indicator_var;
-            assert ( indicator_var == 0 || indicator_var == 1 );
-            indicator_bool.push_back( indicator_var );
-        }
+	int indicator_var = -1;
+	while( free_fix_indicator_file >> indicator_var)
+	{
+		assert ( indicator_var == 0 || indicator_var == 1 );
+		indicator_bool.push_back( indicator_var );
+		indicator_var = -1;
+	}
+	ASSERT_MESSAGE(indicator_bool.size() == num_indicators,"If you use the free_fix file, you must provide the correct number of parameters\n");
     }
 
     //Check that we can access and write to the par outfile now, so that we can warn the user before a lot of time was spent on the optimization
