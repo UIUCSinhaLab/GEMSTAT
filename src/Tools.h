@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <limits>
+#include <numeric>
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_matrix.h>
