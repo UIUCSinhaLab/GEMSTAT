@@ -379,6 +379,26 @@ int main( int argc, char* argv[] )
 	ASSERT_MESSAGE(indicator_bool.size() == num_indicators,"If you use the free_fix file, you must provide the correct number of parameters\n");
     }
 
+    // read the initial parameter values
+    ExprPar par_init( nFactors, nSeqs );
+    if ( !parFile.empty() ){
+        rval = par_init.load( parFile, num_of_coop_pairs );
+        if ( rval == RET_ERROR ){
+            cerr << "Cannot read parameters from " << parFile << endl;
+            exit( 1 );
+        }
+    }
+    //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor the
+    par_init.energyThrFactors = energyThrFactors;
+   
+    //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read. 
+    vector < double > all_pars_for_test;
+    par_init.getFreePars(all_pars_for_test, coopMat, actIndicators, repIndicators);
+    ASSERT_MESSAGE(all_pars_for_test.size() == indicator_bool.size(), "For some reason, the number of entries in free_fix did not match the number of free parameters.\n"
+		  "Remember that whatever model, there are 3 parameters for every transcription factor\n"); 
+    all_pars_for_test.clear();//Won't be used again.
+    //It is possible that the user wants to write out to the same par file, doing this after reading the par file means we won't have overridden it before reading
+    
     //Check that we can access and write to the par outfile now, so that we can warn the user before a lot of time was spent on the optimization
     if( !par_out_file.empty() ){
         par_out_stream.open( par_out_file.c_str() );
@@ -436,19 +456,6 @@ int main( int argc, char* argv[] )
         cerr << "Interaction Function is invalid " << endl; exit( 1 );
     }
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, intFunc, coopMat, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
-    // read the initial parameter values
-    ExprPar par_init( nFactors, nSeqs );
-    if ( !parFile.empty() )
-    {
-        rval = par_init.load( parFile, num_of_coop_pairs );
-        if ( rval == RET_ERROR )
-        {
-            cerr << "Cannot read parameters from " << parFile << endl;
-            exit( 1 );
-        }
-    }
-    //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor the
-    par_init.energyThrFactors = energyThrFactors;
     
     // random number generator
     gsl_rng* rng;
