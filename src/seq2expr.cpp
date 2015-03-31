@@ -358,7 +358,7 @@ int main( int argc, char* argv[] )
 	
 	//read the free fix indicator information
 	int num_indicators = 0;
-	num_indicators += 3*nFactors; //for binding weights, and both transcriptional effects
+	num_indicators += nFactors + sum(actIndicators) + sum(repIndicators); //for binding weights, and both transcriptional effects
 	num_indicators += ExprPredictor::one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
 	num_indicators += nSeqs; //for the pi parameters
 	num_indicators += nSeqs; //for the beta pars per seqs

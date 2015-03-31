@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <limits>
+#include <numeric>
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_matrix.h>
@@ -256,15 +257,17 @@ vector< double > inverse_weight_transform( const vector< double > u );		// u -> 
 void numeric_deriv( gsl_vector* grad, double (*f)( const gsl_vector*, void* ), const gsl_vector* v, void* params, double step );
 
 // sum
-template< class T >
-inline T sum( const vector< T >& v )
-{
-    T result = 0;
-    for ( int i = 0; i < v.size(); i++ ) 
-        result += v[ i ];
-            
-    return result;	
-}
+#define sum( v ) std::accumulate(v.begin(),v.end(),0)
+/*{
+	cerr << "SUM WAS CALLED: " << v << endl;
+	T accumulator = (T)0;
+	for(int iter_i = 0; iter_i < v.size(); iter_i++){
+		accumulator = accumulator + v.at(iter_i);
+		cerr << "acc : " << accumulator << endl;
+	}
+	cerr << "SUM will return " << accumulator << endl;
+	return accumulator;
+}*/
 
 // max and min
 double max( const vector< double >& v, int &arg );
