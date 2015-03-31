@@ -357,10 +357,11 @@ int main( int argc, char* argv[] )
 
     //read the free fix indicator information
     int num_indicators = 0;
-    num_indicators += nFactors + num_of_coop_pairs + nFactors; //for binding weights, coop pairs and transcriptional effects
+    num_indicators += 3*nFactors; //for binding weights, and both transcriptional effects
     num_indicators += ExprPredictor::one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
     num_indicators += nSeqs; //for the pi parameters
     num_indicators += nSeqs; //for the beta pars per seqs
+    num_indicators += num_of_coop_pairs; //For cooperative pairs cooperativities
     num_indicators += nFactors; //for the energyThrFactors
 
     vector <bool> indicator_bool(num_indicators, true);
