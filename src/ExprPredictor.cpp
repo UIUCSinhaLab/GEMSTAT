@@ -1936,6 +1936,7 @@ int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
 		par_result.betas[i] = beta;
 		
 	}
+	obj_result = objFunc( par_result );
 }
 
 double gsl_obj_f( const gsl_vector* v, void* params )
