@@ -39,6 +39,7 @@ int main( int argc, char* argv[] )
     double factorIntSigma = 50.0;                 // sigma parameter for the Gaussian interaction function
     double repressionDistThr = 250;
     int maxContact = 1;
+    bool read_factor_thresh = false;
     double eTF = 0.60;
     unsigned long initialSeed = time(0);
     
@@ -96,8 +97,10 @@ int main( int argc, char* argv[] )
             ExprPar::one_qbtm_per_crm = true;
             ExprFunc::one_qbtm_per_crm = true;
         }
-        else if ( !strcmp( "-et", argv[i] ) )
+        else if ( !strcmp( "-et", argv[i] ) ){
             eTF = atof( argv[ ++i ] );
+	    read_factor_thresh = true;
+	}
         else if ( !strcmp( "-df", argv[ i ]))
             dnase_file = argv[ ++i ];
         else if ( !strcmp( "-ft", argv[ i ]))
@@ -200,10 +203,12 @@ int main( int argc, char* argv[] )
     {
 	int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
 	ASSERT_MESSAGE( 0==readFactorRet , "Difficulty opening the factor_thr_input file.");
+	read_factor_thresh = true;
     }
 
     // site representation of the sequences
-
+    // TODO: Should this code be removed? If we are using this code, and no command-line option was provided for energyThrFactors, but a .par file was provided, shouldn't it use the thresholds learned there? (So, shouldn't it happen after reading the par file?)
+    // TODO: Relates to issue #19
     vector< SiteVec > seqSites( nSeqs );
     vector< int > seqLengths( nSeqs );
     SeqAnnotator ann( motifs, energyThrFactors );
@@ -390,8 +395,8 @@ int main( int argc, char* argv[] )
             exit( 1 );
         }
     }
-    //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor the
-    par_init.energyThrFactors = energyThrFactors;
+    //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
+    if( read_factor_thresh ){ par_init.energyThrFactors = energyThrFactors; }
    
     //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read. 
     vector < double > all_pars_for_test;
