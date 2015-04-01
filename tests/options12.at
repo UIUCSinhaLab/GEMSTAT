@@ -27,27 +27,27 @@ foo	1.0	0.0
 ]])
 
 AT_DATA([start.par],
-[[foo	1	0
-basal_transcription = -5
+[[foo	1	1	1
+basal_transcription = 0.1
 1e-50
 5
-0.6
+0.9
 ]])
 
 AT_DATA([dperk.tab],[[Rows      1       2
 dperk   1.0     1.0
 ]])
 
-AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -dp dperk.tab -par start.par -na 0 -fo 0.out -po 0.par >/dev/null 2>/dev/null ; tail -n2 0.par | head -n1 | sed 's/	*//g'], [0], [[0.6	
+AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -dp dperk.tab -p start.par -na 0 -fo 0.out -po 0.par >/dev/null 2>/dev/null ; tail -n2 0.par | head -n1 | sed 's/	*//g'], [0], [[0.9	
 ]])
 
-AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -dp dperk.tab -par start.par -et 0.757575 -na 0 -fo 1.out -po 1.par >/dev/null 2>/dev/null ; tail -n2 1.par | head -n1 | sed 's/	*//g'], [0], [[0.757575	
+AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -dp dperk.tab -p start.par -et 0.757575 -na 0 -fo 1.out -po 1.par >/dev/null 2>/dev/null ; tail -n2 1.par | head -n1 | sed 's/	*//g'], [0], [[0.757575	
 ]])
 
 AT_DATA([fact_tr.txt],[[0.88
 ]])
 
-AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -dp dperk.tab -par start.par -et 0.757575 -ft fact_tr.txt -na 0 -fo 2.out -po 2.par >/dev/null 2>/dev/null ; tail -n2 2.par | head -n1 | sed 's/	*//g'], [0], [[0.88	
+AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -dp dperk.tab -p start.par -et 0.757575 -ft fact_tr.txt -na 0 -fo 2.out -po 2.par >/dev/null 2>/dev/null ; tail -n2 2.par | head -n1 | sed 's/	*//g'], [0], [[0.88	
 ]])
 
 AT_CLEANUP
