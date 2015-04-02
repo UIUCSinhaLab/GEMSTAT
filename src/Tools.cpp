@@ -887,8 +887,6 @@ double pgp( const vector<double>& profile1, const vector<double>& profile2, doub
 
 	if(!fix_beta){
 		beta = max2/max1;
-		const int max_beta = 10;
-		if( beta > max_beta ) beta = max_beta;
 	}
 
 	vector < double > scaled_profile1 = profile1;
@@ -1001,8 +999,6 @@ double least_square( const vector< double >& x, const vector< double >& y, doubl
 
     if(!fix_beta){
 	    beta = numerator / denom;
-	    const double beta_max = 2;
-	    if (beta > beta_max ) beta = beta_max;
     }
     double rss = 0;
     for ( int i = 0; i < n; i++ ) {
