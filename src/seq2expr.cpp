@@ -26,7 +26,7 @@
 #include "Utils.h"
 #include "IO.h"
 
-#include "ExprPredictor.h"
+#include "INDExprPredictor.h"
 
 
 int main( int argc, char* argv[] ) 

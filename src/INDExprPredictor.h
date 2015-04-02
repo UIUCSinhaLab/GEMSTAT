@@ -2,8 +2,7 @@
 #define EXPR_PREDICTOR_H
 
 #include "SeqAnnotator.h"
-enum ModelType
-{
+enum ModelType {
     LOGISTIC,                                     // logistic regression
     DIRECT,                                       // direct interaction between TF and BTM, repressor works through BTM
     QUENCHING,                                    // repressor stops activator from interacting with BTM
@@ -14,16 +13,14 @@ enum ModelType
 ModelType getModelOption( const string& modelOptionStr );
 string getModelOptionStr( ModelType modelOption );
 
-enum FactorIntType
-{
+enum FactorIntType {
     BINARY,                                       // Binary model of interaction
     GAUSSIAN                                      // Gaussian model of interaction
 };
 
 string getIntOptionStr( FactorIntType intOption );
 
-enum ObjType
-{
+enum ObjType {
     SSE,                                          // sum of squared error
     CORR,                                         // Pearson correlation
     CROSS_CORR,                                   // cross correlation (maximum in a range of shifts)
@@ -33,21 +30,19 @@ enum ObjType
 ObjType getObjOption( const string& objOptionStr );
 string getObjOptionStr( ObjType objOption );
 
-enum SearchType
-{
+enum SearchType {
     UNCONSTRAINED,                                // unconstrained search
     CONSTRAINED                                   // constrained search
 };
 
 string getSearchOptionStr( SearchType searchOption );
 /*****************************************************
- * Factor-Factor Interactions
- ******************************************************/
+* Factor-Factor Interactions
+******************************************************/
 
 /* FactorIntFunc class: distance-dependent function of TF-TF interaction  */
-class FactorIntFunc
-{
-    public:
+class FactorIntFunc {
+public:
         // compute the factor interaction, given the normal interaction (when they are close enough)
         virtual double compFactorInt( double normalInt, double dist, bool orientation ) const = 0;
 
@@ -56,9 +51,8 @@ class FactorIntFunc
 };
 
 /* FactorIntFuncBinary class: binary distance function */
-class FactorIntFuncBinary : public FactorIntFunc
-{
-    public:
+class FactorIntFuncBinary : public FactorIntFunc {
+public:
         // constructors
         FactorIntFuncBinary( double _distThr, double _orientationEffect = 1.0 ) : distThr( _distThr ), orientationEffect( _orientationEffect ) { assert( distThr > 0 ); }
 
@@ -66,22 +60,19 @@ class FactorIntFuncBinary : public FactorIntFunc
         double compFactorInt( double normalInt, double dist, bool orientation ) const;
 
         // the maximum distance beyond which there is no interaction
-        double getMaxDist() const
-        {
+    double getMaxDist() const {
             return distThr;
         }
-    private:
+private:
         double distThr;                           // if distance < thr, the "normal" value; otherwise 1 (no interaction)
         double orientationEffect;                 // the effect of orientation: if at different strands, the effect should be multiplied this value
 };
 
 /* FactorIntFuncGaussian class: Gaussian distance function*/
-class FactorIntFuncGaussian : public FactorIntFunc
-{
-    public:
+class FactorIntFuncGaussian : public FactorIntFunc {
+public: 
         // constructors
-        FactorIntFuncGaussian( double _distThr, double _sigma ) : distThr( _distThr ), sigma( _sigma )
-        {
+    FactorIntFuncGaussian( double _distThr, double _sigma ) : distThr( _distThr ), sigma( _sigma ) {
             assert( distThr > 0 && sigma > 0 );
         }
 
@@ -89,19 +80,17 @@ class FactorIntFuncGaussian : public FactorIntFunc
         double compFactorInt( double normalInt, double dist, bool orientation ) const;
 
         // the maximum distance beyone which there is no interaction
-        double getMaxDist() const
-        {
+    double getMaxDist() const {
             return distThr;
         }
-    private:
+private: 
         double distThr;                           // no interaction if distance is greater than thr.
         double sigma;                             // standard deviation of
 };
 
 /* FactorIntFuncGeometric class: distance function decays geometrically (but never less than 1) */
-class FactorIntFuncGeometric : public FactorIntFunc
-{
-    public:
+class FactorIntFuncGeometric : public FactorIntFunc {
+public:
         // constructors
         FactorIntFuncGeometric( double _distThr, double _spacingEffect, double _orientationEffect ) : distThr( _distThr ), spacingEffect( _spacingEffect ), orientationEffect( _orientationEffect ) { assert( distThr > 0 ); }
 
@@ -109,31 +98,28 @@ class FactorIntFuncGeometric : public FactorIntFunc
         double compFactorInt( double normalInt, double dist, bool orientation ) const;
 
         // the maximum distance beyond which there is no interaction
-        double getMaxDist() const
-        {
+    double getMaxDist() const {
             return distThr;
         }
-    private:
+private:
         double distThr;                           // if distance < thr, the "normal" value; otherwise decay with distance (by parameter spacingEffect)
         double spacingEffect;                     // the effect of spacing
         double orientationEffect;                 // the effect of orientation: if at different strands, the effect should be multiplied this value
 };
 
 /*****************************************************
- * Expression Model and Parameters
- ******************************************************/
+* Expression Model and Parameters
+******************************************************/
 
 /* ExprPar class: the parameters of the expression model */
-class ExprPar
-{
-    public:
+class ExprPar {
+public:
         // constructors
         ExprPar() : factorIntMat() {}
         ExprPar( int _nFactors, int _nSeqs );     // default values of parameters
-        ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors );
-                                                  // construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
-        ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );
-        void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis, betas = other.betas, energyThrFactors = other.energyThrFactors, nSeqs = basalTxps.size();  }
+    ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors, double _cic_att );
+    ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );	// construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
+    void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis; betas = other.betas; energyThrFactors = other.energyThrFactors; cic_att = other.cic_att; nSeqs = basalTxps.size();  }
         ExprPar( const ExprPar& other ) { copy( other ); }
 
         // assignment
@@ -161,10 +147,11 @@ class ExprPar
         vector < double > repEffects;             // repression effects: beta under ChrMod models (the equlibrium constant of nucleosome association with chromatin). Equal to 0 if a TF is not a repressor.
         vector < double > basalTxps;              // basal transcription: q_p for Direct and Quenching model, exp(alpha_0) for Logistic model (so that the same default value can be used)
         vector < double > pis;
-        //     double expRatio; 		// constant factor of measurement to prediction
+//     double expRatio; 		// constant factor of measurement to prediction 
 
         vector < double > betas;
         vector < double > energyThrFactors;
+	double cic_att;
         int nSeqs;
 
         static ModelType modelOption;             // model option
@@ -188,7 +175,7 @@ class ExprPar
         static double max_interaction;            // max. interaction
         static double min_effect_Logistic;        // min. transcriptional effect under Logistic model
         static double max_effect_Logistic;        // max. transcriptional effect under Logistic model
-        //     static double min_effect_Direct;   // min. transcriptional effect under Direct model
+//     static double min_effect_Direct;   // min. transcriptional effect under Direct model
         static double min_effect_Thermo;          // min. transcriptional effect under thermo. models
         static double max_effect_Thermo;          // max. transcriptional effect under thermo. models
         static double min_repression;             // min. repression
@@ -200,37 +187,37 @@ class ExprPar
         static double min_energyThrFactors;
         static double max_energyThrFactors;
         static double default_energyThrFactors;
+    static double min_cic_att;
+    static double max_cic_att;
+    static double default_cic_att;
         static double delta;                      // a small number for testing the range of parameter values
         static double default_beta;
         static double min_beta;                   // a small number for testing the range of parameter values
         static double max_beta;                   // a small number for testing the range of parameter values
-        // 	static double wt_step;		// step of maxExprWt (log10)
-        // 	static double int_step;		// step of interaction (log10)
-        // 	static double ratio_step;	// step of expRatio
+// 	static double wt_step;		// step of maxExprWt (log10)
+// 	static double int_step;		// step of interaction (log10)
+// 	static double ratio_step;	// step of expRatio
 };
 
 /* ExprFunc class: predict the expression (promoter occupancy) of an enhancer sequence */
-class ExprFunc
-{
-    public:
+class ExprFunc {
+public:
         // constructors
         ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par );
 
         // access methods
-        const vector< Motif >& getMotifs() const
-        {
+    const vector< Motif >& getMotifs() const {
             return motifs;
         }
 
         // predict the expression value of a given sequence (its site representation, sorted by the start positions) under given TF concentrations
+    double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, double dperk_conc );
         double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, int TFid );
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, std::ofstream& fout );
         const ExprPar& getPar() const { return par; }
 
         static ModelType modelOption;             // model option
         static bool one_qbtm_per_crm;
-    private:
+private:
         // TF binding motifs
         const vector< Motif >& motifs;
 
@@ -284,43 +271,35 @@ class ExprFunc
 };
 
 /*****************************************************
- * Model Training and Testing
- ******************************************************/
+* Model Training and Testing
+******************************************************/
 
 /* ExprPredictor class: the thermodynamic sequence-to-expression predictor */
-class ExprPredictor
-{
-    public:
+class ExprPredictor {
+public:
         // constructors
-        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
+    ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const Matrix& _dperk_ExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
 
         // access methods
-        int nSeqs() const
-        {
+    int nSeqs() const {
             return seqs.size();
         }
-        int nFactors() const
-        {
+    int nFactors() const { 
             return motifs.size();
         }
-        int nConds() const
-        {
+    int nConds() const {
             return exprData.nCols();
         }
-        const IntMatrix& getCoopMat() const
-        {
+    const IntMatrix& getCoopMat() const {
             return coopMat;
         }
-        const vector< bool >& getActIndicators() const
-        {
+    const vector< bool >& getActIndicators() const {
             return actIndicators;
         }
-        const vector< bool >& getRepIndicators() const
-        {
+    const vector< bool >& getRepIndicators() const {
             return repIndicators;
         }
-        const IntMatrix& getRepressionMat() const
-        {
+    const IntMatrix& getRepressionMat() const {
             return repressionMat;
         }
         const ExprPar& getPar() const { return par_model; }
@@ -331,17 +310,16 @@ class ExprPredictor
 
         // training the model
         int train( const ExprPar& par_init );     // training with the initial values given
-                                                  // training with the initial values and allowing random starts
-        int train( const ExprPar& par_init, const gsl_rng* rng );
+    int train( const ExprPar& par_init, const gsl_rng* rng );   // training with the initial values and allowing random starts
         int train();                              // automatic training: first estimate the initial values, then train
 
         // predict expression values of a sequence (across the same conditions)
         int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const;
 
         // test the model, perfOption = 0: RMSE
-        // 	double test( const vector< Sequence  >& testSeqs, const Matrix& testExprData, Matrix& predictions ) const;
+// 	double test( const vector< Sequence  >& testSeqs, const Matrix& testExprData, Matrix& predictions ) const;    
 
-        //std::ofstream gene_crm_fout;
+	std::ofstream gene_crm_fout;
 
         static ModelType modelOption;             // model option
         static int estBindingOption;              // whether estimate binding parameters
@@ -367,7 +345,8 @@ class ExprPredictor
         vector < double > fix_pars;
         vector < double > free_pars;
         vector < Sequence > seqs;
-    private:
+    const Matrix& dperk_ExprData;
+private:
         // training data
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
         const vector< int >& seqLengths;          // lengths of all sequences
@@ -409,20 +388,19 @@ class ExprPredictor
         // objective functions
         double compRMSE( const ExprPar& par );    // root mean square error between predicted and observed expressions
         double compAvgCorr( const ExprPar& par ); // the average Pearson correlation
-                                                  // the average cross correlation -based similarity
-        double compAvgCrossCorr( const ExprPar& par );
+    double compAvgCrossCorr( const ExprPar& par );    // the average cross correlation -based similarity
         double compPGP( const ExprPar& par );     // the average cross correlation -based similarity
 
         // minimize the objective function, using the current model parameters as initial values
-                                                  // simplex
-        int simplex_minimize( ExprPar& par_result, double& obj_result );
-                                                  // gradient: BFGS or conjugate gradient
-        int gradient_minimize( ExprPar& par_result, double& obj_result );
-        //  	int SA_minimize( ExprPar& par_result, double& obj_result ) const;	// simulated annealing
+    int simplex_minimize( ExprPar& par_result, double& obj_result );	// simplex	
+    int gradient_minimize( ExprPar& par_result, double& obj_result );	// gradient: BFGS or conjugate gradient
+//  	int SA_minimize( ExprPar& par_result, double& obj_result ) const;	// simulated annealing 		
+    int optimize_beta( ExprPar& par_result, double& obj_result);	// find the current best beta with one-step otimization.
 };
 
 // the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize
 double gsl_obj_f( const gsl_vector* v, void* params );
 void gsl_obj_df( const gsl_vector* v, void* params, gsl_vector* grad );
 void gsl_obj_fdf( const gsl_vector* v, void* params, double* result, gsl_vector* grad );
+
 #endif
