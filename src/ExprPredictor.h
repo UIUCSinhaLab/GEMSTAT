@@ -324,7 +324,9 @@ class ExprPredictor
         const ExprPar& getPar() const { return par_model; }
         double getObj() const { return obj_model; }
 
-        // the objective function to be minimized
+	virtual ExprPar* par_factory_method( const vector<double> &pars);
+
+	// the objective function to be minimized
         double objFunc( const ExprPar& par ) ;
 
         // training the model

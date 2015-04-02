@@ -1298,6 +1298,10 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     return 0;
 }
 
+ExprPar* ExprPredictor::par_factory_method( const vector<double> &pars){
+	ExprPar *retval = new ExprPar( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+	return retval;
+}
 
 // double ExprPredictor::test( const vector< Sequence >& testSeqs, const Matrix& testExprData, int perfOption ) const
 // {
@@ -1905,7 +1909,8 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         //cout << "free_par_counter = " << free_par_counter << "\t" << "fix_par_counter = " << fix_par_counter << endl;
         //cout << "samee: " << fix_par_counter << endl;
         //cout << "DEBUG: init ExprPar start" << endl;
-        ExprPar par_curr = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+	//ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+        ExprPar par_curr = *(par_factory_method(pars));//TODO : Absolutely leaks memory.
         //cout << "pars.size() = " << pars.size() << "\tpars_size = " << pars_size << endl;
         //printPar( par_curr );
         //cout << "DEBUG: init ExprPar end" << endl;
@@ -1957,7 +1962,8 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         }
     }
     //cout << "DEBUG: init par_result start." << endl;
-    par_result = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+    //par_result = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+    par_result = *(par_factory_method(pars));
     printPar( par_result );
     //cout << "DEBUG: init par_result end." << endl;
     //Hassan end
@@ -2058,8 +2064,8 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
                 pars.push_back( fix_pars[ fix_par_counter ++ ]);
             }
         }
-
-        ExprPar par_curr = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+        //ExprPar par_curr = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+	ExprPar par_curr = *(par_factory_method(pars));//TODO : Absolutely leaks memory.
         //Hassan end
         //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
         if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ) break;
@@ -2105,7 +2111,8 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
         }
     }
 
-    par_result = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+    //par_result = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+    par_result = *(par_factory_method(pars));//TODO : Absolutely leaks memory.
     //Hassan end
     //par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
     obj_result = s->f;

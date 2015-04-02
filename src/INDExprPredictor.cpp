@@ -212,3 +212,9 @@ int INDExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength,
 
     return 0;
 }
+
+ExprPar* INDExprPredictor::par_factory_method( const vector<double> &pars){
+	cerr << "DEBUG : virtual dispatch to par_factory_method " << endl << flush;
+	        INDExprPar *retval = new INDExprPar( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+		        return (ExprPar*)retval;
+}

@@ -17,7 +17,7 @@ public:
     INDExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors, double _cic_att );
     INDExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );	// construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
     void copy( const INDExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis; betas = other.betas; energyThrFactors = other.energyThrFactors; cic_att = other.cic_att; nSeqs = basalTxps.size();  }
-        INDExprPar( const INDExprPar& other ) { copy( other ); }
+        INDExprPar( const INDExprPar& other ) : ExprPar((ExprPar)other) { cic_att = other.cic_att; }
 
         // assignment
         INDExprPar& operator=( const INDExprPar& other ) { copy( other ); return *this; }
@@ -86,6 +86,7 @@ public:
         // predict expression values of a sequence (across the same conditions)
         virtual int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num, const ExprPar* _in_pars = NULL ) const;
 
+       virtual ExprPar* par_factory_method( const vector<double> &pars);
        	/*
         // test the model, perfOption = 0: RMSE
 // 	double test( const vector< Sequence  >& testSeqs, const Matrix& testExprData, Matrix& predictions ) const;    
