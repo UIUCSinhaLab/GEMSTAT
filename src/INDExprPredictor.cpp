@@ -179,9 +179,36 @@ void INDExprPredictor::printPar( const ExprPar& par ) const
 
 ExprFunc* INDExprPredictor::createExprFunc( const ExprPar& par ) const
 {
+    cerr << "DEBUG: virtual dispatch createExprFunc " << endl << flush;
     //TODO: //This here is where you want to create a factory pattern
 	// Well, I guess this can _be_ the factory pattern for now.	
     INDExprFunc* retval = new INDExprFunc( motifs, intFunc, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, par );
     retval->set_dperk_expr( dperk_ExprData );
     return retval;
+}
+
+//TODO: Use decent software engineering to make this function go away entirely.
+int INDExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num , const ExprPar* _in_pars /* = NULL */) const
+{
+    cerr << "DEBUG: virtual dispatch of predict " << endl << flush;
+    targetExprs.clear();
+   
+    const INDExprPar *my_pars = ((NULL == _in_pars) ? &(par_model) : (INDExprPar*)_in_pars);
+
+    // create site representation of the target sequence
+     SiteVec targetSites;
+     SeqAnnotator ann( motifs, my_pars->energyThrFactors );    
+     ann.annot( seqs[ seq_num ], targetSites );
+            
+    // predict the expression
+    INDExprFunc* func = (INDExprFunc*)createExprFunc( *(my_pars) );       
+    for ( int j = 0; j < nConds(); j++ ) {
+        vector< double > concs = factorExprData.getCol( j );
+        vector <double> t_dperk_conc = dperk_ExprData.getCol( j );
+        double _dperk_conc = t_dperk_conc[0];
+        double predicted = func->predictExpr( targetSites, targetSeqLength, concs, seq_num, _dperk_conc);
+        targetExprs.push_back( predicted );
+    }
+
+    return 0;
 }

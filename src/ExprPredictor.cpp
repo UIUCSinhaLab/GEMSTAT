@@ -1274,17 +1274,19 @@ int ExprPredictor::train()
 }
 
 
-int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const
+int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num, const ExprPar* _in_pars /* = NULL */ ) const
 {
     targetExprs.clear();
 
+    const ExprPar *my_pars = ((NULL == _in_pars) ? &(par_model) : _in_pars);
+
     // create site representation of the target sequence
     SiteVec targetSites;
-    SeqAnnotator ann( motifs, par_model.energyThrFactors );
+    SeqAnnotator ann( motifs, my_pars->energyThrFactors );
     ann.annot( seqs[ seq_num ], targetSites );
 
     // predict the expression
-    ExprFunc* func = createExprFunc( par_model );
+    ExprFunc* func = createExprFunc( *(my_pars) );
     for ( int j = 0; j < nConds(); j++ )
     {
         vector< double > concs = factorExprData.getCol( j );
@@ -1645,20 +1647,19 @@ double ExprPredictor::compRMSE( const ExprPar& par )
     double squaredErr = 0;
     for ( int i = 0; i < nSeqs(); i++ ) {
         vector< double > predictedExprs;
-        vector< double > observedExprs;
-        for ( int j = 0; j < nConds(); j++ ) {
-		double predicted = -1;
-            	vector< double > concs = factorExprData.getCol( j );
-            	predicted = func->predictExpr( seqSites[ i ], seqLengths[i], concs, i );
-		
-            
-            // predicted expression for the i-th sequence at the j-th condition
-            predictedExprs.push_back( predicted );
+        vector< double > observedExprs = exprData.getRow(i);
+        
+	predict( seqSites[i], seqLengths[i], predictedExprs, i, &par);
+
+	/*
+	 * TODO : Delete this bit once we're sure this works.	
+	for ( int j = 0; j < nConds(); j++ ) {
             
             // observed expression for the i-th sequence at the j-th condition
             double observed = exprData( i, j );
             observedExprs.push_back( observed );
         }
+	*/
         double beta; 
         squaredErr += least_square( predictedExprs, observedExprs, beta );
 	//(func -> getPar()).betas[ i ] = beta;

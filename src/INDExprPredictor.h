@@ -82,9 +82,11 @@ public:
     int train( const ExprPar& par_init, const gsl_rng* rng );   // training with the initial values and allowing random starts
         int train();                              // automatic training: first estimate the initial values, then train
 
+	*/
         // predict expression values of a sequence (across the same conditions)
-        int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const;
+        virtual int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num, const ExprPar* _in_pars = NULL ) const;
 
+       	/*
         // test the model, perfOption = 0: RMSE
 // 	double test( const vector< Sequence  >& testSeqs, const Matrix& testExprData, Matrix& predictions ) const;    
 
