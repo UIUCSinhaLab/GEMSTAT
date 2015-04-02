@@ -424,8 +424,8 @@ void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, con
 
 void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const
 {
-    os.setf( ios::fixed );
-    os.precision( 50 );
+//    os.setf( ios::fixed );
+//    os.precision( 50 );
 
     // print the factor information
     for ( int i = 0; i < nFactors(); i++ )
@@ -463,9 +463,9 @@ void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntM
 
     for( int i = 0; i < energyThrFactors.size(); i++ )
     {
-        cout << energyThrFactors[ i ] << "\t";
+        os << energyThrFactors[ i ] << "\t";
     }
-    cout << endl;
+    os << endl;
 
 }
 
@@ -1203,13 +1203,23 @@ int ExprPredictor::train( const ExprPar& par_init )
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
         par_model.adjust( coopMat );
+	#ifdef BETAOPTSEPARATE
+        optimize_beta( par_model, obj_result );
+        #endif
         gradient_minimize( par_result, obj_result );
         par_model = par_result;
         par_model.adjust( coopMat);
+	#ifdef BETAOPTSEPARATE
+        optimize_beta( par_model, obj_result );
+        #endif
     }
 
+    #ifdef BETAOPTBROKEN
+    optimize_beta( par_model, obj_result );
+    #endif
+
     // commit the parameters and the value of the objective function
-    par_model = par_result;
+    //par_model = par_result;
     obj_model = obj_result;
 
     return 0;
@@ -1664,8 +1674,13 @@ double ExprPredictor::compRMSE( const ExprPar& par )
             observedExprs.push_back( observed );
         }
 	*/
-        double beta; 
+        double beta;
+	#ifdef BETAOPTTOGETHER
+	beta = par.betas[i];
+        squaredErr += least_square( predictedExprs, observedExprs, beta, true );
+	#else
         squaredErr += least_square( predictedExprs, observedExprs, beta );
+	#endif
 	//(func -> getPar()).betas[ i ] = beta;
     }	
 
@@ -1735,6 +1750,7 @@ double ExprPredictor::compAvgCorr( const ExprPar& par )
             double observed = exprData( i, j );
             observedExprs.push_back( observed );
         }
+	//BETAOPTOGETHER has no meaning for correlation
         totalSim += corr( predictedExprs, observedExprs );
         //         cout << "Sequence " << i << "\t" << corr( predictedExprs, observedExprs ) << endl;
     }
@@ -1780,7 +1796,12 @@ double ExprPredictor::compPGP( const ExprPar& par )
             observedExprs.push_back( observed );
         }
         double beta;
-        totalSim += pgp( predictedExprs, observedExprs, beta );
+	#ifdef BETAOPTTOGETHER
+	beta = par.betas[i];
+        totalSim += pgp( predictedExprs, observedExprs, beta, true);
+	#else
+	totalSim += pgp( predictedExprs, observedExprs, beta );
+	#endif
     }
     delete func;
     return totalSim / nSeqs();
@@ -2124,6 +2145,39 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     return 0;
 }
 
+int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
+        SiteVec unuzedSV = SiteVec();
+
+        for ( int i = 0; i < nSeqs(); i++ ){
+                vector< double > targetExprs;
+                vector< double > observedExprs = exprData.getRow( i );
+
+                predict( unuzedSV, seqs[i].size(), targetExprs, i );
+
+                double beta = par_model.betas[ i ];
+                double error_or_score;
+
+                if( ExprPredictor::objOption == SSE )
+                {
+                        error_or_score = sqrt( least_square( targetExprs, observedExprs, beta , false) / nConds() );
+                }
+                if( ExprPredictor::objOption == PGP ){
+                        error_or_score = pgp( targetExprs, observedExprs, beta, false );
+                }
+                if( ExprPredictor::objOption == CORR ){
+                        error_or_score = corr( targetExprs, observedExprs, beta, false);
+                }
+                if( ExprPredictor::objOption == CROSS_CORR ){
+                        error_or_score = ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs );
+                }
+
+                //TODO: Check for the appropriate indicator value to see if this beta is an optimization parameter or not.
+                par_result.betas[i] = beta;
+
+        }
+
+	obj_result = objFunc( par_result );
+}
 
 double gsl_obj_f( const gsl_vector* v, void* params )
 {
@@ -2158,178 +2212,6 @@ double gsl_obj_f( const gsl_vector* v, void* params )
     return obj;
 }
 
-
-/*
-int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result ) const
-{
-// 	cout << "Start minimization" << endl;
-    // extract initial parameters
-    vector< double > pars;
-    par_model.getFreePars( pars, coopMat, actIndicators, repIndicators );
-
-    // set the objective function
-    gsl_multimin_function my_func;
-    my_func.f = &gsl_obj_f;
-my_func.n = pars.size();
-my_func.params = (void*)this;
-
-// set the initial values to be searched
-gsl_vector* x = vector2gsl( pars );
-//     for ( int i = 0; i < v.size(); i++ ) gsl_vector_set( x, i, v[ i ] );
-
-// CHECK POINT: evaluate gsl_obj_f() function
-// 	cout << "binding at the initial value of parameters = " << gsl_obj_f( x, (void*)this ) << endl;
-
-// choose the method of optimization and set its parameters
-const gsl_multimin_fminimizer_type* T = gsl_multimin_fminimizer_nmsimplex;
-gsl_vector* ss = gsl_vector_alloc( my_func.n );
-gsl_vector_set_all( ss, 1.0 );
-
-// create the minimizer
-gsl_multimin_fminimizer* s = gsl_multimin_fminimizer_alloc( T, my_func.n );
-gsl_multimin_fminimizer_set( s, &my_func, x, ss );
-
-// iteration
-size_t iter = 0;
-int status;
-double size;
-do {
-double f_prev = iter ? s->fval : 1.0E6;     // the function starts with some very large number
-
-iter++;
-status = gsl_multimin_fminimizer_iterate( s );
-
-// check for error
-if ( status ) break;
-
-// check if the current values of parameters are valid
-ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ) break;
-
-// check for stopping condition
-//         double f_curr = s->fval;
-//         double delta_f = abs( f_curr - f_prev );
-//         if ( objOption == SSE && delta_f < min_delta_f_SSE ) break;
-//         if ( objOption == CORR && delta_f < min_delta_f_Corr ) break;
-//         if ( objOption == CROSS_CORR && delta_f < min_delta_f_CrossCorr ) break;
-
-size = gsl_multimin_fminimizer_size( s );
-status = gsl_multimin_test_size( size, 1e-1 );
-// 		if ( status == GSL_SUCCESS ) { cout << "converged to minimum at " << iter << endl; }
-
-// print the current parameter and function values
-cout << iter << "\t";
-printPar( par_curr );
-printf( "\tf() = %8.5f size = %.3f\n", s->fval, size );
-} while ( status == GSL_CONTINUE && iter < nSimplexIters );
-
-// get the results
-//     vector< double > expv;
-//     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
-par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-obj_result = s->fval;
-
-// free the minimizer
-gsl_vector_free( x );
-gsl_vector_free( ss );
-gsl_multimin_fminimizer_free( s );
-
-return 0;
-}
-
-int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result ) const
-{
-// 	cout << "Start minimization" << endl;
-// extract initial parameters
-vector< double > pars;
-par_model.getFreePars( pars, coopMat, actIndicators, repIndicators );
-
-// set the objective function and its gradient
-gsl_multimin_function_fdf my_func;
-my_func.f = &gsl_obj_f;
-my_func.df = &gsl_obj_df;
-my_func.fdf = &gsl_obj_fdf;
-my_func.n = pars.size();
-my_func.params = (void*)this;
-
-// set the initial values to be searched
-gsl_vector* x = vector2gsl( pars );
-
-// CHECK POINT: evaluate gsl_obj_f() function
-// 	cout << "binding at the initial value of parameters = " << gsl_obj_f( x, (void*)this ) << endl;
-
-// choose the method of optimization and set its parameters
-// 	const gsl_multimin_fdfminimizer_type* T = gsl_multimin_fdfminimizer_conjugate_pr;
-const gsl_multimin_fdfminimizer_type* T = gsl_multimin_fdfminimizer_vector_bfgs;
-
-// create the minimizer
-gsl_multimin_fdfminimizer* s = gsl_multimin_fdfminimizer_alloc( T, my_func.n );
-double init_step = 0.02, tol = 0.1;
-gsl_multimin_fdfminimizer_set( s, &my_func, x, init_step, tol );
-
-// iteration
-size_t iter = 0;
-int status;
-do {
-double f_prev = iter ? s->f : 1.0E6;     // the function starts with some very large number
-
-iter++;
-status = gsl_multimin_fdfminimizer_iterate( s );
-// 	    if ( prev_f - curr_f < 0.001 ) break;
-
-// check for error
-if ( status ) break;
-
-// check if the current values of parameters are valid
-ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ) break;
-
-// check for stopping condition
-double f_curr = s->f;
-double delta_f = abs( f_curr - f_prev );
-if ( objOption == SSE && delta_f < min_delta_f_SSE ) break;
-if ( objOption == CORR && delta_f < min_delta_f_Corr ) break;
-if ( objOption == CROSS_CORR && delta_f < min_delta_f_CrossCorr ) break;
-
-status = gsl_multimin_test_gradient( s->gradient, 5e-4 );
-// 		if ( status == GSL_SUCCESS ) { cout << "converged to minimum at " << iter << endl; }
-
-// print the current parameter and function values
-cout << iter << "\t";
-printPar( par_curr );
-printf( "\tf() = %8.5f\n", s->f );
-//     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
-par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-obj_result = s->f;
-
-// free the minimizer
-gsl_vector_free( x );
-gsl_multimin_fdfminimizer_free( s );
-
-return 0;
-}
-
-double gsl_obj_f( const gsl_vector* v, void* params )
-{
-// the ExprPredictor object
-ExprPredictor* predictor = (ExprPredictor*)params;
-
-// parse the variables (parameters to be optimized)
-//     vector< double > expv;
-//     for ( int i = 0; i < v->size; i++ ) expv.push_back( exp( gsl_vector_get( v, i ) ) );
-vector <double> temp = gsl2vector(v);
-cout << "*********samee start**************" << endl;
-for(int temp_i = 0; temp_i < temp.size(); temp_i ++)
-cout << temp[temp_i] << endl;
-cout << "*********samee end****************" << endl;
-
-ExprPar par( gsl2vector( v ), predictor->getCoopMat(), predictor->getActIndicators(), predictor->getRepIndicators() );
-
-// call the ExprPredictor object to evaluate the objective function
-double obj = predictor->objFunc( par );
-return obj;
-}
-*/
 void gsl_obj_df( const gsl_vector* v, void* params, gsl_vector* grad )
 {
     double step = 1.0E-3;
