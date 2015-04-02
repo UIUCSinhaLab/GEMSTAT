@@ -12,6 +12,7 @@ class INDExprPar : public ExprPar {
 public:
         // constructors
         INDExprPar() : ExprPar() {}
+	INDExprPar( const ExprPar& other) : ExprPar(other) {}
         INDExprPar( int _nFactors, int _nSeqs );     // default values of parameters
     INDExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors, double _cic_att );
     INDExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );	// construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
@@ -21,11 +22,17 @@ public:
         // assignment
         INDExprPar& operator=( const INDExprPar& other ) { copy( other ); return *this; }
 
+	 virtual void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
+
+	// print the parameters
+        virtual void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
+
         // load the parameter values from a file, assuming the parameter has the correct dimensions (and initialized)
-        int load( const string& file, const int num_of_coop_pairs );
+        virtual int load( const string& file, const int num_of_coop_pairs );
 
         // adjust the values of parameters: if the value is close to min or max allowed value, slightly change it s.t. it is away from the boundary
-        void adjust( const IntMatrix& coopMat  );
+        virtual void adjust( const IntMatrix& coopMat  );	
+
 
 	double cic_att;
     static double min_cic_att;
@@ -44,6 +51,9 @@ public:
         double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
         const INDExprPar& getPar() const { return par; }
 
+	protected:
+		// model parameters
+        const INDExprPar& par;
 };
 
 /*****************************************************
@@ -51,7 +61,7 @@ public:
 ******************************************************/
 
 /* ExprPredictor class: the thermodynamic sequence-to-expression predictor */
-class INDExprPredictor {
+class INDExprPredictor : public ExprPredictor {
 public:
         // constructors
     INDExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const Matrix& _dperk_ExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );

@@ -1,15 +1,14 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_multimin.h>
 
-#include "ExprPredictor.h"
 #include "INDExprPredictor.h"
 
 INDExprPar::INDExprPar( int _nFactors, int _nSeqs ) : ExprPar( _nFactors, _nSeqs)
 {	
-	cic_att = ExprPar::default_cic_att;
+	cic_att = INDExprPar::default_cic_att;
 }
 
-INDExprPar::INDExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >& _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector <double>& _energyThrFactors , double _cic_att) : ExprPar( _maxBindingWts, _factorIntMat, _txpEffects, _repEffects, _basalTxps, _pis, _betas, _nSeqs, __energyThrFactors)
+INDExprPar::INDExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >& _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector <double>& _energyThrFactors , double _cic_att) : ExprPar( _maxBindingWts, _factorIntMat, _txpEffects, _repEffects, _basalTxps, _pis, _betas, _nSeqs, _energyThrFactors)
 {
 	cic_att = _cic_att;
 }
@@ -18,7 +17,7 @@ INDExprPar::INDExprPar( const vector< double >& _maxBindingWts, const Matrix& _f
 INDExprPar::INDExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs ) : ExprPar( pars, coopMat, actIndicators, repIndicators, _nSeqs)
 {	
 
-	cic_att = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[ counter++ ], log( min_cic_att ), log( max_cic_att ) ) ) : exp ( pars[ counter++ ] );
+	cic_att = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[ pars.size() - 1 ], log( min_cic_att ), log( max_cic_att ) ) ) : exp ( pars[ pars.size() - 1 ] );
 
 }
 
@@ -42,7 +41,9 @@ int INDExprPar::load( const string& file, const int num_of_coop_pairs )
 	int first_load_results = ExprPar::load( file, num_of_coop_pairs );
 	if( 0 != first_load_results )
 		return first_load_results;
-	fin >> cic_att;
+	//TOOD: This is just to make it compile. WE NEED THIS. I guess load should call a separate parser helper function. Load will open the filestream, and the parser functions will read from that.
+	//Sub-classes should have their parser call their parent-classes parser.
+	//fin >> cic_att;
 
     return 0;
 }
@@ -50,15 +51,15 @@ int INDExprPar::load( const string& file, const int num_of_coop_pairs )
 void INDExprPar::adjust( const IntMatrix& coopMat  )
 {
     ExprPar::adjust( coopMat );
-    if( cic_att < ExprPar::min_cic_att * ( 1.0 + ExprPar::delta ) ) cic_att *= 2.0;
-    if( cic_att > ExprPar::max_cic_att * ( 1.0 - ExprPar::delta ) ) cic_att /= 2.0;
+    if( cic_att < INDExprPar::min_cic_att * ( 1.0 + ExprPar::delta ) ) cic_att *= 2.0;
+    if( cic_att > INDExprPar::max_cic_att * ( 1.0 - ExprPar::delta ) ) cic_att /= 2.0;
 }
 
 double INDExprPar::min_cic_att = 0.99;
 double INDExprPar::max_cic_att = 32.01;
 double INDExprPar::default_cic_att = 10;
 
-INDExprFunc::INDExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs, _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par )
+INDExprFunc::INDExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const INDExprPar& _par ) : ExprFunc( _motifs, _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par )
 {}
 
 double INDExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )

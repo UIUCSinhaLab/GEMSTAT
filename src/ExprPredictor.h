@@ -143,16 +143,16 @@ class ExprPar
         int nFactors() const { return maxBindingWts.size(); }
 
         // get the free parameters (in the correct/uniform scale)
-        void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
+        virtual void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
 
         // print the parameters
-        void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
+        virtual void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
 
         // load the parameter values from a file, assuming the parameter has the correct dimensions (and initialized)
-        int load( const string& file, const int num_of_coop_pairs );
+        virtual int load( const string& file, const int num_of_coop_pairs );
 
         // adjust the values of parameters: if the value is close to min or max allowed value, slightly change it s.t. it is away from the boundary
-        void adjust( const IntMatrix& coopMat  );
+        virtual void adjust( const IntMatrix& coopMat  );
 
         // parameters
         vector < double > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
@@ -223,14 +223,14 @@ class ExprFunc
         }
 
         // predict the expression value of a given sequence (its site representation, sorted by the start positions) under given TF concentrations
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, int TFid );
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, std::ofstream& fout );
+        virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
+        virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, int TFid );
+        virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, std::ofstream& fout );
         const ExprPar& getPar() const { return par; }
 
         static ModelType modelOption;             // model option
         static bool one_qbtm_per_crm;
-    private:
+    protected:
         // TF binding motifs
         const vector< Motif >& motifs;
 
@@ -253,28 +253,28 @@ class ExprFunc
         vector< double > bindingWts;
 
         // compute the partition function when the basal transcriptional machinery (BTM) is not bound
-        double compPartFuncOff() const;
+        virtual double compPartFuncOff() const;
 
         // compute the partition function when the BTM is not bound: ChrMod model
-        double compPartFuncOffChrMod() const;
+        virtual double compPartFuncOffChrMod() const;
 
         // compute the partition function when the BTM is bound
-        double compPartFuncOn() const;
+        virtual double compPartFuncOn() const;
 
         // compute the paritition function when the BTM is bound: Direct model
-        double compPartFuncOnDirect() const;
+        virtual double compPartFuncOnDirect() const;
 
         // compute the paritition function when the BTM is bound: Quenching model
-        double compPartFuncOnQuenching() const;
+        virtual double compPartFuncOnQuenching() const;
 
         // compute the paritition function when the BTM is bound: ChrMod_Unlimited model
-        double compPartFuncOnChrMod_Unlimited() const;
+        virtual double compPartFuncOnChrMod_Unlimited() const;
 
         // compute the paritition function when the BTM is bound: ChrMod_Limited model
-        double compPartFuncOnChrMod_Limited() const;
+        virtual double compPartFuncOnChrMod_Limited() const;
 
         // compute the TF-TF interaction between two occupied sites
-        double compFactorInt( const Site& a, const Site& b ) const;
+        virtual double compFactorInt( const Site& a, const Site& b ) const;
 
         double compDen() const;
         double compNum( int TFid ) const;
@@ -367,7 +367,7 @@ class ExprPredictor
         vector < double > fix_pars;
         vector < double > free_pars;
         vector < Sequence > seqs;
-    private:
+    protected:
         // training data
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
         const vector< int >& seqLengths;          // lengths of all sequences
