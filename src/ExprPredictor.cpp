@@ -1421,8 +1421,8 @@ double ExprPredictor::exprSimCrossCorr( const vector< double >& x, const vector<
 }
 
 
-int ExprPredictor::maxShift = 5;
-double ExprPredictor::shiftPenalty = 0.8;
+int ExprPredictor::maxShift = 5; 
+double ExprPredictor::shiftPenalty = 0.8; 
 
 int ExprPredictor::nAlternations = 4;
 int ExprPredictor::nRandStarts = 5;
@@ -1433,6 +1433,8 @@ double ExprPredictor::min_delta_f_PGP = 1.0E-8;
 int ExprPredictor::nSimplexIters = 200;
 int ExprPredictor::nGradientIters = 50;
 bool ExprPredictor::one_qbtm_per_crm = false;
+
+
 
 int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
 {

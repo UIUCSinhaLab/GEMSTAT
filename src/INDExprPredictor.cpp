@@ -175,23 +175,6 @@ INDExprPredictor::INDExprPredictor( const vector <Sequence>& _seqs, const vector
     ExprPar::estBindingOption = estBindingOption;
 }
 
-ModelType ExprPredictor::modelOption = LOGISTIC;
-int ExprPredictor::estBindingOption = 1;    // 1. estimate binding parameters; 0. not estimate binding parameters
-ObjType ExprPredictor::objOption = SSE;
-
-int ExprPredictor::maxShift = 5; 
-double ExprPredictor::shiftPenalty = 0.8; 
-
-int ExprPredictor::nAlternations = 4;
-int ExprPredictor::nRandStarts = 5;
-double ExprPredictor::min_delta_f_SSE = 1.0E-8;
-double ExprPredictor::min_delta_f_Corr = 1.0E-8;
-double ExprPredictor::min_delta_f_CrossCorr = 1.0E-8;
-double ExprPredictor::min_delta_f_PGP = 1.0E-8;
-int ExprPredictor::nSimplexIters = 200;
-int ExprPredictor::nGradientIters = 50;
-bool ExprPredictor::one_qbtm_per_crm = false;
-
 bool INDExprPredictor::testPar( const ExprPar& par ) const
 {
     if( ! base::testPar( par )) return false;

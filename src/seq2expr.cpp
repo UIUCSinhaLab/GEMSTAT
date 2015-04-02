@@ -383,7 +383,7 @@ int main( int argc, char* argv[] )
 	ASSERT_MESSAGE(indicator_bool.size() == num_indicators,"If you use the free_fix file, you must provide the correct number of parameters\n");
     }
     // read the initial parameter values
-    ExprPar par_init( nFactors, nSeqs );
+    INDExprPar par_init( nFactors, nSeqs );
     if ( !parFile.empty() ){
         rval = par_init.load( parFile, num_of_coop_pairs );
         if ( rval == RET_ERROR ){
@@ -435,7 +435,7 @@ int main( int argc, char* argv[] )
     else {
         cerr << "Interaction Function is invalid " << endl; exit( 1 ); 
     }
-    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, dperk_ExprData, intFunc, coopMat, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
+    INDExprPredictor* predictor = new INDExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, dperk_ExprData, intFunc, coopMat, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
 
     // random number generator
 	gsl_rng* rng;
@@ -448,7 +448,7 @@ int main( int argc, char* argv[] )
     predictor->train( par_init, rng );
 
     // print the training results
-    ExprPar par = predictor->getPar();
+    INDExprPar par = predictor->getPar();
     if( par_out_stream){
 	par.print( par_out_stream, motifNames, coopMat );
 	par_out_stream.close();
