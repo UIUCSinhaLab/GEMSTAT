@@ -59,8 +59,11 @@ double INDExprPar::min_cic_att = 0.99;
 double INDExprPar::max_cic_att = 32.01;
 double INDExprPar::default_cic_att = 10;
 
-INDExprFunc::INDExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const INDExprPar& _par ) : ExprFunc( _motifs, _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par.ExprPar ), par( _par)
-{}
+INDExprFunc::INDExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const INDExprPar& _par ) : ExprFunc( _motifs, _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, (ExprPar)_par ), par( _par)
+{
+	dperk_ExprData = Matrix();
+	//dperk_ExprData = *(new Matrix());//TODO: I bet this leaks memory
+}
 
 double INDExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
 {

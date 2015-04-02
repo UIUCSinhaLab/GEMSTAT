@@ -56,7 +56,7 @@ public:
 	protected:
 		// model parameters
         const INDExprPar& par;
-	Matrix& dperk_ExprData;
+	Matrix dperk_ExprData;
 };
 
 /*****************************************************

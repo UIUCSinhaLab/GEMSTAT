@@ -224,8 +224,6 @@ class ExprFunc
 
         // predict the expression value of a given sequence (its site representation, sorted by the start positions) under given TF concentrations
         virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
-        virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, int TFid );
-        virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num, std::ofstream& fout );
         const ExprPar& getPar() const { return par; }
 
         static ModelType modelOption;             // model option
