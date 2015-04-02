@@ -51,9 +51,12 @@ public:
         double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
         const INDExprPar& getPar() const { return par; }
 
+	void set_dperk_expr( const Matrix& _dperk_ExprData );
+
 	protected:
 		// model parameters
         const INDExprPar& par;
+	Matrix& dperk_ExprData;
 };
 
 /*****************************************************
@@ -120,16 +123,18 @@ private:
 	/*
         // randomly sample parameter values (only those free parameters), the parameters should be initialized
         int randSamplePar( const gsl_rng* rng, ExprPar& par ) const;
-
+	*/
         // check if some parameter combination is valid
-        bool testPar( const ExprPar& par ) const;
+        virtual bool testPar( const ExprPar& par ) const;
 
+	
         // print the parameter values (the ones that are estimated) in a single line
-        void printPar( const ExprPar& par ) const;
+        virtual void printPar( const ExprPar& par ) const;
 
         // create the expression function
-        ExprFunc* createExprFunc( const ExprPar& par ) const;
-
+        virtual ExprFunc* createExprFunc( const ExprPar& par ) const;
+	
+	/*
         // objective functions
         double compRMSE( const ExprPar& par );    // root mean square error between predicted and observed expressions
         double compAvgCorr( const ExprPar& par ); // the average Pearson correlation

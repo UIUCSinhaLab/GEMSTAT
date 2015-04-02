@@ -398,13 +398,13 @@ class ExprPredictor
         int randSamplePar( const gsl_rng* rng, ExprPar& par ) const;
 
         // check if some parameter combination is valid
-        bool testPar( const ExprPar& par ) const;
+        virtual bool testPar( const ExprPar& par ) const;
 
         // print the parameter values (the ones that are estimated) in a single line
-        void printPar( const ExprPar& par ) const;
+        virtual void printPar( const ExprPar& par ) const;
 
         // create the expression function
-        ExprFunc* createExprFunc( const ExprPar& par ) const;
+        virtual ExprFunc* createExprFunc( const ExprPar& par ) const;
 
         // objective functions
         double compRMSE( const ExprPar& par );    // root mean square error between predicted and observed expressions

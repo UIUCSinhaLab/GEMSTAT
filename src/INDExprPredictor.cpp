@@ -59,7 +59,7 @@ double INDExprPar::min_cic_att = 0.99;
 double INDExprPar::max_cic_att = 32.01;
 double INDExprPar::default_cic_att = 10;
 
-INDExprFunc::INDExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const INDExprPar& _par ) : ExprFunc( _motifs, _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par )
+INDExprFunc::INDExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const INDExprPar& _par ) : ExprFunc( _motifs, _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par.ExprPar ), par( _par)
 {}
 
 double INDExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
@@ -147,48 +147,30 @@ double INDExprFunc::predictExpr( const SiteVec& _sites, int length, const vector
     return promoterOcc;
 }
 
-//TODO : Take a chainsaw to this function (make it just call the superclass constructor.)
-INDExprPredictor::INDExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const Matrix& _dperk_ExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ), dperk_ExprData( _dperk_ExprData ), intFunc( _intFunc ), coopMat( _coopMat ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts )
-{
-    assert( exprData.nRows() == nSeqs() );
-    assert( factorExprData.nRows() == nFactors() && factorExprData.nCols() == nConds() );
-    assert( coopMat.isSquare() && coopMat.isSymmetric() && coopMat.nRows() == nFactors() );
-    assert( actIndicators.size() == nFactors() );
-    assert( maxContact > 0 );
-    assert( repIndicators.size() == nFactors() );
-    assert( repressionMat.isSquare() && repressionMat.nRows() == nFactors() );
-    assert( repressionDistThr >= 0 );
-	
-	gene_crm_fout.open( "gene_crm_fout.hassan.txt" );
-
-
-    // set the model option for ExprPar and ExprFunc
-    ExprPar::modelOption = modelOption;
-    ExprFunc::modelOption = modelOption;
-
-    // set the values of the parameter range according to the model option
-    if ( modelOption != LOGISTIC && modelOption != DIRECT ) {
-        //ExprPar::min_effect_Thermo = 0.99;
-        //ExprPar::min_interaction = 0.99;
-    }
-
-    // set the option of parameter estimation
-    ExprPar::estBindingOption = estBindingOption;
+void INDExprFunc::set_dperk_expr( const Matrix& _dperk_ExprData ){
+	dperk_ExprData = _dperk_ExprData;
 }
 
+//TODO : Take a chainsaw to this function (make it just call the superclass constructor.)
+INDExprPredictor::INDExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const Matrix& _dperk_ExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) :
+ExprPredictor( _seqs, _seqSites, _r_seqSites, _seqLengths, _r_seqLengths, _exprData, _motifs, _factorExprData, _intFunc, _coopMat, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _indicator_bool, _motifNames, _axis_start, _axis_end, _axis_wts), dperk_ExprData( _dperk_ExprData )
+{}
+
+//TODO: Replace with a virtual member function of par.
 bool INDExprPredictor::testPar( const ExprPar& par ) const
 {
-    if( ! base::testPar( par )) return false;
-    if( par.cic_att < ExprPar::min_cic_att * ( 1.0 + ExprPar::delta ) ) return false;
-    if( par.cic_att > ExprPar::max_cic_att * ( 1.0 - ExprPar::delta ) ) return false;
+    if( ! ExprPredictor::testPar( par )) return false;
+    if( ((INDExprPar)par).cic_att < INDExprPar::min_cic_att * ( 1.0 + INDExprPar::delta ) ) return false;
+    if( ((INDExprPar)par).cic_att > INDExprPar::max_cic_att * ( 1.0 - INDExprPar::delta ) ) return false;
    
    return true;    
 }
 
+//TODO: Replace with a virtual member function of par.
 void INDExprPredictor::printPar( const ExprPar& par ) const
 {
-    base::printPar( par ) ;
-    cout << endl << par.cic_att;
+    ExprPredictor::printPar( par ) ;
+    cout << endl << ((INDExprPar)par).cic_att;
     cout << endl;
 }
 
