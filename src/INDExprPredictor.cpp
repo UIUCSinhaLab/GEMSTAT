@@ -182,7 +182,7 @@ ExprFunc* INDExprPredictor::createExprFunc( const ExprPar& par ) const
     cerr << "DEBUG: virtual dispatch createExprFunc " << endl << flush;
     //TODO: //This here is where you want to create a factory pattern
 	// Well, I guess this can _be_ the factory pattern for now.	
-    INDExprFunc* retval = new INDExprFunc( motifs, intFunc, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, par );
+    INDExprFunc* retval = new INDExprFunc( motifs, intFunc, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, (INDExprPar)par );
     retval->set_dperk_expr( dperk_ExprData );
     return retval;
 }
@@ -209,6 +209,8 @@ int INDExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength,
         double predicted = func->predictExpr( targetSites, targetSeqLength, concs, seq_num, _dperk_conc);
         targetExprs.push_back( predicted );
     }
+
+    cerr << "DEBUG : predic predicted " << targetExprs << endl << flush;
 
     return 0;
 }

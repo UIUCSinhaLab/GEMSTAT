@@ -1145,6 +1145,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     assert( repressionMat.isSquare() && repressionMat.nRows() == nFactors() );
     assert( repressionDistThr >= 0 );
 
+
     //gene_crm_fout.open( "gene_crm_fout.txt" );
 
     // set the model option for ExprPar and ExprFunc
@@ -1174,48 +1175,49 @@ double ExprPredictor::objFunc( const ExprPar& par )
 
 int ExprPredictor::train( const ExprPar& par_init )
 {
-    par_model = par_init;
+    copy_par( par_init, par_model );
 
     cout << "*** Diagnostic printing BEFORE adjust() ***" << endl;
     cout << "Parameters: " << endl;
-    printPar( par_model );
+    printPar( *par_model );
     cout << endl;
-    cout << "Objective function value: " << objFunc( par_model ) << endl;
+    cout << "Objective function value: " << objFunc( *par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
-    if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ) par_model.adjust( coopMat );
-    obj_model = objFunc( par_model );
+    if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ) par_model->adjust( coopMat );
+    obj_model = objFunc( *par_model );
 
     cout << "*** Diagnostic printing AFTER adjust() ***" << endl;
     cout << "Parameters: " << endl;
-    printPar( par_model );
+    printPar( *par_model );
     cout << endl;
-    cout << "Objective function value: " << objFunc( par_model ) << endl;
+    cout << "Objective function value: " << objFunc( *par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
     if ( nAlternations == 0 ) return 0;
 
     // alternate between two different methods
-    ExprPar par_result;
+    ExprPar* par_result = NULL;
+    copy_par(*par_model, par_result);
     double obj_result;
     for ( int i = 0; i < nAlternations; i++ )
     {
-        simplex_minimize( par_result, obj_result );
-        par_model = par_result;
-        par_model.adjust( coopMat );
+        simplex_minimize( *par_result, obj_result );
+	copy_par(*par_result, par_model);
+        par_model->adjust( coopMat );
 	#ifdef BETAOPTSEPARATE
-        optimize_beta( par_model, obj_result );
+        optimize_beta( *par_model, obj_result );
         #endif
-        gradient_minimize( par_result, obj_result );
-        par_model = par_result;
-        par_model.adjust( coopMat);
+        gradient_minimize( *par_result, obj_result );
+        copy_par(*par_result, par_model);
+        par_model->adjust( coopMat);
 	#ifdef BETAOPTSEPARATE
-        optimize_beta( par_model, obj_result );
+        optimize_beta( *par_model, obj_result );
         #endif
     }
 
     #ifdef BETAOPTBROKEN
-    optimize_beta( par_model, obj_result );
+    optimize_beta( *par_model, obj_result );
     #endif
 
     // commit the parameters and the value of the objective function
@@ -1236,29 +1238,30 @@ int ExprPredictor::train( const ExprPar& par_init, const gsl_rng* rng )
     // training using the initial values
     train( par_init );
 
-    cout << "Initial training:\tParameters = "; printPar( par_model );
+    cout << "Initial training:\tParameters = "; printPar( *par_model );
     cout << "\tObjective = " << setprecision( 5 ) << obj_model << endl;
 
     // training with random starts
-    ExprPar par_best = par_model;
+    ExprPar* par_best = NULL;
+    copy_par(*par_model, par_best);
     double obj_best = obj_model;
     for ( int i = 0; i < nRandStarts; i++ )
     {
         ExprPar par_curr = par_init;
         randSamplePar( rng, par_curr );
         train( par_curr );
-        cout << "Random start " << i + 1 << ":\tParameters = "; printPar( par_model );
+        cout << "Random start " << i + 1 << ":\tParameters = "; printPar( *par_model );
         cout << "\tObjective = " << setprecision( 5 ) << obj_model << endl;
         if ( obj_model < obj_best )
         {
-            par_best = par_model;
+            copy_par(*par_model, par_best);
             obj_best = obj_model;
         }
     }
 
     // training using the best parameters so far
-    if ( nRandStarts ) train( par_best );
-    cout << "Final training:\tParameters = "; printPar( par_model );
+    if ( nRandStarts ) train( *par_best );
+    cout << "Final training:\tParameters = "; printPar( *par_model );
     cout << "\tObjective = " << setprecision( 5 ) << obj_model << endl;
 
     //gene_crm_fout.close();
@@ -1288,7 +1291,7 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
 {
     targetExprs.clear();
 
-    const ExprPar *my_pars = ((NULL == _in_pars) ? &(par_model) : _in_pars);
+    const ExprPar *my_pars = ((NULL == _in_pars) ? par_model : _in_pars);
 
     // create site representation of the target sequence
     SiteVec targetSites;
@@ -1311,6 +1314,21 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
 ExprPar* ExprPredictor::par_factory_method( const vector<double> &pars){
 	ExprPar *retval = new ExprPar( pars, coopMat, actIndicators, repIndicators, nSeqs() );
 	return retval;
+}
+
+void ExprPredictor::get_free_from_par( const ExprPar& _in_par, vector< double >& _out_vect){
+	_out_vect.clear();
+	_in_par.getFreePars( _out_vect, coopMat, actIndicators, repIndicators );
+}
+
+ExprPar* ExprPredictor::copy_par( const ExprPar& in){
+	vector<double> tmp;
+	get_free_from_par( in, tmp);
+	return par_factory_method(tmp);
+}
+void ExprPredictor::copy_par(const ExprPar& in, ExprPar*& out){
+	if(NULL != out) delete out;
+	out = copy_par(in);
 }
 
 // double ExprPredictor::test( const vector< Sequence >& testSeqs, const Matrix& testExprData, int perfOption ) const
@@ -1849,7 +1867,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //for(int i = 0; i < actIndicators.size(); i++) cout << "act: " << i << " " << (actIndicators[i] > 0? 1 : 0) << endl;
     //for(int i = 0; i < repIndicators.size(); i++) cout << "rep: " << i << " " << (repIndicators[i] > 0? 1 : 0) << endl;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, coopMat, actIndicators, repIndicators );
+    get_free_from_par( *par_model, pars);
     //cout << "pars.size() = " << pars.size() << endl;
     //cout << "DEBUG: out getFreePars()" << endl;
     //Hassan start:
@@ -2007,7 +2025,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     // extract initial parameters
     vector< double > pars;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, coopMat, actIndicators, repIndicators );
+    get_free_from_par( *par_model, pars);
     //cout << "DEBUG: out getFreePars()" << endl;
 
     //Hassan start:
@@ -2154,7 +2172,7 @@ int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
 
                 predict( unuzedSV, seqs[i].size(), targetExprs, i );
 
-                double beta = par_model.betas[ i ];
+                double beta = par_model->betas[ i ];
                 double error_or_score;
 
                 if( ExprPredictor::objOption == SSE )

@@ -321,10 +321,13 @@ class ExprPredictor
         {
             return repressionMat;
         }
-        const ExprPar& getPar() const { return par_model; }
+        const ExprPar& getPar() const { return *par_model; }
         double getObj() const { return obj_model; }
 
 	virtual ExprPar* par_factory_method( const vector<double> &pars);
+	void get_free_from_par( const ExprPar& _in_par, vector< double>& _out_vect);
+	ExprPar* copy_par( const ExprPar& in);
+	void copy_par(const ExprPar& in, ExprPar*& out);
 
 	// the objective function to be minimized
         double objFunc( const ExprPar& par ) ;
@@ -334,6 +337,9 @@ class ExprPredictor
                                                   // training with the initial values and allowing random starts
         int train( const ExprPar& par_init, const gsl_rng* rng );
         int train();                              // automatic training: first estimate the initial values, then train
+
+	//Only used when BETAOPTSEPARATE or BETAOPTBROKEN are defined.
+	int optimize_beta( ExprPar& par_result, double &obj_result );
 
         // predict expression values of a sequence (across the same conditions)
         virtual int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num, const ExprPar* _in_pars = NULL ) const;
@@ -391,7 +397,7 @@ class ExprPredictor
         double repressionDistThr;                 // distance threshold for repression: d_R
 
         // model parameters and the value of the objective function
-        ExprPar par_model;
+        ExprPar *par_model = NULL; 
         double obj_model;
 
         // randomly sample parameter values (only those free parameters), the parameters should be initialized
