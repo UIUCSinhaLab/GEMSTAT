@@ -24,6 +24,7 @@
 #include "Utils.h"
 #include "IO.h"
 
+#include "ExprModel.h"
 #include "ExprPredictor.h"
 
 int main( int argc, char* argv[] )
@@ -35,6 +36,8 @@ int main( int argc, char* argv[] )
     string factor_thr_file;
     string par_out_file; // the learned parameters will get stored here
     ofstream par_out_stream; // Uninitialized at first.
+
+    ModelType cmdline_modelOption = LOGISTIC;
     double coopDistThr = 50;
     double factorIntSigma = 50.0;                 // sigma parameter for the Gaussian interaction function
     double repressionDistThr = 250;
@@ -43,8 +46,9 @@ int main( int argc, char* argv[] )
     double eTF = 0.60;
     unsigned long initialSeed = time(0);
     
+    bool cmdline_one_qbtm_per_crm = false;
+
     string free_fix_indicator_filename;
-    ExprPredictor::one_qbtm_per_crm = false;
     ExprPar::one_qbtm_per_crm = false;
     ExprFunc::one_qbtm_per_crm = false;
 
@@ -64,7 +68,7 @@ int main( int argc, char* argv[] )
         else if ( !strcmp( "-f", argv[ i ] ) )
             factorExprFile = argv[ ++i ];
         else if ( !strcmp( "-o", argv[ i ] ) )
-            ExprPredictor::modelOption = getModelOption( argv[++i] );
+            cmdline_modelOption = getModelOption( argv[++i] );
         else if ( !strcmp( "-c", argv[ i ] ) )
             coopFile = argv[ ++i ];
         else if ( !strcmp( "-i", argv[ i ] ) )
@@ -93,7 +97,8 @@ int main( int argc, char* argv[] )
             free_fix_indicator_filename = argv[++i];
         else if ( !strcmp( "-oq", argv[i] ) )
         {
-            ExprPredictor::one_qbtm_per_crm = true;
+	    cmdline_one_qbtm_per_crm = true;
+
             ExprPar::one_qbtm_per_crm = true;
             ExprFunc::one_qbtm_per_crm = true;
         }
@@ -111,7 +116,7 @@ int main( int argc, char* argv[] )
 	    par_out_file = argv[ ++i ]; //output file for pars at the en
     }
 
-    if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_UNLIMITED || ExprPredictor::modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( ExprPredictor::modelOption == QUENCHING && repressionFile.empty() ) )
+    if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
     {
         cerr << "Usage: " << argv[ 0 ] << " -s seqFile -e exprFile -m motifFile -f factorExprFile -fo outFile [-a annFile -o modelOption -c coopFile -i factorInfoFile -r repressionFile -oo objOption -mc maxContact -p parFile -rt repressionDistThr -na nAlternations -ct coopDistThr -sigma factorIntSigma --seed RNG_SEED]" << endl;
         cerr << "modelOption: Logistic, Direct, Quenching, ChrMod_Unlimited, ChrMod_Limited" << endl;
@@ -339,6 +344,20 @@ int main( int argc, char* argv[] )
 	ASSERT_MESSAGE(0 == readRet, "Error reading the repression file.");
     }
 
+
+    FactorIntFunc* intFunc;
+    if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
+    else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
+    else
+    {
+        cerr << "Interaction Function is invalid " << endl; exit( 1 );
+    }
+
+    //Create a new ExprModel with all of the selected options.
+    //TODO: Continue here
+    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
+
+
     // read the axis wt file
     vector < int > axis_start;
     vector < int > axis_end;
@@ -365,7 +384,7 @@ int main( int argc, char* argv[] )
     num_indicators += nFactors;//The K values for every factor
     num_indicators += std::accumulate(actIndicators.begin(), actIndicators.end(),(int)0); //All the alpha act
     num_indicators += std::accumulate(repIndicators.begin(), repIndicators.end(),(int)0); //All the alpha rep
-    num_indicators += ExprPredictor::one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
+    num_indicators += cmdline_one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
     num_indicators += nSeqs; //for the pi parameters
     num_indicators += nSeqs; //for the beta pars per seqs
     num_indicators += num_of_coop_pairs; //For cooperative pairs cooperativities
@@ -433,12 +452,12 @@ int main( int argc, char* argv[] )
 
     // print the parameters for running the analysis
     cout << "Parameters for running the program: " << endl;
-    cout << "Model = " << getModelOptionStr( ExprPredictor::modelOption ) << endl;
-    if ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_LIMITED )
+    cout << "Model = " << getModelOptionStr( cmdline_modelOption ) << endl;
+    if ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_LIMITED )
     {
         cout << "Maximum_Contact = " << maxContact << endl;
     }
-    if ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_LIMITED || ExprPredictor::modelOption == CHRMOD_UNLIMITED )
+    if ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_LIMITED || cmdline_modelOption == CHRMOD_UNLIMITED )
     {
         cout << "Repression_Distance_Threshold = " << repressionDistThr << endl;
     }
@@ -455,14 +474,7 @@ int main( int argc, char* argv[] )
 
 
     // create the expression predictor
-    FactorIntFunc* intFunc;
-    if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
-    else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
-    else
-    {
-        cerr << "Interaction Function is invalid " << endl; exit( 1 );
-    }
-    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, intFunc, coopMat, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
+    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
     
     // random number generator
     gsl_rng* rng;
