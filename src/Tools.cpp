@@ -1344,7 +1344,7 @@ double infty_transform( double x, double a, double b )
     assert(a <= b);
 
     // transformation
-    return GSL_REAL(gsl_complex_arcsin_real((x-a)/(b-a)))*M_2_PI;
+    return GSL_REAL(gsl_complex_arcsin_real(2.0*(x-a)/(b-a) - 1.0));
 }
 
 
@@ -1357,7 +1357,7 @@ double inverse_infty_transform( double z, double a, double b )
     //assert( !(a > b) );
     //TODO: Commenting makes patchign/merging easier, remove all of this after the merge
 
-    return (b-a)*gsl_sf_sin(z*M_PI_2) + a;
+    return (b-a)*(0.5*gsl_sf_sin(z) + 0.5) + a;
 }
 
 
