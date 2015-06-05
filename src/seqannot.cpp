@@ -26,6 +26,13 @@
 
 #include "SeqAnnotator.h"
 
+
+void altered_site_print( ostream& os, const Site& site , vector< string > motifNames )
+{
+	char strandChar = site.strand ? '+' : '-';
+	os << site.start + 1 << "\t" << strandChar << "\t" << motifNames[site.factorIdx] << "\t" << site.energy << "\t" << site.wtRatio;
+}
+
 int main( int argc, char* argv[] )
 {
     // command line processing
@@ -34,7 +41,8 @@ int main( int argc, char* argv[] )
     string dnase_file;
     string factor_thr_file;
     double eTF = 0.60;
-    
+    bool traditional_format = false;
+
     for ( int i = 1; i < argc; i++ )
     {
         if ( !strcmp( "-s", argv[ i ] ) )
@@ -43,19 +51,19 @@ int main( int argc, char* argv[] )
             annFile = argv[ ++i ];
         else if ( !strcmp( "-m", argv[ i ] ) )
             motifFile = argv[ ++i ];
-        else if ( !strcmp( "-fo", argv[i] ) )
-            outFile = argv[++i];
         else if ( !strcmp( "-et", argv[i] ) )
             eTF = atof( argv[ ++i ] );
         else if ( !strcmp( "-df", argv[ i ]))
             dnase_file = argv[ ++i ];
         else if ( !strcmp( "-ft", argv[ i ]))
             factor_thr_file = argv[ ++i ];
+	else if ( !strcmp( "-tf", argv[ i ]))
+	    traditional_format = true;
     }
 
-    if ( seqFile.empty() || motifFile.empty() || outFile.empty() ) 
+    if ( seqFile.empty() || motifFile.empty() ) 
     {
-        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -m motifFile -fo outFile [ -et default_factor_energy=<" << eTF << "> -ft <factorThresholdsFile -df <dnase_file> ]" << endl;
+        cerr << "Usage: " << argv[ 0 ] << " -s seqFile -m motifFile [ -et default_factor_energy=<" << eTF << "> -ft <factorThresholdsFile -df <dnase_file> -tf (for traditional output format)]" << endl;
         exit( 1 );
     }
 
@@ -191,10 +199,17 @@ int main( int argc, char* argv[] )
     //     cout << "Activators:" << endl << actIndicators << endl;
     //     cout << "Repressors:" << endl << repIndicators << endl;
     //     cout << "Repression matrix:" << endl << repressionMat << endl;
-         cout << "Site representation of sequences:" << endl;
+         cerr << "Site representation of sequences:" << endl;
          for ( int i = 0; i < nSeqs; i++ ) {
              cout << ">" << seqNames[i] << endl;
-             for ( int j = 0; j < seqSites[i].size(); j++ ) cout << seqSites[i][j] << endl;
+             for ( int j = 0; j < seqSites[i].size(); j++ ){
+		    if( traditional_format){
+			    cout << seqSites[i][j] << endl;
+		    }else{
+		    	altered_site_print(cout, seqSites[i][j], motifNames);
+		    	cout << endl;
+		    }
+		}
          }
 
     return 0;
