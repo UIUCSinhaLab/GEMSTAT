@@ -365,6 +365,12 @@ class ExprPredictor
         vector < double > fix_pars;
         vector < double > free_pars;
         vector < Sequence > seqs;
+	
+	//Centers for regularization
+	ExprPar regularization_centers;
+	//Labdas for regularization
+	double lambda1;
+	double lambda2;
     private:
         // training data
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
@@ -391,6 +397,7 @@ class ExprPredictor
         // model parameters and the value of the objective function
         ExprPar par_model;
         double obj_model;
+	
 
         // randomly sample parameter values (only those free parameters), the parameters should be initialized
         int randSamplePar( const gsl_rng* rng, ExprPar& par ) const;

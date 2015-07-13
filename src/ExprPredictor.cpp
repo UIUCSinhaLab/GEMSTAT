@@ -1090,7 +1090,7 @@ bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 }
 
 
-ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ), intFunc( _intFunc ), coopMat( _coopMat ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts )
+ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ), intFunc( _intFunc ), coopMat( _coopMat ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts ), regularization_centers(_actIndicators.size(), _seqs.size())
 {
     assert( exprData.nRows() == nSeqs() );
     assert( factorExprData.nRows() == nFactors() && factorExprData.nCols() == nConds() );
@@ -1121,10 +1121,34 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 
 double ExprPredictor::objFunc( const ExprPar& par )
 {
-    if ( objOption == SSE ) return compRMSE( par );
-    if ( objOption == CORR ) return -compAvgCorr( par );
-    if ( objOption == PGP ) return compPGP( par );
-    if ( objOption == CROSS_CORR ) return -compAvgCrossCorr( par );
+    vector<double> centers;
+    regularization_centers.getFreePars(centers, getCoopMat(), getActIndicators(), getRepIndicators());
+    vector<double> allpars;
+    par.getFreePars(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
+    assert(centers.size() == allpars.size());
+    //ASSERT_MESSAGE(centers.size() == allpars.size(), "The number of parameters for regularization and parameters did not match.");
+    
+    double l1 = 0.0;
+    double l2 = 0.0;
+
+    for(int i = 0;i< centers.size();i++){
+	    double the_diff = allpars.at(i) - centers.at(i);
+	    l1+= the_diff;
+	    l2 += the_diff*the_diff;//very slow, but floating point format could make squaring just a matter of adding or subtracting from the exponent.(because it's internally stored as A*2^B
+    }
+    l2 = sqrt(l2);
+
+    l1 *= lambda1;
+    l2 *= lambda2;
+
+    double objective_value = l1 + l2;
+
+    if ( objOption == SSE ) objective_value += compRMSE( par );
+    if ( objOption == CORR ) objective_value -= compAvgCorr( par );
+    if ( objOption == PGP ) objective_value += compPGP( par );
+    if ( objOption == CROSS_CORR ) objective_value -= compAvgCrossCorr( par );
+
+    return objective_value;
 }
 
 

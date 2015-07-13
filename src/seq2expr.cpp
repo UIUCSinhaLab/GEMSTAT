@@ -42,7 +42,10 @@ int main( int argc, char* argv[] )
     bool read_factor_thresh = false;
     double eTF = 0.60;
     unsigned long initialSeed = time(0);
-    
+
+    double l1 = 0.0;
+    double l2 = 0.0;
+
     string free_fix_indicator_filename;
     ExprPredictor::one_qbtm_per_crm = false;
     ExprPar::one_qbtm_per_crm = false;
@@ -108,7 +111,11 @@ int main( int argc, char* argv[] )
 	else if ( !strcmp( "--seed", argv[ i ]))
 	    initialSeed = atol( argv[++i] );
 	else if ( !strcmp("-po", argv[ i ]))
-	    par_out_file = argv[ ++i ]; //output file for pars at the en
+	    par_out_file = argv[ ++i ]; //output file for pars at the end
+	else if ( !strcmp("-l1", argv[ i ]))
+	    l1 = atof(argv[ ++i ]);
+	else if ( !strcmp("-l2", argv[ i ]))
+	    l2 = atof(argv[ ++i ]);
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( ExprPredictor::modelOption == QUENCHING || ExprPredictor::modelOption == CHRMOD_UNLIMITED || ExprPredictor::modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( ExprPredictor::modelOption == QUENCHING && repressionFile.empty() ) )
@@ -463,7 +470,9 @@ int main( int argc, char* argv[] )
         cerr << "Interaction Function is invalid " << endl; exit( 1 );
     }
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, intFunc, coopMat, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
-    
+    predictor->lambda1 = l1;
+    predictor->lambda2 = l2;
+
     // random number generator
     gsl_rng* rng;
     gsl_rng_env_setup();
