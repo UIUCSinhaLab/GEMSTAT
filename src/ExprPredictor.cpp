@@ -1149,9 +1149,9 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 double ExprPredictor::objFunc( const ExprPar& par )
 {
     vector<double> centers;
-    regularization_centers.getFreeParsRaw(centers, getCoopMat(), getActIndicators(), getRepIndicators());
+    regularization_centers.getFreePars(centers, getCoopMat(), getActIndicators(), getRepIndicators());
     vector<double> allpars;
-    par.getFreeParsRaw(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
+    par.getFreePars(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
     assert(centers.size() == allpars.size());
     //ASSERT_MESSAGE(centers.size() == allpars.size(), "The number of parameters for regularization and parameters did not match.");
 
