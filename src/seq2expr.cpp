@@ -481,13 +481,6 @@ int main( int argc, char* argv[] )
 
 
     // create the expression predictor
-    FactorIntFunc* intFunc;
-    if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
-    else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
-    else
-    {
-        cerr << "Interaction Function is invalid " << endl; exit( 1 );
-    }
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
     predictor->lambda1 = l1;
     predictor->lambda2 = l2;

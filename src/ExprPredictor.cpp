@@ -359,6 +359,92 @@ void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, con
     }
 }
 
+void ExprPar::getFreeParsRaw( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
+{
+    assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
+    assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
+    pars.clear();
+
+    // write maxBindingWts
+    if ( estBindingOption )
+    {
+        for ( int i = 0; i < nFactors(); i++ )
+        {
+            pars.push_back( maxBindingWts[i] );
+        }
+    }
+
+    // write the interaction matrix
+    if ( modelOption != LOGISTIC )
+    {
+        for ( int i = 0; i < nFactors(); i++ )
+        {
+            for ( int j = 0; j <= i; j++ )
+            {
+                if ( coopMat( i, j ) )
+                {
+                    pars.push_back( factorIntMat(i,j) );
+                }
+            }
+        }
+    }
+
+    // write the transcriptional effects
+    for ( int i = 0; i < nFactors(); i++ )
+    {
+        if ( modelOption == LOGISTIC )
+        {
+            pars.push_back( txpEffects[i] );
+        }
+        /*else if ( modelOption == DIRECT ) {
+                    double effect = searchOption == CONSTRAINED ? infty_transform( log( txpEffects[i] ), log( min_effect_Thermo ), log( max_effect_Thermo ) ) : log( txpEffects[i] );
+                    pars.push_back( effect );
+                }*/
+        else
+        {
+            if ( actIndicators[i] )
+            {
+                pars.push_back( txpEffects[i] );
+            }
+        }
+    }
+
+    // write the repression effects
+    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
+    {
+        for ( int i = 0; i < nFactors(); i++ )
+        {
+            if ( repIndicators[i] )
+            {
+                pars.push_back( repEffects[i] );
+            }
+        }
+    }
+
+    for( int i = 0; i < basalTxps.size(); i++ )
+    {
+        // write the basal transcription
+            pars.push_back( basalTxps[ i ] );
+    }
+
+    //write the pis
+    for( int i = 0; i < pis.size(); i++ )
+    {
+        pars.push_back( pis[ i ] );
+    }
+
+    //write the betas
+    for( int i = 0; i < betas.size(); i++ )
+    {
+        pars.push_back( betas[ i ] );
+    }
+    
+    for( int i = 0; i < energyThrFactors.size(); i++ )
+    {
+        pars.push_back( energyThrFactors[i] );
+    }
+}
+
 
 void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const
 {
@@ -1030,7 +1116,7 @@ bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model,
 		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ),
 	expr_model( _expr_model),
-	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts ), regularization_centers(_actIndicators.size(), _seqs.size())
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts ), regularization_centers(_expr_model.actIndicators.size(), _seqs.size())
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
     assert( exprData.nRows() == nSeqs() );
@@ -1063,19 +1149,21 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 double ExprPredictor::objFunc( const ExprPar& par )
 {
     vector<double> centers;
-    regularization_centers.getFreePars(centers, getCoopMat(), getActIndicators(), getRepIndicators());
+    regularization_centers.getFreeParsRaw(centers, getCoopMat(), getActIndicators(), getRepIndicators());
     vector<double> allpars;
-    par.getFreePars(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
+    par.getFreeParsRaw(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
     assert(centers.size() == allpars.size());
     //ASSERT_MESSAGE(centers.size() == allpars.size(), "The number of parameters for regularization and parameters did not match.");
-    
+
     double l1 = 0.0;
     double l2 = 0.0;
 
     for(int i = 0;i< centers.size();i++){
+	    if(indicator_bool[i] == 0)//Only optimization variables that we are optimizing contribute to regularization
+		    continue;
 	    double the_diff = allpars.at(i) - centers.at(i);
 	    l1+= the_diff;
-	    l2 += the_diff*the_diff;//very slow, but floating point format could make squaring just a matter of adding or subtracting from the exponent.(because it's internally stored as A*2^B
+	    l2 += the_diff*the_diff;//very slow, floating point format could make squaring just a matter of adding or subtracting from the exponent.(because it's internally stored as A*2^B
     }
     l2 = sqrt(l2);
 

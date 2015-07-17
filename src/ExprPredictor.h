@@ -49,6 +49,7 @@ class ExprPar
 
         // get the free parameters (in the correct/uniform scale)
         void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
+        void getFreeParsRaw( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
 
         // print the parameters
         void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
