@@ -1,26 +1,9 @@
 #ifndef EXPR_PREDICTOR_H
 #define EXPR_PREDICTOR_H
 
+#include "ExprModel.h"
+#include "FactorIntFunc.h"
 #include "SeqAnnotator.h"
-enum ModelType
-{
-    LOGISTIC,                                     // logistic regression
-    DIRECT,                                       // direct interaction between TF and BTM, repressor works through BTM
-    QUENCHING,                                    // repressor stops activator from interacting with BTM
-    CHRMOD_UNLIMITED,                             // repressor works by chromatin modification (making it unaccessible), unlimited activation
-    CHRMOD_LIMITED                                // repressor works by chromatin modification (making it unaccessible), limited activation
-};
-
-ModelType getModelOption( const string& modelOptionStr );
-string getModelOptionStr( ModelType modelOption );
-
-enum FactorIntType
-{
-    BINARY,                                       // Binary model of interaction
-    GAUSSIAN                                      // Gaussian model of interaction
-};
-
-string getIntOptionStr( FactorIntType intOption );
 
 enum ObjType
 {
@@ -40,84 +23,6 @@ enum SearchType
 };
 
 string getSearchOptionStr( SearchType searchOption );
-/*****************************************************
- * Factor-Factor Interactions
- ******************************************************/
-
-/* FactorIntFunc class: distance-dependent function of TF-TF interaction  */
-class FactorIntFunc
-{
-    public:
-        // compute the factor interaction, given the normal interaction (when they are close enough)
-        virtual double compFactorInt( double normalInt, double dist, bool orientation ) const = 0;
-
-        // the maximum distance beyond which there is no interaction
-        virtual double getMaxDist() const = 0;
-};
-
-/* FactorIntFuncBinary class: binary distance function */
-class FactorIntFuncBinary : public FactorIntFunc
-{
-    public:
-        // constructors
-        FactorIntFuncBinary( double _distThr, double _orientationEffect = 1.0 ) : distThr( _distThr ), orientationEffect( _orientationEffect ) { assert( distThr > 0 ); }
-
-        // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool orientation ) const;
-
-        // the maximum distance beyond which there is no interaction
-        double getMaxDist() const
-        {
-            return distThr;
-        }
-    private:
-        double distThr;                           // if distance < thr, the "normal" value; otherwise 1 (no interaction)
-        double orientationEffect;                 // the effect of orientation: if at different strands, the effect should be multiplied this value
-};
-
-/* FactorIntFuncGaussian class: Gaussian distance function*/
-class FactorIntFuncGaussian : public FactorIntFunc
-{
-    public:
-        // constructors
-        FactorIntFuncGaussian( double _distThr, double _sigma ) : distThr( _distThr ), sigma( _sigma )
-        {
-            assert( distThr > 0 && sigma > 0 );
-        }
-
-        // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool orientation ) const;
-
-        // the maximum distance beyone which there is no interaction
-        double getMaxDist() const
-        {
-            return distThr;
-        }
-    private:
-        double distThr;                           // no interaction if distance is greater than thr.
-        double sigma;                             // standard deviation of
-};
-
-/* FactorIntFuncGeometric class: distance function decays geometrically (but never less than 1) */
-class FactorIntFuncGeometric : public FactorIntFunc
-{
-    public:
-        // constructors
-        FactorIntFuncGeometric( double _distThr, double _spacingEffect, double _orientationEffect ) : distThr( _distThr ), spacingEffect( _spacingEffect ), orientationEffect( _orientationEffect ) { assert( distThr > 0 ); }
-
-        // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool orientation ) const;
-
-        // the maximum distance beyond which there is no interaction
-        double getMaxDist() const
-        {
-            return distThr;
-        }
-    private:
-        double distThr;                           // if distance < thr, the "normal" value; otherwise decay with distance (by parameter spacingEffect)
-        double spacingEffect;                     // the effect of spacing
-        double orientationEffect;                 // the effect of orientation: if at different strands, the effect should be multiplied this value
-};
 
 /*****************************************************
  * Expression Model and Parameters
@@ -290,7 +195,7 @@ class ExprPredictor
 {
     public:
         // constructors
-        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
+        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
 
         // access methods
         int nSeqs() const
@@ -307,19 +212,19 @@ class ExprPredictor
         }
         const IntMatrix& getCoopMat() const
         {
-            return coopMat;
+            return expr_model.coopMat;
         }
         const vector< bool >& getActIndicators() const
         {
-            return actIndicators;
+            return expr_model.actIndicators;
         }
         const vector< bool >& getRepIndicators() const
         {
-            return repIndicators;
+            return expr_model.repIndicators;
         }
         const IntMatrix& getRepressionMat() const
         {
-            return repressionMat;
+            return expr_model.repressionMat;
         }
         const ExprPar& getPar() const { return par_model; }
         double getObj() const { return obj_model; }
@@ -341,7 +246,6 @@ class ExprPredictor
 
         //std::ofstream gene_crm_fout;
 
-        static ModelType modelOption;             // model option
         static int estBindingOption;              // whether estimate binding parameters
         static ObjType objOption;                 // option of the objective function
 
@@ -359,7 +263,6 @@ class ExprPredictor
         static double min_delta_f_PGP;            // the minimum change of the objective function under PGP
         static int nSimplexIters;                 // maximum number of iterations for Simplex optimizer
         static int nGradientIters;                // maximum number of iterations for Gradient optimizer
-        static bool one_qbtm_per_crm;
         vector < bool > indicator_bool;
         vector <string> motifNames;
         vector < double > fix_pars;
@@ -386,13 +289,7 @@ class ExprPredictor
         const vector < double >& axis_wts;
 
         // control parameters
-        const FactorIntFunc* intFunc;             // function to compute distance-dependent TF-TF interactions
-        const IntMatrix& coopMat;                 // cooperativity matrix: C(f,f') = 1 if f and f' bind cooperatively
-        const vector< bool >& actIndicators;      // 1 if the TF is in the activator set
-        int maxContact;                           // the maximum contact
-        const vector< bool >& repIndicators;      // 1 if the TF is in the repressor set
-        const IntMatrix& repressionMat;           // repression matrix: R(f,f') = 1 if f can repress f'
-        double repressionDistThr;                 // distance threshold for repression: d_R
+	const ExprModel& expr_model;
 
         // model parameters and the value of the objective function
         ExprPar par_model;

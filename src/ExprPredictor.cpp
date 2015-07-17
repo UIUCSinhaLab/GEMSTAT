@@ -4,40 +4,6 @@
 #include "ExprPredictor.h"
 #include "conf/ExprParConf.hpp"
 
-ModelType getModelOption( const string& modelOptionStr )
-{
-    if ( toupperStr( modelOptionStr ) == "LOGISTIC" ) return LOGISTIC;
-    if ( toupperStr( modelOptionStr ) == "DIRECT" ) return DIRECT;
-    if ( toupperStr( modelOptionStr ) == "QUENCHING" ) return QUENCHING;
-    if ( toupperStr( modelOptionStr ) == "CHRMOD_UNLIMITED" ) return CHRMOD_UNLIMITED;
-    if ( toupperStr( modelOptionStr ) == "CHRMOD_LIMITED" ) return CHRMOD_LIMITED;
-
-    cerr << "modelOptionStr is not a valid model option" << endl;
-    exit(1);
-}
-
-
-string getModelOptionStr( ModelType modelOption )
-{
-    if ( modelOption == LOGISTIC ) return "Logisitic";
-    if ( modelOption == DIRECT ) return "Direct";
-    if ( modelOption == QUENCHING ) return "Quenching";
-    if ( modelOption == CHRMOD_UNLIMITED ) return "ChrMod_Unlimited";
-    if ( modelOption == CHRMOD_LIMITED ) return "ChrMod_Limited";
-
-    return "Invalid";
-}
-
-
-string getIntOptionStr( FactorIntType intOption )
-{
-    if ( intOption == BINARY ) return "Binary";
-    if ( intOption == GAUSSIAN ) return "Gaussian";
-
-    return "Invalid";
-}
-
-
 ObjType getObjOption( const string& objOptionStr )
 {
     if ( toupperStr( objOptionStr ) == "SSE" ) return SSE;
@@ -67,35 +33,6 @@ string getSearchOptionStr( SearchType searchOption )
     if ( searchOption == CONSTRAINED ) return "Constrained";
 
     return "Invalid";
-}
-
-
-double FactorIntFuncBinary::compFactorInt( double normalInt, double dist, bool orientation ) const
-{
-    assert( dist >= 0 );
-
-    double spacingTerm = ( dist < distThr ? normalInt : 1.0 );
-    double orientationTerm = orientation ? 1.0 : orientationEffect;
-    return spacingTerm * orientationTerm;
-}
-
-
-double FactorIntFuncGaussian::compFactorInt( double normalInt, double dist, bool orientation ) const
-{
-    assert( dist >= 0 );
-
-    double GaussianInt = dist < distThr ? normalInt * exp( - ( dist * dist ) / ( 2.0 * sigma * sigma ) ) : 1.0;
-    return max( 1.0, GaussianInt );
-}
-
-
-double FactorIntFuncGeometric::compFactorInt( double normalInt, double dist, bool orientation ) const
-{
-    assert( dist >= 0 );
-
-    double spacingTerm = max( 1.0, dist <= distThr ? normalInt : normalInt * pow( spacingEffect, dist - distThr ) );
-    double orientationTerm = orientation ? 1.0 : orientationEffect;
-    return spacingTerm * orientationTerm;
 }
 
 
@@ -1090,25 +1027,29 @@ bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 }
 
 
-ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const FactorIntFunc* _intFunc, const IntMatrix& _coopMat, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ), intFunc( _intFunc ), coopMat( _coopMat ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts ), regularization_centers(_actIndicators.size(), _seqs.size())
+ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model,
+		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ),
+	expr_model( _expr_model),
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts ), regularization_centers(_actIndicators.size(), _seqs.size())
 {
+    //TODO: Move appropriate lines from this block to the ExprModel class.
     assert( exprData.nRows() == nSeqs() );
     assert( factorExprData.nRows() == nFactors() && factorExprData.nCols() == nConds() );
-    assert( coopMat.isSquare() && coopMat.isSymmetric() && coopMat.nRows() == nFactors() );
-    assert( actIndicators.size() == nFactors() );
-    assert( maxContact > 0 );
-    assert( repIndicators.size() == nFactors() );
-    assert( repressionMat.isSquare() && repressionMat.nRows() == nFactors() );
-    assert( repressionDistThr >= 0 );
+    assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
+    assert( expr_model.actIndicators.size() == nFactors() );
+    assert( expr_model.maxContact > 0 );
+    assert( expr_model.repIndicators.size() == nFactors() );
+    assert( expr_model.repressionMat.isSquare() && expr_model.repressionMat.nRows() == nFactors() );
+    assert( expr_model.repressionDistThr >= 0 );
 
     //gene_crm_fout.open( "gene_crm_fout.txt" );
 
     // set the model option for ExprPar and ExprFunc
-    ExprPar::modelOption = modelOption;
-    ExprFunc::modelOption = modelOption;
+    ExprPar::modelOption = expr_model.modelOption;//TODO: Remove both of these.
+    ExprFunc::modelOption = expr_model.modelOption;
 
     // set the values of the parameter range according to the model option
-    if ( modelOption != LOGISTIC && modelOption != DIRECT )
+    if ( expr_model.modelOption != LOGISTIC && expr_model.modelOption != DIRECT )
     {
         //ExprPar::min_effect_Thermo = 0.99;
         //ExprPar::min_interaction = 0.99;
@@ -1163,7 +1104,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     cout << "Objective function value: " << objFunc( par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
-    if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ) par_model.adjust( coopMat );
+    if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ) par_model.adjust( expr_model.coopMat );
     obj_model = objFunc( par_model );
 
     cout << "*** Diagnostic printing AFTER adjust() ***" << endl;
@@ -1182,13 +1123,13 @@ int ExprPredictor::train( const ExprPar& par_init )
     {
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
-        par_model.adjust( coopMat );
+        par_model.adjust( expr_model.coopMat );
 	#ifdef BETAOPTSEPARATE
         optimize_beta( par_model, obj_result );
         #endif
         gradient_minimize( par_result, obj_result );
         par_model = par_result;
-        par_model.adjust( coopMat);
+        par_model.adjust( expr_model.coopMat);
 	#ifdef BETAOPTSEPARATE
         optimize_beta( par_model, obj_result );
         #endif
@@ -1311,7 +1252,6 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
 // 	}
 // }
 
-ModelType ExprPredictor::modelOption = LOGISTIC;
 int ExprPredictor::estBindingOption = 1;          // 1. estimate binding parameters; 0. not estimate binding parameters
 ObjType ExprPredictor::objOption = SSE;
 
@@ -1351,7 +1291,6 @@ double ExprPredictor::min_delta_f_CrossCorr = 1.0E-8;
 double ExprPredictor::min_delta_f_PGP = 1.0E-8;
 int ExprPredictor::nSimplexIters = 200;
 int ExprPredictor::nGradientIters = 50;
-bool ExprPredictor::one_qbtm_per_crm = false;
 
 int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
 {
@@ -1366,14 +1305,14 @@ int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
     }
 
     // sample the interaction matrix
-    if ( modelOption != LOGISTIC )
+    if ( expr_model.modelOption != LOGISTIC )
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
             for ( int j = 0; j <= i; j++ )
             {
                 double rand_interaction = exp( gsl_ran_flat( rng, log( ExprPar::min_interaction ), log( ExprPar::max_interaction ) ) );
-                if ( coopMat( i, j ) ) par.factorIntMat( i, j ) = rand_interaction;
+                if ( expr_model.coopMat( i, j ) ) par.factorIntMat( i, j ) = rand_interaction;
             }
         }
         for ( int i = 0; i < nFactors(); i++ )
@@ -1388,19 +1327,19 @@ int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
     // sample the transcriptional effects
     for ( int i = 0; i < nFactors(); i++ )
     {
-        if ( modelOption == LOGISTIC )
+        if ( expr_model.modelOption == LOGISTIC )
         {
             double rand_effect = gsl_ran_flat( rng, ExprPar::min_effect_Logistic, ExprPar::max_effect_Logistic );
             par.txpEffects[i] = rand_effect;
         }
-        else if ( modelOption == DIRECT )
+        else if ( expr_model.modelOption == DIRECT )
         {
             double rand_effect = exp( gsl_ran_flat( rng, log( ExprPar::min_effect_Thermo ), log( ExprPar::max_effect_Thermo ) ) );
             par.txpEffects[i] = rand_effect;
         }
         else
         {
-            if ( actIndicators[i] )
+            if ( expr_model.actIndicators[i] )
             {
                 double rand_effect = exp( gsl_ran_flat( rng, log( ExprPar::min_effect_Thermo ), log( ExprPar::max_effect_Thermo ) ) );
                 par.txpEffects[i] = rand_effect;
@@ -1409,11 +1348,11 @@ int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
     }
 
     // sample the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED )
+    if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED )
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
-            if ( repIndicators[i] )
+            if ( expr_model.repIndicators[i] )
             {
                 double rand_repression = exp( gsl_ran_flat( rng, log( ExprPar::min_repression ), log( ExprPar::max_repression ) ) );
                 par.repEffects[i] = rand_repression;
@@ -1425,7 +1364,7 @@ int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
     double rand_basal;
     for( int _i = 0; _i < par.basalTxps.size(); _i ++ )
     {
-        if ( modelOption == LOGISTIC )
+        if ( expr_model.modelOption == LOGISTIC )
             rand_basal = gsl_ran_flat( rng, ExprPar::min_basal_Logistic, ExprPar::max_basal_Logistic );
         else
             rand_basal = exp( gsl_ran_flat( rng, log( ExprPar::min_basal_Thermo ), log( ExprPar::max_basal_Thermo ) ) );
@@ -1450,7 +1389,7 @@ bool ExprPredictor::testPar( const ExprPar& par ) const
     //cout << "dbg1" << endl;
 
     // test the interaction matrix
-    if ( modelOption != LOGISTIC )
+    if ( expr_model.modelOption != LOGISTIC )
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
@@ -1465,19 +1404,19 @@ bool ExprPredictor::testPar( const ExprPar& par ) const
     // test the transcriptional effects
     for ( int i = 0; i < nFactors(); i++ )
     {
-        if ( modelOption == LOGISTIC )
+        if ( expr_model.modelOption == LOGISTIC )
         {
             if ( par.txpEffects[i] < ExprPar::min_effect_Logistic + ExprPar::delta || par.txpEffects[i] > ExprPar::max_effect_Logistic - ExprPar::delta )
                 return false;
         }
-        else if ( modelOption == DIRECT )
+        else if ( expr_model.modelOption == DIRECT )
         {
             if ( par.txpEffects[i] < ExprPar::min_effect_Thermo * ( 1.0 + ExprPar::delta ) || par.txpEffects[i] > ExprPar::max_effect_Thermo * ( 1.0 - ExprPar::delta ) )
                 return false;
         }
         else
         {
-            if ( actIndicators[i] )
+            if ( expr_model.actIndicators[i] )
             {
                 if ( par.txpEffects[i] < ExprPar::min_effect_Thermo * ( 1.0 + ExprPar::delta ) || par.txpEffects[i] > ExprPar::max_effect_Thermo * ( 1.0 - ExprPar::delta ) )
                     return false;
@@ -1487,11 +1426,11 @@ bool ExprPredictor::testPar( const ExprPar& par ) const
 
     //cout << "dbg2" << endl;
     // test the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
+    if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT )
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
-            if ( repIndicators[i] )
+            if ( expr_model.repIndicators[i] )
             {
                 if ( par.repEffects[i] < ExprPar::min_repression * ( 1.0 + ExprPar::delta ) || par.repEffects[i] > ExprPar::max_repression * ( 1.0 - ExprPar::delta ) )
                     return false;
@@ -1503,7 +1442,7 @@ bool ExprPredictor::testPar( const ExprPar& par ) const
     // test the basal transcription
     for( int _i = 0; _i < par.basalTxps.size(); _i++ )
     {
-        if ( modelOption == LOGISTIC )
+        if ( expr_model.modelOption == LOGISTIC )
         {
             if ( par.basalTxps[ _i ] < ExprPar::min_basal_Logistic + ExprPar::delta || par.basalTxps[ _i ] > ExprPar::max_basal_Logistic - ExprPar::delta )
                 return false;
@@ -1561,26 +1500,26 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     {
         for ( int j = 0; j <= i; j++ )
         {
-            if ( coopMat( i, j ) ) cout << par.factorIntMat( i, j ) << "\t";
+            if ( expr_model.coopMat( i, j ) ) cout << par.factorIntMat( i, j ) << "\t";
         }
     }
 
     // print the transcriptional effects
     for ( int i = 0; i < nFactors(); i++ )
     {
-        if ( modelOption == LOGISTIC ) cout << par.txpEffects[i] << "\t";
+        if ( expr_model.modelOption == LOGISTIC ) cout << par.txpEffects[i] << "\t";
         else
         {
-            if ( actIndicators[i] ) cout << par.txpEffects[i] << "\t";
+            if ( expr_model.actIndicators[i] ) cout << par.txpEffects[i] << "\t";
         }
     }
 
     // print the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
+    if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT )
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
-            if ( repIndicators[i] ) cout << par.repEffects[i] << "\t";
+            if ( expr_model.repIndicators[i] ) cout << par.repEffects[i] << "\t";
         }
     }
 
@@ -1611,7 +1550,9 @@ void ExprPredictor::printPar( const ExprPar& par ) const
 
 ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
 {
-    return new ExprFunc( motifs, intFunc, actIndicators, maxContact, repIndicators, repressionMat, repressionDistThr, par );
+	//TODO: just make it take an expr_model as a parameter.
+	//Also, it should use a factory to create the ExprFunc, but this is already close to a factory method.
+    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, par );
 }
 
 
@@ -1822,7 +1763,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //for(int i = 0; i < actIndicators.size(); i++) cout << "act: " << i << " " << (actIndicators[i] > 0? 1 : 0) << endl;
     //for(int i = 0; i < repIndicators.size(); i++) cout << "rep: " << i << " " << (repIndicators[i] > 0? 1 : 0) << endl;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, coopMat, actIndicators, repIndicators );
+    par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "pars.size() = " << pars.size() << endl;
     //cout << "DEBUG: out getFreePars()" << endl;
     //Hassan start:
@@ -1903,7 +1844,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         //cout << "free_par_counter = " << free_par_counter << "\t" << "fix_par_counter = " << fix_par_counter << endl;
         //cout << "samee: " << fix_par_counter << endl;
         //cout << "DEBUG: init ExprPar start" << endl;
-        ExprPar par_curr = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+        ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
         //cout << "pars.size() = " << pars.size() << "\tpars_size = " << pars_size << endl;
         //printPar( par_curr );
         //cout << "DEBUG: init ExprPar end" << endl;
@@ -1955,7 +1896,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         }
     }
     //cout << "DEBUG: init par_result start." << endl;
-    par_result = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+    par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
     printPar( par_result );
     //cout << "DEBUG: init par_result end." << endl;
     //Hassan end
@@ -1978,7 +1919,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     // extract initial parameters
     vector< double > pars;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, coopMat, actIndicators, repIndicators );
+    par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "DEBUG: out getFreePars()" << endl;
 
     //Hassan start:
@@ -2057,7 +1998,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
             }
         }
 
-        ExprPar par_curr = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+        ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
         //Hassan end
         //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
         if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ){
@@ -2109,7 +2050,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
         }
     }
 
-    par_result = ExprPar ( pars, coopMat, actIndicators, repIndicators, nSeqs() );
+    par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
     //Hassan end
     //par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
     obj_result = s->f;
