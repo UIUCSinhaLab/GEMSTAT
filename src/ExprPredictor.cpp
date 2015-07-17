@@ -1179,7 +1179,7 @@ double ExprPredictor::objFunc( const ExprPar& par )
     if ( objOption == PGP ) objective_value += compPGP( par );
     if ( objOption == CROSS_CORR ) objective_value -= compAvgCrossCorr( par );
 
-    return objective_value;
+    return (1.0 - lambda1 - lambda2)*objective_value;
 }
 
 
