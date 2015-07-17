@@ -1159,8 +1159,10 @@ double ExprPredictor::objFunc( const ExprPar& par )
     double l2 = 0.0;
 
     for(int i = 0;i< centers.size();i++){
-	    if(indicator_bool[i] == 0)//Only optimization variables that we are optimizing contribute to regularization
+	    /* This was not my best idea. It will make the objective function change just by changing which parameters you are optimizing. Makes it difficult to optimize some and then fix a few and continue optimization.
+	     if(indicator_bool[i] == 0)//Only optimization variables that we are optimizing contribute to regularization
 		    continue;
+		*/
 	    double the_diff = allpars.at(i) - centers.at(i);
 	    l1+= the_diff;
 	    l2 += the_diff*the_diff;//very slow, floating point format could make squaring just a matter of adding or subtracting from the exponent.(because it's internally stored as A*2^B
