@@ -438,7 +438,7 @@ void ExprPar::getFreeParsRaw( vector< double >& pars, const IntMatrix& coopMat, 
     {
         pars.push_back( betas[ i ] );
     }
-    
+
     for( int i = 0; i < energyThrFactors.size(); i++ )
     {
         pars.push_back( energyThrFactors[i] );
@@ -1148,6 +1148,9 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 
 double ExprPredictor::objFunc( const ExprPar& par )
 {
+    double objective_value = 0.0;
+
+
     vector<double> centers;
     regularization_centers.getFreePars(centers, getCoopMat(), getActIndicators(), getRepIndicators());
     vector<double> allpars;
@@ -1163,7 +1166,7 @@ double ExprPredictor::objFunc( const ExprPar& par )
 	     if(indicator_bool[i] == 0)//Only optimization variables that we are optimizing contribute to regularization
 		    continue;
 		*/
-	    double the_diff = allpars.at(i) - centers.at(i);
+	    double the_diff = abs(allpars.at(i) - centers.at(i));
 	    l1+= the_diff;
 	    l2 += the_diff*the_diff;//very slow, floating point format could make squaring just a matter of adding or subtracting from the exponent.(because it's internally stored as A*2^B
     }
@@ -1171,15 +1174,42 @@ double ExprPredictor::objFunc( const ExprPar& par )
 
     l1 *= lambda1;
     l2 *= lambda2;
+    objective_value += l1 + l2;
 
-    double objective_value = l1 + l2;
+    //BETA_regularization
+    double l1_beta = 0.0;
+    double l2_beta = 0.0;
+    for(int i = 0;i<regularization_centers.betas.size();i++){
+      double the_diff = abs(par.betas.at(i) - regularization_centers.betas.at(i));
+      l1_beta += the_diff;
+      l2_beta += the_diff*the_diff;
+    }
+    l2_beta = sqrt(l2_beta);
+    l1_beta *= lambda1_beta;
+    l2_beta *= lambda2_beta;
+    objective_value += l1_beta + l2_beta;
+
+    //COOP regularization
+    double l1_coop;
+    double l2_coop;
+    for(int i = 0;i<regularization_centers.nFactors();i++){
+      for(int j = 0;j<regularization_centers.nFactors();j++){
+        double the_diff = abs(par.factorIntMat(i,j) - regularization_centers.factorIntMat(i,j));
+        l1_coop += the_diff;
+        l2_coop += the_diff*the_diff;
+      }
+    }
+    l2_coop = sqrt(l2_coop);
+    l1_coop *= lambda1_coop;
+    l2_coop *= lambda2_coop;
+    objective_value += l1_coop + l2_coop;
 
     if ( objOption == SSE ) objective_value += compRMSE( par );
     if ( objOption == CORR ) objective_value -= compAvgCorr( par );
     if ( objOption == PGP ) objective_value += compPGP( par );
     if ( objOption == CROSS_CORR ) objective_value -= compAvgCrossCorr( par );
 
-    return (1.0 - lambda1 - lambda2)*objective_value;
+    return objective_value;
 }
 
 

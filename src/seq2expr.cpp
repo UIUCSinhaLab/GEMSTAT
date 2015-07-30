@@ -48,7 +48,13 @@ int main( int argc, char* argv[] )
 
     double l1 = 0.0;
     double l2 = 0.0;
-    
+
+    double l1_beta = 0.0;
+    double l2_beta = 0.0;
+
+    double l1_coop = 0.0;
+    double l2_coop = 0.0;
+
     bool cmdline_one_qbtm_per_crm = false;
 
     string free_fix_indicator_filename;
@@ -121,6 +127,14 @@ int main( int argc, char* argv[] )
 	    l1 = atof(argv[ ++i ]);
 	else if ( !strcmp("-l2", argv[ i ]))
 	    l2 = atof(argv[ ++i ]);
+  else if ( !strcmp("-l1beta", argv[ i ]))
+    	l1_beta = atof(argv[ ++i ]);
+  else if ( !strcmp("-l2beta", argv[ i ]))
+    	l2_beta = atof(argv[ ++i ]);
+  else if ( !strcmp("-l1coop", argv[ i ]))
+      l1_coop = atof(argv[ ++i ]);
+  else if ( !strcmp("-l2coop", argv[ i ]))
+      l2_coop = atof(argv[ ++i ]);
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -210,7 +224,7 @@ int main( int argc, char* argv[] )
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
-    
+
     if( ! factor_thr_file.empty() )
     {
 	int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
@@ -340,7 +354,7 @@ int main( int argc, char* argv[] )
     if ( !factorInfoFile.empty() )
     {
 	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators);
-        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");    
+        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");
     }
 
     // read the repression matrix
@@ -423,15 +437,15 @@ int main( int argc, char* argv[] )
     }
     //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
     if( read_factor_thresh ){ par_init.energyThrFactors = energyThrFactors; }
-   
-    //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read. 
+
+    //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
     vector < double > all_pars_for_test;
     par_init.getFreePars(all_pars_for_test, coopMat, actIndicators, repIndicators);
     ASSERT_MESSAGE(all_pars_for_test.size() == indicator_bool.size(), "For some reason, the number of entries in free_fix did not match the number of free parameters.\n"
-		  "Remember that whatever model, there are 3 parameters for every transcription factor\n"); 
+		  "Remember that whatever model, there are 3 parameters for every transcription factor\n");
     all_pars_for_test.clear();//Won't be used again.
     //It is possible that the user wants to write out to the same par file, doing this after reading the par file means we won't have overridden it before reading
-    
+
     //Check that we can access and write to the par outfile now, so that we can warn the user before a lot of time was spent on the optimization
     if( !par_out_file.empty() ){
         par_out_stream.open( par_out_file.c_str() );
@@ -484,6 +498,10 @@ int main( int argc, char* argv[] )
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
     predictor->lambda1 = l1;
     predictor->lambda2 = l2;
+    predictor->lambda1_beta = l1_beta;
+    predictor->lambda2_beta = l2_beta;
+    predictor->lambda1_coop = l1_coop;
+    predictor->lambda2_coop = l2_coop;
 
     // random number generator
     gsl_rng* rng;
@@ -509,7 +527,7 @@ int main( int argc, char* argv[] )
 
     // print the predictions
     writePredictions(outFile, *predictor, exprData, expr_condNames, true);
-    
+
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*
         cout << "Max expressions of the random sequences:" << endl;
