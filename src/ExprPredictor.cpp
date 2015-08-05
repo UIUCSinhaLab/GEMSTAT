@@ -364,85 +364,12 @@ void ExprPar::getFreeParsRaw( vector< double >& pars, const IntMatrix& coopMat, 
     assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
     assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
     pars.clear();
+    SearchType tmpSearchType = searchOption;//DISGUSTING, non-reentrant, ugh.
 
-    // write maxBindingWts
-    if ( estBindingOption )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            pars.push_back( maxBindingWts[i] );
-        }
-    }
+    searchOption = UNCONSTRAINED;
+    getFreePars(pars, coopMat, actIndicators, repIndicators);
 
-    // write the interaction matrix
-    if ( modelOption != LOGISTIC )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = 0; j <= i; j++ )
-            {
-                if ( coopMat( i, j ) )
-                {
-                    pars.push_back( factorIntMat(i,j) );
-                }
-            }
-        }
-    }
-
-    // write the transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( modelOption == LOGISTIC )
-        {
-            pars.push_back( txpEffects[i] );
-        }
-        /*else if ( modelOption == DIRECT ) {
-                    double effect = searchOption == CONSTRAINED ? infty_transform( log( txpEffects[i] ), log( min_effect_Thermo ), log( max_effect_Thermo ) ) : log( txpEffects[i] );
-                    pars.push_back( effect );
-                }*/
-        else
-        {
-            if ( actIndicators[i] )
-            {
-                pars.push_back( txpEffects[i] );
-            }
-        }
-    }
-
-    // write the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( repIndicators[i] )
-            {
-                pars.push_back( repEffects[i] );
-            }
-        }
-    }
-
-    for( int i = 0; i < basalTxps.size(); i++ )
-    {
-        // write the basal transcription
-            pars.push_back( basalTxps[ i ] );
-    }
-
-    //write the pis
-    for( int i = 0; i < pis.size(); i++ )
-    {
-        pars.push_back( pis[ i ] );
-    }
-
-    //write the betas
-    for( int i = 0; i < betas.size(); i++ )
-    {
-        pars.push_back( betas[ i ] );
-    }
-
-    for( int i = 0; i < energyThrFactors.size(); i++ )
-    {
-        pars.push_back( energyThrFactors[i] );
-    }
+    searchOption = tmpSearchType;
 }
 
 
@@ -1152,9 +1079,9 @@ double ExprPredictor::objFunc( const ExprPar& par )
 
 
     vector<double> centers;
-    regularization_centers.getFreePars(centers, getCoopMat(), getActIndicators(), getRepIndicators());
+    regularization_centers.getFreeParsRaw(centers, getCoopMat(), getActIndicators(), getRepIndicators());
     vector<double> allpars;
-    par.getFreePars(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
+    par.getFreeParsRaw(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
     assert(centers.size() == allpars.size());
     //ASSERT_MESSAGE(centers.size() == allpars.size(), "The number of parameters for regularization and parameters did not match.");
 
