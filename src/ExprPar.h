@@ -4,6 +4,32 @@
 #include "ExprModel.h"
 #include "PredictorTrainer.h"
 
+enum ThermodynamicParameterSpace {
+  PROB_SPACE, //GEMSTAT dynamic programming algorithms are written for this to be the native parameter space.
+              //It is also easier for humans to understand. The exp() of ENERGY_SPACE.
+  ENERGY_SPACE,//Most thermodynamic textbooks and concepts happen in this parameter space, (-inf, +inf)
+                //In particular, regularization, machine learning, etc. generally happen in this space. The log() of the PROB_SPACE.
+  CONSTRAINED_SPACE//ENERGY_SPACE parameters are transformed via a Sinusoidal, sigmoidal, or other function so that an unconstrained
+                //optimizer can be used to perform constrained optimization. (For user understandability, constraints are specified in PROB_SPACE.)
+};
+
+
+class ParFactory
+{
+    public:
+      ParFactory( ExprModel& in_model, int nSeqs);
+      ~ParFactory();
+
+      void setFreeFix(vector<double> in_free_fix);
+      void setMaximums();
+
+      //Code for separating parameters to optimize from those that we don't want to optimize.
+      void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output);//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
+      void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output);
+
+};
+
+
 /* ExprPar class: the parameters of the expression model */
 class ExprPar
 {
@@ -19,6 +45,8 @@ class ExprPar
 
         // assignment
         ExprPar& operator=( const ExprPar& other ) { copy( other ); return *this; }
+
+        ExprPar& changeSpace(const ThermodynamicParameterSpace new_space);
 
         // access methods
         int nFactors() const { return maxBindingWts.size(); }
