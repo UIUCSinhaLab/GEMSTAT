@@ -3,7 +3,12 @@
 #include "conf/ExprParConf.hpp"
 #include "ExprPredictor.h"
 
-void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output)
+ParFactory::ParFactory( ExprModel& in_model, int nSeqs) : expr_model(in_model)
+{
+
+}
+
+void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<double>& indicator_bool)
 {
   //Hassan's code for separating parameters
   vector<double> pars;
@@ -25,9 +30,11 @@ void ParFactory::separateParams(const ExprPar& input, vector<double>& free_outpu
   }
 }
 
-void ParFactory::joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double> output);
+void ParFactory::joinParams(const vector<double>& free_pars, const vector<double>& fix_pars, vector<double>& output, const vector<double>& indicator_bool)
 {
   output.clear();
+  int pars_size = free_pars.size() + fix_pars.size();
+  //assert(indicator_bool.size() == pars_size)
   int free_par_counter = 0;
   int fix_par_counter = 0;
   for( int index = 0; index < pars_size; index ++ )
