@@ -324,7 +324,7 @@ int main( int argc, char* argv[] )
     }
 
     // read the roles of factors
-    vector< bool > actIndicators( nFactors, false );
+    vector< bool > actIndicators( nFactors, true );
     vector< bool > repIndicators( nFactors, false );
     if ( !factorInfoFile.empty() )
     {
