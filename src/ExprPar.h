@@ -25,8 +25,8 @@ class ParFactory
       void setMaximums();
 
       //Code for separating parameters to optimize from those that we don't want to optimize.
-      void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<double>& indicator_bool);//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
-      void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<double>& indicator_bool);
+      void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<bool>& indicator_bool);//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
+      void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool);
     private:
       const ExprModel& expr_model;
 };

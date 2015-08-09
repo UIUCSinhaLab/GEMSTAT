@@ -7,7 +7,7 @@ ParFactory::ParFactory( const ExprModel& in_model, int nSeqs) : expr_model(in_mo
 
 }
 
-void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<double>& indicator_bool)
+void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool)
 {
   //Hassan's code for separating parameters
   vector<double> pars;
@@ -29,7 +29,7 @@ void ParFactory::separateParams(const ExprPar& input, vector<double>& free_outpu
   }
 }
 
-void ParFactory::joinParams(const vector<double>& free_pars, const vector<double>& fix_pars, vector<double>& output, const vector<double>& indicator_bool)
+void ParFactory::joinParams(const vector<double>& free_pars, const vector<double>& fix_pars, vector<double>& output, const vector<bool>& indicator_bool)
 {
   output.clear();
   int pars_size = free_pars.size() + fix_pars.size();

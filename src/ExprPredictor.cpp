@@ -1170,27 +1170,11 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //for(int i = 0; i < actIndicators.size(); i++) cout << "act: " << i << " " << (actIndicators[i] > 0? 1 : 0) << endl;
     //for(int i = 0; i < repIndicators.size(); i++) cout << "rep: " << i << " " << (repIndicators[i] > 0? 1 : 0) << endl;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
+    //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "pars.size() = " << pars.size() << endl;
     //cout << "DEBUG: out getFreePars()" << endl;
-    //Hassan start:
-    int pars_size = pars.size();
-    /*DEBUG*///cout << "DEBUG: " << pars_size << endl;
-    /*DEBUG*///exit(1);
-    fix_pars.clear();
-    free_pars.clear();
-    for( int index = 0; index < pars_size; index++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            free_pars.push_back( pars[ index ]);
-        }
-        else
-        {
-            fix_pars.push_back( pars[ index ] );
-        }
-    }
-    //cout << "DEBUG: free_pars.size() = " << free_pars.size() << "\t" << "fix_pars.size() = " << fix_pars.size() << endl;
+    param_factory->separateParams(par_model, free_pars, fix_pars, indicator_bool );
+
     pars.clear();
     pars = free_pars;
 
@@ -1232,20 +1216,9 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         if ( status ) break;
         //Hassan start:
         free_pars = gsl2vector( s-> x);
-        pars.clear();
-        int free_par_counter = 0;
-        int fix_par_counter = 0;
-        for( int index = 0; index < pars_size; index ++ )
-        {
-            if( indicator_bool[ index ] )
-            {
-                pars.push_back( free_pars[ free_par_counter ++ ]);
-            }
-            else
-            {
-                pars.push_back( fix_pars[ fix_par_counter ++ ]);
-            }
-        }
+
+        param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
+
         //cout << "DEBUG: pars.size() = " << pars.size() << endl;
         //cout << "DEBUG: free_pars.size() = " << free_pars.size() << "\t" << "fix_pars.size() = " << fix_pars.size() << "\t";
         //cout << "free_par_counter = " << free_par_counter << "\t" << "fix_par_counter = " << fix_par_counter << endl;
@@ -1288,20 +1261,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
     //Hassan start:
     free_pars = gsl2vector( s-> x);
-    pars.clear();
-    int free_par_counter = 0;
-    int fix_par_counter = 0;
-    for( int index = 0; index < pars_size; index ++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            pars.push_back( free_pars[ free_par_counter ++ ]);
-        }
-        else
-        {
-            pars.push_back( fix_pars[ fix_par_counter ++ ]);
-        }
-    }
+    param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
     //cout << "DEBUG: init par_result start." << endl;
     par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
     printPar( par_result );
