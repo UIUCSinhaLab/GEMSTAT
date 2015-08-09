@@ -94,7 +94,7 @@ class ExprPredictor
     public:
         // constructors
         ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
-
+        ~ExprPredictor();
         // access methods
         int nSeqs() const
         {
@@ -181,7 +181,9 @@ class ExprPredictor
         const vector < double >& axis_wts;
 
         // control parameters
-	const ExprModel& expr_model;
+	      const ExprModel& expr_model;
+        // Factory for Parameter vectors;
+        ParFactory *param_factory;
 
         // model parameters and the value of the objective function
         ExprPar par_model;

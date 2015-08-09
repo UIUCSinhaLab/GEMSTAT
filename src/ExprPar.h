@@ -18,8 +18,8 @@ class ExprPar;
 class ParFactory
 {
     public:
-      ParFactory( ExprModel& in_model, int nSeqs);
-      ~ParFactory();
+      ParFactory( const ExprModel& in_model, int nSeqs);
+      ~ParFactory(){};
 
       void setFreeFix(vector<double> in_free_fix);
       void setMaximums();
@@ -28,7 +28,7 @@ class ParFactory
       void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<double>& indicator_bool);//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
       void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<double>& indicator_bool);
     private:
-      ExprModel expr_model;
+      const ExprModel& expr_model;
 };
 
 

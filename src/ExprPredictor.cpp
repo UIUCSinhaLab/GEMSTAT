@@ -2,6 +2,7 @@
 #include <gsl/gsl_multimin.h>
 
 #include "ExprPredictor.h"
+#include "ExprPar.h"
 
 
 ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), par( _par )
@@ -480,8 +481,15 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 
     // set the option of parameter estimation
     ExprPar::estBindingOption = estBindingOption;
+
+    //expr_model was already initialized. Setup the parameter factory.
+    param_factory = new ParFactory(expr_model, nSeqs());
 }
 
+ExprPredictor::~ExprPredictor()
+{
+  delete param_factory;
+}
 
 double ExprPredictor::objFunc( const ExprPar& par )
 {

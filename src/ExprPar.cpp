@@ -1,9 +1,8 @@
 #include "ExprPar.h"
 #include "ExprPredictor.h"
 #include "conf/ExprParConf.hpp"
-#include "ExprPredictor.h"
 
-ParFactory::ParFactory( ExprModel& in_model, int nSeqs) : expr_model(in_model)
+ParFactory::ParFactory( const ExprModel& in_model, int nSeqs) : expr_model(in_model)
 {
 
 }
