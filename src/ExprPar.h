@@ -23,19 +23,18 @@ class ExprPar
         ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors );
                                                   // construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
         ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );
-        void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis, betas = other.betas, energyThrFactors = other.energyThrFactors, nSeqs = basalTxps.size();  }
+        void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis, betas = other.betas, energyThrFactors = other.energyThrFactors, nSeqs = basalTxps.size(); my_space = other.my_space;  }
         ExprPar( const ExprPar& other ) { copy( other ); }
 
         // assignment
         ExprPar& operator=( const ExprPar& other ) { copy( other ); return *this; }
-
-        ExprPar& changeSpace(const ThermodynamicParameterSpace new_space);
 
         // access methods
         int nFactors() const { return maxBindingWts.size(); }
 
         // get the free parameters (in the correct/uniform scale)
         void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
+        void getRawPars(vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;//Temporary until these edits are all done.
 
         // print the parameters
         void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
@@ -45,6 +44,9 @@ class ExprPar
 
         // adjust the values of parameters: if the value is close to min or max allowed value, slightly change it s.t. it is away from the boundary
         void adjust( const IntMatrix& coopMat  );
+
+        //Which parameter space this ExprPar lives in
+        ThermodynamicParameterSpace my_space;
 
         // parameters
         vector < double > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
@@ -104,21 +106,36 @@ class ExprPar
 class ParFactory
 {
     public:
-      ParFactory( const ExprModel& in_model, int in_nSeqs);
+      ParFactory( const ExprModel& in_model, int in_nSeqs, const vector<bool>& in_ff);
       ~ParFactory(){};
 
-      void setFreeFix(vector<bool> in_free_fix);
+      //the raison d'etre for this class
+      virtual ExprPar create_expr_par() const;
+      virtual ExprPar create_expr_par(const vector<double>& pars, const ThermodynamicParameterSpace in_space) const;
 
-      ExprPar createDefaultMinMax(bool min_or_max);
+
+
+
+      void setFreeFix(const vector<bool>& in_free_fix);
+
+      ExprPar createDefaultMinMax(bool min_or_max) const;
+
+      ExprPar changeSpace(const ExprPar& in_par, const ThermodynamicParameterSpace new_space) const;
 
       //Code for separating parameters to optimize from those that we don't want to optimize.
-      void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<bool>& indicator_bool);//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
-      void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool);
+      void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<bool>& indicator_bool) const;//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
+      void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool) const;
     private:
+      const vector<bool>& indicator_bool;//TODO: Later work on making this non-const. Original author const'ed everything.
       int nSeqs;
       const ExprModel& expr_model;
       ExprPar maximums; //Should be in the ENERGY_SPACE
       ExprPar minimums; //Should be in the ENERGY_SPACE
+
+      void constrained_to_energy_helper(const vector<double>& pars, vector<double>& output, const vector<double>& low, const vector<double>& high) const;
+      void energy_to_constrained_helper(const vector<double>& pars, vector<double>& output, const vector<double>& low, const vector<double>& high) const;
+      void energy_to_prob_helper(const vector<double>& pars, vector<double>& output) const;
+      void prob_to_energy_helper(const vector<double>& pars, vector<double>& output) const;
 };
 
 #endif

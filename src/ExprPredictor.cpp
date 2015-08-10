@@ -483,7 +483,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     ExprPar::estBindingOption = estBindingOption;
 
     //expr_model was already initialized. Setup the parameter factory.
-    param_factory = new ParFactory(expr_model, nSeqs());
+    param_factory = new ParFactory(expr_model, nSeqs(), _indicator_bool);
 
     /* DEBUG
     cout << setprecision(10);
@@ -1235,6 +1235,19 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         //cout << "samee: " << fix_par_counter << endl;
         //cout << "DEBUG: init ExprPar start" << endl;
         ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+        /* TEMPORARY BRYAN DEBUG
+        ExprPar par_compare = param_factory->changeSpace(param_factory->create_expr_par(pars,CONSTRAINED_SPACE),PROB_SPACE);
+
+        cout << "FIRST" << endl << flush;
+        printPar(par_curr);
+        cout << par_curr.maxBindingWts.size() << " " << par_curr.txpEffects.size() << " " << par_curr.repEffects.size()  << " " << par_curr.basalTxps.size() << " " << par_curr.pis.size() << " " << par_curr.betas.size() << " " << par_curr.energyThrFactors.size() << endl;
+        cout << flush << "AND THEN " << endl;
+        printPar(par_compare);
+        cout << par_compare.maxBindingWts.size() << " " << par_compare.txpEffects.size() << " " << par_compare.repEffects.size() << " " << par_compare.basalTxps.size() << " " << par_compare.pis.size() << " " << par_compare.betas.size() << " " << par_compare.energyThrFactors.size() << endl;
+        cout << flush << "END" << endl << endl << flush;
+        exit(1);
+        */
+
         //cout << "pars.size() = " << pars.size() << "\tpars_size = " << pars_size << endl;
         //printPar( par_curr );
         //cout << "DEBUG: init ExprPar end" << endl;

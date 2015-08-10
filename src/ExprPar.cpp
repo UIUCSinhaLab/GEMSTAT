@@ -2,7 +2,7 @@
 #include "ExprPredictor.h"
 #include "conf/ExprParConf.hpp"
 
-ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in_model), nSeqs(in_nSeqs)
+ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs, const vector<bool>& in_ff) : expr_model(in_model), nSeqs(in_nSeqs), indicator_bool(in_ff)
 {
   //maximums = ExprPar( expr_model.motifs.size(), nSeqs );
   maximums = createDefaultMinMax(true);
@@ -10,7 +10,7 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in
   minimums = createDefaultMinMax(false);
 }
 
-void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool)
+void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool) const
 {
   //Hassan's code for separating parameters
   vector<double> pars;
@@ -32,7 +32,7 @@ void ParFactory::separateParams(const ExprPar& input, vector<double>& free_outpu
   }
 }
 
-void ParFactory::joinParams(const vector<double>& free_pars, const vector<double>& fix_pars, vector<double>& output, const vector<bool>& indicator_bool)
+void ParFactory::joinParams(const vector<double>& free_pars, const vector<double>& fix_pars, vector<double>& output, const vector<bool>& indicator_bool) const
 {
   output.clear();
   int pars_size = free_pars.size() + fix_pars.size();
@@ -53,7 +53,7 @@ void ParFactory::joinParams(const vector<double>& free_pars, const vector<double
 
 }
 
-ExprPar ParFactory::createDefaultMinMax(bool min_or_max)
+ExprPar ParFactory::createDefaultMinMax(bool min_or_max) const
 {
   //TODO: the model really should know about the number of factors in the model.
   int _nFactors = expr_model.motifs.size();
@@ -61,16 +61,233 @@ ExprPar ParFactory::createDefaultMinMax(bool min_or_max)
 
   ExprPar tmp_par = ExprPar( _nFactors, nSeqs );
 
-  tmp_par.maxBindingWts.assign(tmp_par.maxBindingWts.size(), min_or_max ? ExprPar::max_weight : ExprPar::min_weight); // ExprPar::min_weight
+  tmp_par.maxBindingWts.assign(tmp_par.maxBindingWts.size(), min_or_max ? log(ExprPar::max_weight) : log(ExprPar::min_weight)); // ExprPar::min_weight
   //set the interaction maximums
-  tmp_par.factorIntMat.setAll(min_or_max ? ExprPar::max_interaction : ExprPar::min_interaction);
-  tmp_par.txpEffects.assign(tmp_par.txpEffects.size(), min_or_max ? ExprPar::max_effect_Thermo : ExprPar::min_effect_Thermo);//TODO: Doesn't handle Logistic model
-  tmp_par.repEffects.assign(tmp_par.repEffects.size(), min_or_max ? ExprPar::max_repression : ExprPar::min_repression);
-  tmp_par.basalTxps.assign(tmp_par.basalTxps.size(), min_or_max ? ExprPar::max_basal_Thermo : ExprPar::min_basal_Thermo);//TODO: Doesn't handle Logistic model
-  tmp_par.pis.assign(tmp_par.pis.size(), min_or_max ? ExprPar::max_pi : ExprPar::min_pi);
-  tmp_par.betas.assign(tmp_par.betas.size(), min_or_max ? ExprPar::max_beta : ExprPar::min_beta);
-  tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? ExprPar::max_energyThrFactors : ExprPar::min_energyThrFactors);
+  tmp_par.factorIntMat.setAll(min_or_max ? log(ExprPar::max_interaction) : log(ExprPar::min_interaction));
+  tmp_par.txpEffects.assign(tmp_par.txpEffects.size(), min_or_max ? log(ExprPar::max_effect_Thermo) : log(ExprPar::min_effect_Thermo));//TODO: Doesn't handle Logistic model
+  tmp_par.repEffects.assign(tmp_par.repEffects.size(), min_or_max ? log(ExprPar::max_repression) : log(ExprPar::min_repression));
+  tmp_par.basalTxps.assign(tmp_par.basalTxps.size(), min_or_max ? log(ExprPar::max_basal_Thermo) : log(ExprPar::min_basal_Thermo));//TODO: Doesn't handle Logistic model
+  tmp_par.pis.assign(tmp_par.pis.size(), min_or_max ? log(ExprPar::max_pi) : log(ExprPar::min_pi));
+  tmp_par.betas.assign(tmp_par.betas.size(), min_or_max ? log(ExprPar::max_beta) : log(ExprPar::min_beta));
+  tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? log(ExprPar::max_energyThrFactors) : log(ExprPar::min_energyThrFactors));
   return tmp_par;
+}
+
+ExprPar ParFactory::create_expr_par() const
+{
+  return ExprPar(expr_model.getNFactors(), this->nSeqs);
+}
+
+ExprPar ParFactory::create_expr_par(const vector<double>& pars, const ThermodynamicParameterSpace in_space) const
+{
+      //TODO: Most of this code can be further simplified by using the STL vector's nice functions.
+
+      ExprPar tmp_par = this->create_expr_par();
+
+      int _nFactors = expr_model.getNFactors();
+
+      int counter = 0;
+
+      // set maxBindingWts
+      tmp_par.maxBindingWts.clear();
+      if ( ExprPar::estBindingOption ) // TODO: get rid of ugly static variable. Frankly, get rid of estBindingOption altogether. Just fix them to 1.0 if you don7t want to estimate.
+      {
+          for ( int i = 0; i < _nFactors; i++ )
+          {
+              double weight = pars[counter++] ;
+              tmp_par.maxBindingWts.push_back( weight );
+          }
+      }
+      else
+      {
+          tmp_par.maxBindingWts.assign(_nFactors, ExprPar::default_weight );//TODO: Needs to take into account which space this default is in.
+      }
+
+      // set the interaction matrix
+      //Which was created previously.
+      tmp_par.factorIntMat.setAll(ExprPar::default_interaction);
+      for ( int i = 0; i < _nFactors; i++ )
+      {
+          for ( int j = 0; j <= i; j++ )
+          {
+              if ( expr_model.coopMat( i, j ) )
+              {
+                  double interaction = pars[counter++] ;
+                  tmp_par.factorIntMat( i, j ) = interaction;
+                  tmp_par.factorIntMat( j, i ) = interaction;
+              }
+          }
+      }
+
+      //TODO: For the logistic model, actIndicators should always be 1 and actRepressors always 0
+
+      // set the transcriptional effects
+      for ( int i = 0; i < _nFactors; i++ )
+      {
+              double effect;
+
+              if ( expr_model.actIndicators[i] )
+                effect = pars[counter++];
+              else
+                effect = ExprPar::default_effect_Thermo;//TODO: Which space are we creating in?
+
+              tmp_par.txpEffects[i] = effect ;
+      }
+
+      // set the repression effects
+      tmp_par.repEffects.assign(_nFactors, ExprPar::default_repression);//TODO: Which space are we creating in?
+      if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT )
+      {
+          for ( int i = 0; i < _nFactors; i++ )
+          {
+              if ( expr_model.repIndicators[i] )
+              {
+                  double repression = pars[counter++];
+                  tmp_par.repEffects[i] = repression;
+              }
+          }
+      }
+
+      // set the basal transcription
+
+      int num_qbtm = expr_model.one_qbtm_per_crm ? nSeqs : 1;
+      tmp_par.basalTxps.clear();
+      for( int i = 0; i < num_qbtm; i++ )
+      {
+            double basal = pars[counter++];
+            tmp_par.basalTxps.push_back( basal );
+      }
+
+      //for( int i = 0; i < num_qbtm; i++ )//TODO: should be this but that triggers an exception somewhere I don7t want to deal with.
+      for( int i = 0; i < nSeqs; i++ )
+      {
+          //cout << "sending for:" << pars[counter] <<"\t" << log(min_pi) << "\t" <<log(max_pi) << endl;
+          double pi_val = pars[ counter++ ] ;
+          tmp_par.pis[i] = pi_val ;
+      }
+
+      //cout << "Counter before beta: " << counter << endl;
+      //cout << "nSeqs: " << nSeqs << "\t _nSeqs: " << _nSeqs << endl;
+      //put in the values of the beta params
+
+      //for( int i = 0; i < num_qbtm; i++ )//TODO: should be this but that triggers an exception somewhere I don7t want to deal with.
+
+      for( int i = 0; i < nSeqs; i++ )
+      {
+          double beta_val = pars[ counter ++];
+          tmp_par.betas[i] = beta_val ;
+      }
+
+      //cout << "Counter after beta: " << counter << endl;
+      for( int i = 0; i < _nFactors; i++ )
+      {
+          double energyThrFactor_val = pars[ counter++ ];
+          tmp_par.energyThrFactors[i] = energyThrFactor_val ;
+      }
+      assert(counter == pars.size());
+
+      tmp_par.my_space = in_space;
+      return tmp_par;
+}
+
+
+
+ExprPar ParFactory::changeSpace(const ExprPar& in_par, const ThermodynamicParameterSpace new_space) const
+{
+  if( in_par.my_space == new_space){
+    return in_par;
+  }
+
+  //Since the spaces are related by CONSTRAINED_SPACE <-> ENERGY_SPACE <-> PROB_SPACE
+  //and we already handled a transformation to the same space type above, we know we at least need to go to the energy space.
+
+  vector<double> as_energy_space;
+  vector<double> original_pars;
+
+
+  vector<double> low_vect;//TODO: Cache this when the high and low exprPar are set.
+  vector<double> high_vect;
+  if(in_par.my_space == CONSTRAINED_SPACE || new_space == CONSTRAINED_SPACE){
+        maximums.getRawPars(high_vect, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
+        minimums.getRawPars(low_vect, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
+  }
+
+
+  in_par.getRawPars(original_pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
+
+  if(in_par.my_space == CONSTRAINED_SPACE){
+
+
+    constrained_to_energy_helper(original_pars, as_energy_space,low_vect, high_vect);
+  }else{//Inputs were in the PROB_SPACE
+    prob_to_energy_helper(original_pars, as_energy_space);
+  }
+
+  //Now convert that into whichever the target parameter space was.
+  if(new_space == ENERGY_SPACE){
+    return create_expr_par(as_energy_space,new_space);
+  }
+
+  if(new_space == PROB_SPACE){
+    vector<double> as_prob_space;
+    energy_to_prob_helper(as_energy_space,as_prob_space);
+    return create_expr_par(as_prob_space,PROB_SPACE);
+  }
+
+  if(new_space == CONSTRAINED_SPACE){
+    vector<double> as_constrained;
+    energy_to_constrained_helper(as_energy_space, as_constrained, low_vect, high_vect);
+    return create_expr_par(as_constrained, CONSTRAINED_SPACE);
+  }
+
+  assert(false);
+}
+
+void ParFactory::constrained_to_energy_helper(const vector<double>& pars, vector<double>& output, const vector<double>& low, const vector<double>& high) const
+{
+  output.clear();
+  assert(pars.size() == low.size() && pars.size() == high.size());
+
+  int N = pars.size();
+  for(int i = 0; i<N;i++){
+    double value = inverse_infty_transform( pars[i], low[i], high[i] );
+    output.push_back(value);
+  }
+
+
+}
+
+void ParFactory::energy_to_constrained_helper(const vector<double>& pars, vector<double>& output, const vector<double>& low, const vector<double>& high) const
+{
+  output.clear();
+  assert(pars.size() == low.size() && pars.size() == high.size());
+
+  int N = pars.size();
+  for(int i = 0; i<N;i++){
+    double value = infty_transform( pars[i], low[i], high[i] );
+    output.push_back(value);
+  }
+
+}
+
+void ParFactory::energy_to_prob_helper(const vector<double>& pars, vector<double>& output) const
+{
+  output.assign(pars.size(), 1.0);
+
+  int N = pars.size();
+  for(int i = 0; i<N;i++){
+    output[i] = exp(pars[i]);
+  }
+}
+
+void ParFactory::prob_to_energy_helper(const vector<double>& pars, vector<double>& output) const
+{
+  output.assign(pars.size(), 0.0);
+
+  int N = pars.size();
+  for(int i = 0; i<N;i++){
+    output[i] = log(pars[i]);
+  }
 }
 
 ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
@@ -93,12 +310,14 @@ ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
     double basalTxp_val = modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : ExprPar::default_basal_Thermo;
     basalTxps.assign( numBTMS, basalTxp_val );
     //for the pausing parameters
-    pis.assign( numBTMS, ExprPar::default_pi );
+    pis.assign( nSeqs, ExprPar::default_pi );
 
     //for the beta parameters
-    betas.assign( numBTMS, ExprPar::default_beta );
+    betas.assign( nSeqs, ExprPar::default_beta );
 
-    energyThrFactors.assign( numBTMS, ExprPar::default_energyThrFactors );
+    energyThrFactors.assign( _nFactors, ExprPar::default_energyThrFactors );
+
+    my_space = PROB_SPACE;
 }
 
 
@@ -366,7 +585,97 @@ void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, con
         pars.push_back( energyThrFactor_val );
     }
 }
+void ExprPar::getRawPars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
+{
+    assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
+    assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
+    pars.clear();
 
+    // write maxBindingWts
+    if ( estBindingOption )
+    {
+        for ( int i = 0; i < nFactors(); i++ )
+        {
+          pars.push_back( maxBindingWts[ i ] );
+        }
+    }
+
+    // write the interaction matrix
+    if ( modelOption != LOGISTIC )
+    {
+        for ( int i = 0; i < nFactors(); i++ )
+        {
+            for ( int j = 0; j <= i; j++ )
+            {
+                if ( coopMat( i, j ) )
+                {
+                      pars.push_back( factorIntMat( i, j ) );
+                }
+            }
+        }
+    }
+
+    // write the transcriptional effects
+    for ( int i = 0; i < nFactors(); i++ )
+    {
+        if ( modelOption == LOGISTIC )
+        {
+          pars.push_back( txpEffects[i] );
+        }
+        /*else if ( modelOption == DIRECT ) {
+                    double effect = searchOption == CONSTRAINED ? infty_transform( log( txpEffects[i] ), log( min_effect_Thermo ), log( max_effect_Thermo ) ) : log( txpEffects[i] );
+                    pars.push_back( effect );
+                }*/
+        else
+        {
+            if ( actIndicators[i] )
+            {
+                pars.push_back( txpEffects[i] );
+            }
+        }
+    }
+
+    // write the repression effects
+    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
+    {
+        for ( int i = 0; i < nFactors(); i++ )
+        {
+            if ( repIndicators[i] )
+            {
+              pars.push_back( repEffects[i] );
+            }
+        }
+    }
+
+    for( int i = 0; i < basalTxps.size(); i++ )
+    {
+        // write the basal transcription
+        if ( modelOption == LOGISTIC )
+        {
+            pars.push_back( basalTxps[ i ] );
+        }
+        else
+        {
+            pars.push_back( basalTxps[ i ] );
+        }
+    }
+
+    //write the pis
+    for( int i = 0; i < pis.size(); i++ )
+    {
+        pars.push_back( pis[ i ] );
+    }
+
+    //write the betas
+    for( int i = 0; i < betas.size(); i++ )
+    {
+        pars.push_back( betas[ i ] );
+    }
+    for( int i = 0; i < energyThrFactors.size(); i++ )
+    {
+        pars.push_back( energyThrFactors[ i ] );
+    }
+}
 
 void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const
 {

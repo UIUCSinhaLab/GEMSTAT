@@ -44,7 +44,7 @@ public: //TODO: Implement good accessors / mutators instead.
 	IntMatrix& repressionMat;		// repression matrix: R(f,f') = 1 if f can repress f' (Matrix representation of a directed graph.)
 	double repressionDistThr;		// distance threshold for repression: d_R
 
-
+  int getNFactors() const {return motifs.size();}
 };
 
 
