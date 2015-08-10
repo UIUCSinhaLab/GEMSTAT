@@ -484,6 +484,16 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 
     //expr_model was already initialized. Setup the parameter factory.
     param_factory = new ParFactory(expr_model, nSeqs());
+
+    /* DEBUG
+    cout << setprecision(10);
+    ExprPar foo = param_factory->createDefaultMinMax(true);
+    cout << " MAXIMUMS " << endl;
+    printPar(foo);
+    foo = param_factory->createDefaultMinMax(false);
+    cout << " MINIMUMS " << endl;
+    printPar(foo);
+    */
 }
 
 ExprPredictor::~ExprPredictor()
@@ -951,7 +961,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     {
         cout << par.energyThrFactors[ _i ] << "\t";
     }
-    cout << endl;
+    cout << flush << endl;
 }
 
 
@@ -1286,26 +1296,10 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     // extract initial parameters
     vector< double > pars;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
+    //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "DEBUG: out getFreePars()" << endl;
 
-    //Hassan start:
-    int pars_size = pars.size();
-    fix_pars.clear();
-    free_pars.clear();
-    for( int index = 0; index < pars_size; index++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            //cout << "testing 1: " << pars[ index ] << endl;
-            free_pars.push_back( pars[ index ]);
-        }
-        else
-        {
-            //cout << "testing 2: " << pars[ index ] << endl;
-            fix_pars.push_back( pars[ index ] );
-        }
-    }
+    param_factory->separateParams(par_model, free_pars, fix_pars, indicator_bool );
 
     pars.clear();
     pars = free_pars;
@@ -1350,20 +1344,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
         // check if the current values of parameters are valid
         //Hassan start:
         free_pars = gsl2vector( s-> x);
-        pars.clear();
-        int free_par_counter = 0;
-        int fix_par_counter = 0;
-        for( int index = 0; index < pars_size; index ++ )
-        {
-            if( indicator_bool[ index ] )
-            {
-                pars.push_back( free_pars[ free_par_counter ++ ]);
-            }
-            else
-            {
-                pars.push_back( fix_pars[ fix_par_counter ++ ]);
-            }
-        }
+        param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
 
         ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
         //Hassan end
@@ -1402,20 +1383,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     //     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
     //Hassan start:
     free_pars = gsl2vector( s-> x);
-    pars.clear();
-    int free_par_counter = 0;
-    int fix_par_counter = 0;
-    for( int index = 0; index < pars_size; index ++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            pars.push_back( free_pars[ free_par_counter ++ ]);
-        }
-        else
-        {
-            pars.push_back( fix_pars[ fix_par_counter ++ ]);
-        }
-    }
+    param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
 
     par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
     //Hassan end
@@ -1473,20 +1441,8 @@ double gsl_obj_f( const gsl_vector* v, void* params )
     //     for ( int i = 0; i < v->size; i++ ) expv.push_back( exp( gsl_vector_get( v, i ) ) );
     vector <double> temp_free_pars = gsl2vector(v);
     vector < double > all_pars;
-    all_pars.clear();
-    int free_par_counter = 0;
-    int fix_par_counter = 0;
-    for( int index = 0; index < predictor -> indicator_bool.size(); index ++ )
-    {
-        if( predictor ->  indicator_bool[ index ]  )
-        {
-            all_pars.push_back( temp_free_pars[ free_par_counter ++ ]  );
-        }
-        else
-        {
-            all_pars.push_back( predictor ->  fix_pars[ fix_par_counter ++ ]  );
-        }
-    }
+
+    predictor->param_factory->joinParams(temp_free_pars, predictor->fix_pars, all_pars, predictor->indicator_bool);
 
     ExprPar par( all_pars, predictor->getCoopMat(), predictor->getActIndicators(), predictor->getRepIndicators(), predictor -> nSeqs() );
     //ExprPar par( gsl2vector( v ), predictor->getCoopMat(), predictor->getActIndicators(), predictor->getRepIndicators() );

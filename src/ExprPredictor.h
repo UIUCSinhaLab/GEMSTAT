@@ -166,6 +166,10 @@ class ExprPredictor
         vector < double > fix_pars;
         vector < double > free_pars;
         vector < Sequence > seqs;
+
+        //TODO: decide if this needs to be made private
+        // Factory for Parameter vectors;
+        ParFactory *param_factory;
     private:
         // training data
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
@@ -182,8 +186,6 @@ class ExprPredictor
 
         // control parameters
 	      const ExprModel& expr_model;
-        // Factory for Parameter vectors;
-        ParFactory *param_factory;
 
         // model parameters and the value of the objective function
         ExprPar par_model;

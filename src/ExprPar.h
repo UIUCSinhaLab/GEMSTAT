@@ -10,27 +10,8 @@ enum ThermodynamicParameterSpace {
   ENERGY_SPACE,//Most thermodynamic textbooks and concepts happen in this parameter space, (-inf, +inf)
                 //In particular, regularization, machine learning, etc. generally happen in this space. The log() of the PROB_SPACE.
   CONSTRAINED_SPACE//ENERGY_SPACE parameters are transformed via a Sinusoidal, sigmoidal, or other function so that an unconstrained
-                //optimizer can be used to perform constrained optimization. (For user understandability, constraints are specified in PROB_SPACE.)
+                //optimizer can be used to perform constrained optimization. (For user understandability, constraints are specified in PROB_SPACE, _in input, output, and config files_.)
 };
-
-
-class ExprPar;
-class ParFactory
-{
-    public:
-      ParFactory( const ExprModel& in_model, int nSeqs);
-      ~ParFactory(){};
-
-      void setFreeFix(vector<double> in_free_fix);
-      void setMaximums();
-
-      //Code for separating parameters to optimize from those that we don't want to optimize.
-      void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<bool>& indicator_bool);//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
-      void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool);
-    private:
-      const ExprModel& expr_model;
-};
-
 
 /* ExprPar class: the parameters of the expression model */
 class ExprPar
@@ -118,6 +99,26 @@ class ExprPar
         // 	static double wt_step;		// step of maxExprWt (log10)
         // 	static double int_step;		// step of interaction (log10)
         // 	static double ratio_step;	// step of expRatio
+};
+
+class ParFactory
+{
+    public:
+      ParFactory( const ExprModel& in_model, int in_nSeqs);
+      ~ParFactory(){};
+
+      void setFreeFix(vector<bool> in_free_fix);
+
+      ExprPar createDefaultMinMax(bool min_or_max);
+
+      //Code for separating parameters to optimize from those that we don't want to optimize.
+      void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<bool>& indicator_bool);//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
+      void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool);
+    private:
+      int nSeqs;
+      const ExprModel& expr_model;
+      ExprPar maximums; //Should be in the ENERGY_SPACE
+      ExprPar minimums; //Should be in the ENERGY_SPACE
 };
 
 #endif

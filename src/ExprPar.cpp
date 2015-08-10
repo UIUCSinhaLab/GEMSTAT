@@ -2,9 +2,12 @@
 #include "ExprPredictor.h"
 #include "conf/ExprParConf.hpp"
 
-ParFactory::ParFactory( const ExprModel& in_model, int nSeqs) : expr_model(in_model)
+ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in_model), nSeqs(in_nSeqs)
 {
-
+  //maximums = ExprPar( expr_model.motifs.size(), nSeqs );
+  maximums = createDefaultMinMax(true);
+  //minimums = ExprPar( expr_model.motifs.size(), nSeqs );
+  minimums = createDefaultMinMax(false);
 }
 
 void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool)
@@ -48,6 +51,26 @@ void ParFactory::joinParams(const vector<double>& free_pars, const vector<double
       }
   }
 
+}
+
+ExprPar ParFactory::createDefaultMinMax(bool min_or_max)
+{
+  //TODO: the model really should know about the number of factors in the model.
+  int _nFactors = expr_model.motifs.size();
+  assert( _nFactors > 0 );
+
+  maximums = ExprPar( _nFactors, nSeqs );
+
+  maximums.maxBindingWts.assign(maximums.maxBindingWts.size(), min_or_max ? ExprPar::max_weight : ExprPar::min_weight); // ExprPar::min_weight
+  //set the interaction maximums
+  maximums.factorIntMat.setAll(min_or_max ? ExprPar::max_interaction : ExprPar::min_interaction);
+  maximums.txpEffects.assign(maximums.txpEffects.size(), min_or_max ? ExprPar::max_effect_Thermo : ExprPar::min_effect_Thermo);//TODO: Doesn't handle Logistic model
+  maximums.repEffects.assign(maximums.repEffects.size(), min_or_max ? ExprPar::max_repression : ExprPar::min_repression);
+  maximums.basalTxps.assign(maximums.basalTxps.size(), min_or_max ? ExprPar::max_basal_Thermo : ExprPar::min_basal_Thermo);//TODO: Doesn't handle Logistic model
+  maximums.pis.assign(maximums.pis.size(), min_or_max ? ExprPar::max_pi : ExprPar::min_pi);
+  maximums.betas.assign(maximums.betas.size(), min_or_max ? ExprPar::max_beta : ExprPar::min_beta);
+  maximums.energyThrFactors.assign(maximums.energyThrFactors.size(), min_or_max ? ExprPar::max_energyThrFactors : ExprPar::min_energyThrFactors);
+  return maximums;
 }
 
 ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
