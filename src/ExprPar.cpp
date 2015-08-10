@@ -59,68 +59,46 @@ ExprPar ParFactory::createDefaultMinMax(bool min_or_max)
   int _nFactors = expr_model.motifs.size();
   assert( _nFactors > 0 );
 
-  maximums = ExprPar( _nFactors, nSeqs );
+  ExprPar tmp_par = ExprPar( _nFactors, nSeqs );
 
-  maximums.maxBindingWts.assign(maximums.maxBindingWts.size(), min_or_max ? ExprPar::max_weight : ExprPar::min_weight); // ExprPar::min_weight
+  tmp_par.maxBindingWts.assign(tmp_par.maxBindingWts.size(), min_or_max ? ExprPar::max_weight : ExprPar::min_weight); // ExprPar::min_weight
   //set the interaction maximums
-  maximums.factorIntMat.setAll(min_or_max ? ExprPar::max_interaction : ExprPar::min_interaction);
-  maximums.txpEffects.assign(maximums.txpEffects.size(), min_or_max ? ExprPar::max_effect_Thermo : ExprPar::min_effect_Thermo);//TODO: Doesn't handle Logistic model
-  maximums.repEffects.assign(maximums.repEffects.size(), min_or_max ? ExprPar::max_repression : ExprPar::min_repression);
-  maximums.basalTxps.assign(maximums.basalTxps.size(), min_or_max ? ExprPar::max_basal_Thermo : ExprPar::min_basal_Thermo);//TODO: Doesn't handle Logistic model
-  maximums.pis.assign(maximums.pis.size(), min_or_max ? ExprPar::max_pi : ExprPar::min_pi);
-  maximums.betas.assign(maximums.betas.size(), min_or_max ? ExprPar::max_beta : ExprPar::min_beta);
-  maximums.energyThrFactors.assign(maximums.energyThrFactors.size(), min_or_max ? ExprPar::max_energyThrFactors : ExprPar::min_energyThrFactors);
-  return maximums;
+  tmp_par.factorIntMat.setAll(min_or_max ? ExprPar::max_interaction : ExprPar::min_interaction);
+  tmp_par.txpEffects.assign(tmp_par.txpEffects.size(), min_or_max ? ExprPar::max_effect_Thermo : ExprPar::min_effect_Thermo);//TODO: Doesn't handle Logistic model
+  tmp_par.repEffects.assign(tmp_par.repEffects.size(), min_or_max ? ExprPar::max_repression : ExprPar::min_repression);
+  tmp_par.basalTxps.assign(tmp_par.basalTxps.size(), min_or_max ? ExprPar::max_basal_Thermo : ExprPar::min_basal_Thermo);//TODO: Doesn't handle Logistic model
+  tmp_par.pis.assign(tmp_par.pis.size(), min_or_max ? ExprPar::max_pi : ExprPar::min_pi);
+  tmp_par.betas.assign(tmp_par.betas.size(), min_or_max ? ExprPar::max_beta : ExprPar::min_beta);
+  tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? ExprPar::max_energyThrFactors : ExprPar::min_energyThrFactors);
+  return tmp_par;
 }
 
 ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
 {
     assert( _nFactors > 0 );
 
-    for ( int i = 0; i < _nFactors; i++ )
-    {
-        maxBindingWts.push_back( ExprPar::default_weight );
-    }
+    maxBindingWts.assign( _nFactors, ExprPar::default_weight );
 
     factorIntMat.setDimensions( _nFactors, _nFactors );
     factorIntMat.setAll( ExprPar::default_interaction );
 
-    for ( int i = 0; i < _nFactors; i++ )
-    {
-        double defaultEffect = modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : ExprPar::default_effect_Thermo;
-        txpEffects.push_back( defaultEffect );
-        repEffects.push_back( ExprPar::default_repression );
-    }
+    double defaultEffect = modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : ExprPar::default_effect_Thermo;
+    txpEffects.assign( _nFactors, defaultEffect );
+    repEffects.assign( _nFactors, ExprPar::default_repression );
 
     nSeqs = _nSeqs;
-    if( one_qbtm_per_crm  )
-    {
-        for( int i = 0; i < nSeqs; i++ )
-        {
-            double basalTxp_val = modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : ExprPar::default_basal_Thermo;
-            basalTxps.push_back( basalTxp_val );
-        }
-    }
-    else
-    {
-        double basalTxp_val = modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : ExprPar::default_basal_Thermo;
-        basalTxps.push_back( basalTxp_val );
-    }
-    //for the pausing parameters
 
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        pis.push_back( ExprPar::default_pi );
-    }
+    int numBTMS = one_qbtm_per_crm ? nSeqs : 1;
+
+    double basalTxp_val = modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : ExprPar::default_basal_Thermo;
+    basalTxps.assign( numBTMS, basalTxp_val );
+    //for the pausing parameters
+    pis.assign( numBTMS, ExprPar::default_pi );
+
     //for the beta parameters
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        betas.push_back( ExprPar::default_beta );
-    }
-    for( int i = 0; i < _nFactors; i++ )
-    {
-        energyThrFactors.push_back( ExprPar::default_energyThrFactors );
-    }
+    betas.assign( numBTMS, ExprPar::default_beta );
+
+    energyThrFactors.assign( numBTMS, ExprPar::default_energyThrFactors );
 }
 
 
@@ -128,14 +106,7 @@ ExprPar::ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorI
 {
     if ( !factorIntMat.isEmpty() ) assert( factorIntMat.nRows() == maxBindingWts.size() && factorIntMat.isSquare() );
     assert( txpEffects.size() == maxBindingWts.size() && repEffects.size() == maxBindingWts.size() );
-    if ( one_qbtm_per_crm )
-    {
-        assert( basalTxps.size() == nSeqs );
-    }
-    else
-    {
-        assert( basalTxps.size() == 1 );
-    }
+    assert( basalTxps.size() == one_qbtm_per_crm ? nSeqs : 1);
 }
 
 
