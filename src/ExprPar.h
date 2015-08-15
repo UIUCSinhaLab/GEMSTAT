@@ -125,6 +125,10 @@ class ParFactory
       //Code for separating parameters to optimize from those that we don't want to optimize.
       void joinParams(const vector<double>& freepars, const vector<double>& fixpars, vector<double>& output, const vector<bool>& indicator_bool) const;//TODO: Will become unnecessary when we switch to a natrually constrained optimizer.
       void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool) const;
+
+      ExprPar randSamplePar( const gsl_rng* rng) const;
+
+      int nFactors() const {return expr_model.motifs.size();}
     private:
       const vector<bool>& indicator_bool;//TODO: Later work on making this non-const. Original author const'ed everything.
       int nSeqs;

@@ -290,6 +290,65 @@ void ParFactory::prob_to_energy_helper(const vector<double>& pars, vector<double
   }
 }
 
+ExprPar ParFactory::randSamplePar( const gsl_rng* rng) const
+{
+    ExprPar tmp_par = create_expr_par();
+    tmp_par.my_space = ENERGY_SPACE;
+    // sample binding weights
+    //estBindingOption is now always true, fix the bindings to 1.0 if you don't want to estimate them.
+    for ( int i = 0; i < nFactors(); i++ )
+    {
+      tmp_par.maxBindingWts[i] = gsl_ran_flat( rng, minimums.maxBindingWts[i], maximums.maxBindingWts[i] );
+    }
+
+
+    // sample the interaction matrix
+
+    for ( int i = 0; i < nFactors(); i++ )
+    {
+        for ( int j = 0; j <= i; j++ )
+        {
+            if ( expr_model.coopMat( i, j ) ){
+              double rand_interaction = gsl_ran_flat( rng, minimums.factorIntMat(i, j), maximums.factorIntMat(i,j) );
+              tmp_par.factorIntMat( i, j ) = rand_interaction;
+              tmp_par.factorIntMat( j, i ) = rand_interaction;
+           }
+        }
+    }
+
+    // sample the transcriptional effects
+    for ( int i = 0; i < nFactors(); i++ )
+    {
+      if( expr_model.actIndicators[i]){//TODO: Consider removing
+            double rand_effect = gsl_ran_flat( rng, minimums.txpEffects[i], maximums.txpEffects[i] );
+            tmp_par.txpEffects[i] = rand_effect;
+      }
+    }
+
+    // sample the repression effects
+    for ( int i = 0; i < nFactors(); i++ )
+    {
+      if ( expr_model.repIndicators[i] )//TODO: Consider removing
+      {
+          double rand_repression = gsl_ran_flat( rng, minimums.repEffects[i], maximums.repEffects[i] );
+          tmp_par.repEffects[i] = rand_repression;
+      }
+    }
+
+    // sample the basal transcription
+    int num_qbtm = expr_model.one_qbtm_per_crm ? nSeqs : 1;
+    double rand_basal;
+    for( int i = 0; i < num_qbtm; i ++ )
+    {
+        rand_basal = gsl_ran_flat( rng, minimums.basalTxps[i], maximums.basalTxps[i] );
+        tmp_par.basalTxps[ i ] = rand_basal;
+    }
+
+
+    return tmp_par;
+}
+
+
 ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
 {
     assert( _nFactors > 0 );

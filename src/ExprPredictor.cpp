@@ -569,7 +569,7 @@ int ExprPredictor::train( const ExprPar& par_init, const gsl_rng* rng )
     /*
         //for random starts:
         ExprPar par_rand_start = par_init;
-        randSamplePar( rng, par_rand_start );
+        par_rand_start = param_factor->randSamplePar( rng );
         train( par_rand_start );*/
     // training using the initial values
     train( par_init );
@@ -583,7 +583,7 @@ int ExprPredictor::train( const ExprPar& par_init, const gsl_rng* rng )
     for ( int i = 0; i < nRandStarts; i++ )
     {
         ExprPar par_curr = par_init;
-        randSamplePar( rng, par_curr );
+        par_curr = param_factory->randSamplePar( rng );
         train( par_curr );
         cout << "Random start " << i + 1 << ":\tParameters = "; printPar( par_model );
         cout << "\tObjective = " << setprecision( 5 ) << obj_model << endl;
@@ -709,86 +709,7 @@ double ExprPredictor::min_delta_f_PGP = 1.0E-8;
 int ExprPredictor::nSimplexIters = 200;
 int ExprPredictor::nGradientIters = 50;
 
-int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
-{
-    // sample binding weights
-    if ( estBindingOption )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            double rand_weight = exp( gsl_ran_flat( rng, log( ExprPar::min_weight ), log( ExprPar::max_weight ) ) );
-            par.maxBindingWts[i] = rand_weight;
-        }
-    }
 
-    // sample the interaction matrix
-    if ( expr_model.modelOption != LOGISTIC )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = 0; j <= i; j++ )
-            {
-                double rand_interaction = exp( gsl_ran_flat( rng, log( ExprPar::min_interaction ), log( ExprPar::max_interaction ) ) );
-                if ( expr_model.coopMat( i, j ) ) par.factorIntMat( i, j ) = rand_interaction;
-            }
-        }
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = i + 1; j < nFactors(); j++ )
-            {
-                par.factorIntMat( i, j ) = par.factorIntMat( j, i );
-            }
-        }
-    }
-
-    // sample the transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( expr_model.modelOption == LOGISTIC )
-        {
-            double rand_effect = gsl_ran_flat( rng, ExprPar::min_effect_Logistic, ExprPar::max_effect_Logistic );
-            par.txpEffects[i] = rand_effect;
-        }
-        else if ( expr_model.modelOption == DIRECT )
-        {
-            double rand_effect = exp( gsl_ran_flat( rng, log( ExprPar::min_effect_Thermo ), log( ExprPar::max_effect_Thermo ) ) );
-            par.txpEffects[i] = rand_effect;
-        }
-        else
-        {
-            if ( expr_model.actIndicators[i] )
-            {
-                double rand_effect = exp( gsl_ran_flat( rng, log( ExprPar::min_effect_Thermo ), log( ExprPar::max_effect_Thermo ) ) );
-                par.txpEffects[i] = rand_effect;
-            }
-        }
-    }
-
-    // sample the repression effects
-    if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( expr_model.repIndicators[i] )
-            {
-                double rand_repression = exp( gsl_ran_flat( rng, log( ExprPar::min_repression ), log( ExprPar::max_repression ) ) );
-                par.repEffects[i] = rand_repression;
-            }
-        }
-    }
-
-    // sample the basal transcription
-    double rand_basal;
-    for( int _i = 0; _i < par.basalTxps.size(); _i ++ )
-    {
-        if ( expr_model.modelOption == LOGISTIC )
-            rand_basal = gsl_ran_flat( rng, ExprPar::min_basal_Logistic, ExprPar::max_basal_Logistic );
-        else
-            rand_basal = exp( gsl_ran_flat( rng, log( ExprPar::min_basal_Thermo ), log( ExprPar::max_basal_Thermo ) ) );
-        par.basalTxps[ _i ] = rand_basal;
-    }
-    return 0;
-}
 
 
 bool ExprPredictor::testPar( const ExprPar& par ) const
@@ -969,7 +890,13 @@ ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
 {
 	//TODO: just make it take an expr_model as a parameter.
 	//Also, it should use a factory to create the ExprFunc, but this is already close to a factory method.
-    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, par );
+
+    //TODO: This makes ExprPredictor act as the factory for ExprFunc objects.
+    //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
+    ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
+
+
+    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
 }
 
 
