@@ -1110,7 +1110,9 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "pars.size() = " << pars.size() << endl;
     //cout << "DEBUG: out getFreePars()" << endl;
-    param_factory->separateParams(par_model, free_pars, fix_pars, indicator_bool );
+
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
     pars.clear();
     pars = free_pars;
@@ -1155,13 +1157,8 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         free_pars = gsl2vector( s-> x);
 
         param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-
-        //cout << "DEBUG: pars.size() = " << pars.size() << endl;
-        //cout << "DEBUG: free_pars.size() = " << free_pars.size() << "\t" << "fix_pars.size() = " << fix_pars.size() << "\t";
-        //cout << "free_par_counter = " << free_par_counter << "\t" << "fix_par_counter = " << fix_par_counter << endl;
-        //cout << "samee: " << fix_par_counter << endl;
-        //cout << "DEBUG: init ExprPar start" << endl;
-        ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+        ExprPar par_curr = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+        par_curr = param_factory->changeSpace(par_curr, PROB_SPACE);
         /* TEMPORARY BRYAN DEBUG
         ExprPar par_compare = param_factory->changeSpace(param_factory->create_expr_par(pars,CONSTRAINED_SPACE),PROB_SPACE);
 
@@ -1182,7 +1179,13 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         // check if the current values of parameters are valid
         //the following line should be uncommented if you remove all the changes by Hassan
         //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-
+        
+        /*
+        if( !testPar( par_curr)){
+          cout << "TEST PAR FAILED" << endl;
+          printPar(par_curr);
+          cout << endl << endl;
+        }*/
         if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ) break;
 
         // check for stopping condition
@@ -1212,8 +1215,9 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //Hassan start:
     free_pars = gsl2vector( s-> x);
     param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-    //cout << "DEBUG: init par_result start." << endl;
-    par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
+
     printPar( par_result );
     //cout << "DEBUG: init par_result end." << endl;
     //Hassan end
@@ -1238,8 +1242,9 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     //cout << "DEBUG: in getFreePars()" << endl;
     //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "DEBUG: out getFreePars()" << endl;
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
 
-    param_factory->separateParams(par_model, free_pars, fix_pars, indicator_bool );
+    param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
     pars.clear();
     pars = free_pars;
@@ -1285,8 +1290,8 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
         //Hassan start:
         free_pars = gsl2vector( s-> x);
         param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-
-        ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+        ExprPar par_curr = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+        par_curr = param_factory->changeSpace(par_curr, PROB_SPACE);
         //Hassan end
         //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
         if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ){
@@ -1324,8 +1329,9 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     //Hassan start:
     free_pars = gsl2vector( s-> x);
     param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
+    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
 
-    par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+    par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
     //Hassan end
     //par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
     obj_result = s->f;
@@ -1383,9 +1389,7 @@ double gsl_obj_f( const gsl_vector* v, void* params )
     vector < double > all_pars;
 
     predictor->param_factory->joinParams(temp_free_pars, predictor->fix_pars, all_pars, predictor->indicator_bool);
-
-    ExprPar par( all_pars, predictor->getCoopMat(), predictor->getActIndicators(), predictor->getRepIndicators(), predictor -> nSeqs() );
-    //ExprPar par( gsl2vector( v ), predictor->getCoopMat(), predictor->getActIndicators(), predictor->getRepIndicators() );
+    ExprPar par = predictor->param_factory->create_expr_par(all_pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
 
     // call the ExprPredictor object to evaluate the objective function
     double obj = predictor->objFunc( par );

@@ -15,7 +15,7 @@ void ParFactory::separateParams(const ExprPar& input, vector<double>& free_outpu
   //Hassan's code for separating parameters
   vector<double> pars;
 
-  input.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
+  input.getRawPars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
   int pars_size = pars.size();
   free_output.clear();
   fixed_output.clear();
@@ -540,6 +540,7 @@ ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const 
 
 void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
 {
+  assert(false);
     assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
     assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
     pars.clear();
