@@ -59,7 +59,7 @@ ExprPar ParFactory::createDefaultMinMax(bool min_or_max) const
   int _nFactors = expr_model.motifs.size();
   assert( _nFactors > 0 );
 
-  ExprPar tmp_par = ExprPar( _nFactors, nSeqs );
+  ExprPar tmp_par = create_expr_par();
 
   tmp_par.maxBindingWts.assign(tmp_par.maxBindingWts.size(), min_or_max ? log(ExprPar::max_weight) : log(ExprPar::min_weight)); // ExprPar::min_weight
   //set the interaction maximums
@@ -216,16 +216,16 @@ ExprPar ParFactory::changeSpace(const ExprPar& in_par, const ThermodynamicParame
   in_par.getRawPars(original_pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
 
   if(in_par.my_space == CONSTRAINED_SPACE){
-
-
     constrained_to_energy_helper(original_pars, as_energy_space,low_vect, high_vect);
-  }else{//Inputs were in the PROB_SPACE
+  }else if(in_par.my_space == PROB_SPACE){//Inputs were in the PROB_SPACE
     prob_to_energy_helper(original_pars, as_energy_space);
+  }else{ // Intputs were in ENERGY_SPACE
+    as_energy_space = original_pars;
   }
 
   //Now convert that into whichever the target parameter space was.
   if(new_space == ENERGY_SPACE){
-    return create_expr_par(as_energy_space,new_space);
+    return create_expr_par(as_energy_space,ENERGY_SPACE);
   }
 
   if(new_space == PROB_SPACE){
@@ -540,7 +540,7 @@ ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const 
 
 void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
 {
-  assert(false);
+  //assert(false); //Depricated
     assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
     assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
     pars.clear();

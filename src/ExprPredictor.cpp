@@ -895,7 +895,6 @@ ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
     //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
     ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
 
-
     return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
 }
 
@@ -1110,7 +1109,6 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "pars.size() = " << pars.size() << endl;
     //cout << "DEBUG: out getFreePars()" << endl;
-
     ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
     param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
@@ -1179,7 +1177,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         // check if the current values of parameters are valid
         //the following line should be uncommented if you remove all the changes by Hassan
         //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-        
+
         /*
         if( !testPar( par_curr)){
           cout << "TEST PAR FAILED" << endl;
