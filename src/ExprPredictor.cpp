@@ -1481,7 +1481,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     // print the transcriptional effects
     for ( int i = 0; i < nFactors(); i++ )
     {
-        cout << par.txpEffects[i];
+        cout << par.txpEffects[i]; << "\t";
     }
 
     // print the repression effects
