@@ -82,6 +82,7 @@ ExprPar ParFactory::createDefaultMinMax(bool min_or_max) const
   tmp_par.pis.assign(tmp_par.pis.size(), min_or_max ? log(ExprPar::max_pi) : log(ExprPar::min_pi));
   tmp_par.betas.assign(tmp_par.betas.size(), min_or_max ? log(ExprPar::max_beta) : log(ExprPar::min_beta));
   tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? log(ExprPar::max_energyThrFactors) : log(ExprPar::min_energyThrFactors));
+  tmp_par.my_space = ENERGY_SPACE;
   return tmp_par;
 }
 

@@ -1078,7 +1078,8 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     // extract initial parameters
     vector < double > pars;
 
-    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ENERGY_SPACE);
     param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
     pars.clear();
@@ -1091,11 +1092,23 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     optimizer.set_initial_step(1.0);//TODO: enforce simplex staring size.
     optimizer.set_maxeval(nSimplexIters);//TODO: enforce nSimplexIters
 
+    if(ExprPar::searchOption == CONSTRAINED){
+      vector<double> free_mins;
+      vector<double> fix_mins;
+
+      param_factory->separateParams(param_factory->minimums, free_mins, fix_mins, indicator_bool);
+      optimizer.set_lower_bounds(free_mins);
+
+      param_factory->separateParams(param_factory->maximums, free_mins, fix_mins, indicator_bool);
+      optimizer.set_upper_bounds(free_mins);
+    }
+
     nlopt::result result = optimizer.optimize(free_pars, obj_result);
     //Done Minimizing
 
     param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    tmp_par_model = param_factory->create_expr_par(pars, ENERGY_SPACE);
     par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
 
     printPar( par_result );
@@ -1112,7 +1125,8 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     //cout << "DEBUG: in getFreePars()" << endl;
     //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "DEBUG: out getFreePars()" << endl;
-    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ENERGY_SPACE);
 
     param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
@@ -1145,6 +1159,18 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     }
     optimizer.set_ftol_abs(ftol);
 
+    if(ExprPar::searchOption == CONSTRAINED){
+      vector<double> free_mins;
+      vector<double> fix_mins;
+
+      param_factory->separateParams(param_factory->minimums, free_mins, fix_mins, indicator_bool);
+      optimizer.set_lower_bounds(free_mins);
+
+      param_factory->separateParams(param_factory->maximums, free_mins, fix_mins, indicator_bool);
+      optimizer.set_upper_bounds(free_mins);
+    }
+
+
     //TODO: enforce nGradientIters
     optimizer.set_maxeval(nGradientIters);
     try{
@@ -1157,7 +1183,8 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     //pars now contains the optimal parameters
 
     param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    tmp_par_model = param_factory->create_expr_par(pars, ENERGY_SPACE);
 
     par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
     cout << "DEBUG" << endl;
@@ -1232,7 +1259,8 @@ double gsl_obj_f( const gsl_vector* v, void* params )
     vector < double > all_pars;
 
     predictor->param_factory->joinParams(temp_free_pars, predictor->fix_pars, all_pars, predictor->indicator_bool);
-    ExprPar par = predictor->param_factory->create_expr_par(all_pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //ExprPar par = predictor->param_factory->create_expr_par(all_pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    ExprPar par = predictor->param_factory->create_expr_par(all_pars, ENERGY_SPACE);
     par = predictor->param_factory->changeSpace(par, PROB_SPACE); //TODO: WTF? This shouldn't be required because it's done in the createExprFunc method. Stack corruption or something?
 
 
