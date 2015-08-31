@@ -546,13 +546,13 @@ int ExprPredictor::train( const ExprPar& par_init )
     {
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
-        par_model.adjust( expr_model.coopMat );
+        //par_model.adjust( expr_model.coopMat );
 	#ifdef BETAOPTSEPARATE
         optimize_beta( par_model, obj_result );
         #endif
         gradient_minimize( par_result, obj_result );
         par_model = par_result;
-        par_model.adjust( expr_model.coopMat);
+        //par_model.adjust( expr_model.coopMat);
 	#ifdef BETAOPTSEPARATE
         optimize_beta( par_model, obj_result );
         #endif
