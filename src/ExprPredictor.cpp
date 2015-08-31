@@ -825,12 +825,10 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     //     cout.width( 8 );
 
     // print binding weights
-    if ( estBindingOption )
+
+    for ( int i = 0; i < nFactors(); i++ )
     {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            cout << par.maxBindingWts[i] << "\t";
-        }
+          cout << par.maxBindingWts[i] << "\t";
     }
 
     // print the interaction matrix
@@ -845,11 +843,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     // print the transcriptional effects
     for ( int i = 0; i < nFactors(); i++ )
     {
-        if ( expr_model.modelOption == LOGISTIC ) cout << par.txpEffects[i] << "\t";
-        else
-        {
-            if ( expr_model.actIndicators[i] ) cout << par.txpEffects[i] << "\t";
-        }
+        cout << par.txpEffects[i];
     }
 
     // print the repression effects
@@ -857,7 +851,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
-            if ( expr_model.repIndicators[i] ) cout << par.repEffects[i] << "\t";
+            cout << par.repEffects[i] << "\t";
         }
     }
 
@@ -882,7 +876,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     {
         cout << par.energyThrFactors[ _i ] << "\t";
     }
-    cout << flush << endl;
+    cout << endl;
 }
 
 
