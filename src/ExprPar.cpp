@@ -100,12 +100,18 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
       }
       else
       {
+          assert(false);
           tmp_par.maxBindingWts.assign(_nFactors, ExprPar::default_weight );//TODO: Needs to take into account which space this default is in.
       }
 
       // set the interaction matrix
       //Which was created previously.
-      tmp_par.factorIntMat.setAll(ExprPar::default_interaction);
+      double scaled_default = ExprPar::default_interaction;
+      if(in_space == ENERGY_SPACE)
+        scaled_default = log(ExprPar::default_interaction);
+      if(in_space == CONSTRAINED_SPACE)
+        scaled_default = infty_transform(log(ExprPar::default_interaction), log( ExprPar::min_interaction ), log( ExprPar::max_interaction ));
+      tmp_par.factorIntMat.setAll(scaled_default);
       for ( int i = 0; i < _nFactors; i++ )
       {
           for ( int j = 0; j <= i; j++ )
@@ -122,6 +128,12 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
       //TODO: For the logistic model, actIndicators should always be 1 and actRepressors always 0
 
       // set the transcriptional effects
+      scaled_default = ExprPar::default_effect_Thermo;
+      if(in_space == ENERGY_SPACE)
+        scaled_default = log(ExprPar::default_effect_Thermo);
+      if(in_space == CONSTRAINED_SPACE)
+        scaled_default = infty_transform(log(ExprPar::default_effect_Thermo), log( ExprPar::min_effect_Thermo ), log( ExprPar::max_effect_Thermo ));
+
       for ( int i = 0; i < _nFactors; i++ )
       {
               double effect;
@@ -129,13 +141,19 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
               if ( expr_model.actIndicators[i] )
                 effect = pars[counter++];
               else
-                effect = ExprPar::default_effect_Thermo;//TODO: Which space are we creating in?
+                effect = scaled_default;//TODO: Which space are we creating in?
 
               tmp_par.txpEffects[i] = effect ;
       }
 
       // set the repression effects
-      tmp_par.repEffects.assign(_nFactors, ExprPar::default_repression);//TODO: Which space are we creating in?
+      scaled_default = ExprPar::default_repression;
+      if(in_space == ENERGY_SPACE)
+        scaled_default = log(ExprPar::default_repression);
+      if(in_space == CONSTRAINED_SPACE)
+        scaled_default = infty_transform(log(ExprPar::default_repression), log( ExprPar::min_repression ), log( ExprPar::max_repression ));
+
+      tmp_par.repEffects.assign(_nFactors, scaled_default);//TODO: Which space are we creating in?
       if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT )
       {
           for ( int i = 0; i < _nFactors; i++ )
