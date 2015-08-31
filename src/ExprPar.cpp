@@ -2,6 +2,18 @@
 #include "ExprPredictor.h"
 #include "conf/ExprParConf.hpp"
 
+
+string parameterSpaceStr(ThermodynamicParameterSpace in){
+    if(in == CONSTRAINED_SPACE)
+      return "CONSTRAINED";
+    if(in == ENERGY_SPACE)
+      return "ENERGY_SPACE";
+    if(in == PROB_SPACE)
+      return "PROB_SPACE";
+    assert(false);
+}
+
+
 ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs, const vector<bool>& in_ff) : expr_model(in_model), nSeqs(in_nSeqs), indicator_bool(in_ff)
 {
   //maximums = ExprPar( expr_model.motifs.size(), nSeqs );

@@ -5,14 +5,17 @@
 #include "ExprPar.h"
 
 
-ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), par( _par )
+ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
 {
+    par = _par;
+
     int nFactors = par.nFactors();
     assert( motifs.size() == nFactors );
     assert( actIndicators.size() == nFactors );
     assert( repIndicators.size() == nFactors );
     assert( repressionMat.isSquare() && repressionMat.nRows() == nFactors );
     assert( maxContact >= 0 );
+
 }
 
 
@@ -864,16 +867,6 @@ ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
     //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
     ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
 
-
-
-    cout << "DEBUG_1" << endl;
-    printPar(parToPass);
-    //cout << endl;
-    //vector<double> foobar;
-    //par.getRawPars(foobar, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
-    //printPar(ExprPar(foobar, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs()));
-    cout << "END DEBUG_1" << endl;
-
     return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
 }
 
@@ -1367,6 +1360,8 @@ double gsl_obj_f( const gsl_vector* v, void* params )
 
     predictor->param_factory->joinParams(temp_free_pars, predictor->fix_pars, all_pars, predictor->indicator_bool);
     ExprPar par = predictor->param_factory->create_expr_par(all_pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    par = predictor->param_factory->changeSpace(par, PROB_SPACE); //TODO: WTF? This shouldn't be required because it's done in the createExprFunc method. Stack corruption or something?
+
 
     // call the ExprPredictor object to evaluate the objective function
     double obj = predictor->objFunc( par );

@@ -13,6 +13,8 @@ enum ThermodynamicParameterSpace {
                 //optimizer can be used to perform constrained optimization. (For user understandability, constraints are specified in PROB_SPACE, _in input, output, and config files_.)
 };
 
+string parameterSpaceStr(ThermodynamicParameterSpace in);
+
 /* ExprPar class: the parameters of the expression model */
 class ExprPar
 {
