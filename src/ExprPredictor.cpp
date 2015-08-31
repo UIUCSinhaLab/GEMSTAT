@@ -1459,62 +1459,38 @@ bool ExprPredictor::testPar( const ExprPar& par ) const
 void ExprPredictor::printPar( const ExprPar& par ) const
 {
     cout.setf( ios::fixed );
-    cout.precision( 50 );
+    cout.precision( 8 );
     //     cout.width( 8 );
 
     // print binding weights
-
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-          cout << par.maxBindingWts[i] << "\t";
-    }
-
+    cout << "MAXBIND : " << par.maxBindingWts << endl;
+    cout << "INTER : " ;
     // print the interaction matrix
     for ( int i = 0; i < nFactors(); i++ )
     {
         for ( int j = 0; j <= i; j++ )
         {
-            if ( expr_model.coopMat( i, j ) ) cout << par.factorIntMat( i, j ) << "\t";
+           cout << par.factorIntMat( i, j ) << "\t";
         }
     }
+    cout << endl;
 
     // print the transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        cout << par.txpEffects[i]; << "\t";
-    }
+    cout << "TXP : " << par.txpEffects << endl;
 
     // print the repression effects
-    if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            cout << par.repEffects[i] << "\t";
-        }
-    }
+    cout << "REP : " << par.repEffects << endl;
 
     // print the basal transcriptions
-    for( int _i = 0; _i < par.basalTxps.size(); _i ++ )
-    {
-        cout << par.basalTxps[ _i ] << "\t";
-    }
-    cout << endl;
+    cout << "BASAL : " << par.basalTxps << endl;
+
     //print the pi values
-    for( int _i = 0; _i < par.pis.size(); _i++ )
-    {
-        cout << par.pis[ _i ] << "\t";
-    }
-    cout << endl;
+    cout << "PIS : " << par.pis << endl;
+
     //print the beta values
+    cout << "BETAS : " << par.betas << endl;
     assert( par.betas.size() == nSeqs() );
-    /*for( int i = 0; i < par.betas.size(); i++ ){
-        cout << par.betas[ i ] << endl;
-    }*/
-    for( int _i = 0; _i < par.energyThrFactors.size(); _i++ )
-    {
-        cout << par.energyThrFactors[ _i ] << "\t";
-    }
-    cout << endl;
+    cout << flush;
 }
 
 
