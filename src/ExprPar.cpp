@@ -20,6 +20,8 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs, const vector<bo
   maximums = createDefaultMinMax(true);
   //minimums = ExprPar( expr_model.motifs.size(), nSeqs );
   minimums = createDefaultMinMax(false);
+
+  defaults = create_expr_par();
 }
 
 void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool) const
@@ -82,12 +84,38 @@ ExprPar ParFactory::createDefaultMinMax(bool min_or_max) const
   tmp_par.pis.assign(tmp_par.pis.size(), min_or_max ? log(ExprPar::max_pi) : log(ExprPar::min_pi));
   tmp_par.betas.assign(tmp_par.betas.size(), min_or_max ? log(ExprPar::max_beta) : log(ExprPar::min_beta));
   tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? log(ExprPar::max_energyThrFactors) : log(ExprPar::min_energyThrFactors));
+  tmp_par.my_space = ENERGY_SPACE;
   return tmp_par;
 }
 
 ExprPar ParFactory::create_expr_par() const
 {
-  return ExprPar(expr_model.getNFactors(), this->nSeqs);
+  ExprPar tmp_par = ExprPar(expr_model.getNFactors(), this->nSeqs);
+
+  int _nFactors = expr_model.motifs.size();
+  assert( _nFactors > 0 );
+
+  tmp_par.maxBindingWts.assign( _nFactors, log( ExprPar::default_weight ) );
+  tmp_par.factorIntMat.setDimensions( _nFactors, _nFactors );
+  tmp_par.factorIntMat.setAll( log( ExprPar::default_interaction ) );
+
+  double defaultEffect = expr_model.modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : log(ExprPar::default_effect_Thermo);
+  tmp_par.txpEffects.assign( _nFactors, defaultEffect );
+  tmp_par.repEffects.assign( _nFactors, log( ExprPar::default_repression ) );
+
+  int numBTMS = expr_model.one_qbtm_per_crm ? nSeqs : 1;
+
+  double basalTxp_val = expr_model.modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : log( ExprPar::default_basal_Thermo );
+  tmp_par.basalTxps.assign( numBTMS, basalTxp_val );
+  //for the pausing parameters
+  tmp_par.pis.assign( nSeqs, log( ExprPar::default_pi ) );
+
+  //for the beta parameters
+  tmp_par.betas.assign( nSeqs, log( ExprPar::default_beta ) );
+
+  tmp_par.energyThrFactors.assign( _nFactors, log( ExprPar::default_energyThrFactors ) );
+  tmp_par.my_space = ENERGY_SPACE;
+  return tmp_par;
 }
 
 ExprPar ParFactory::create_expr_par(const vector<double>& pars, const ThermodynamicParameterSpace in_space) const
@@ -406,7 +434,7 @@ ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
 
     energyThrFactors.assign( _nFactors, ExprPar::default_energyThrFactors );
 
-    my_space = PROB_SPACE;
+    my_space = modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE;
 }
 
 
