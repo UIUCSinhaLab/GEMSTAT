@@ -46,6 +46,15 @@ int main( int argc, char* argv[] )
     double eTF = 0.60;
     unsigned long initialSeed = time(0);
 
+    double l1 = 0.0;
+    double l2 = 0.0;
+
+    double l1_beta = 0.0;
+    double l2_beta = 0.0;
+
+    double l1_coop = 0.0;
+    double l2_coop = 0.0;
+
     bool cmdline_one_qbtm_per_crm = false;
 
     string free_fix_indicator_filename;
@@ -113,7 +122,19 @@ int main( int argc, char* argv[] )
 	else if ( !strcmp( "--seed", argv[ i ]))
 	    initialSeed = atol( argv[++i] );
 	else if ( !strcmp("-po", argv[ i ]))
-	    par_out_file = argv[ ++i ]; //output file for pars at the en
+	    par_out_file = argv[ ++i ]; //output file for pars at the end
+  else if ( !strcmp("-l1", argv[ i ]))
+      l1 = atof(argv[ ++i ]);
+  else if ( !strcmp("-l2", argv[ i ]))
+      l2 = atof(argv[ ++i ]);
+  else if ( !strcmp("-l1beta", argv[ i ]))
+      l1_beta = atof(argv[ ++i ]);
+  else if ( !strcmp("-l2beta", argv[ i ]))
+      l2_beta = atof(argv[ ++i ]);
+  else if ( !strcmp("-l1coop", argv[ i ]))
+      l1_coop = atof(argv[ ++i ]);
+  else if ( !strcmp("-l2coop", argv[ i ]))
+      l2_coop = atof(argv[ ++i ]);
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -475,6 +496,13 @@ int main( int argc, char* argv[] )
 
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
+
+    predictor->lambda1 = l1;
+    predictor->lambda2 = l2;
+    predictor->lambda1_beta = l1_beta;
+    predictor->lambda2_beta = l2_beta;
+    predictor->lambda1_coop = l1_coop;
+    predictor->lambda2_coop = l2_coop;
 
     // random number generator
     gsl_rng* rng;

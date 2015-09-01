@@ -506,10 +506,67 @@ ExprPredictor::~ExprPredictor()
 
 double ExprPredictor::objFunc( const ExprPar& par )
 {
-    if ( objOption == SSE ) return compRMSE( par );
-    if ( objOption == CORR ) return -compAvgCorr( par );
-    if ( objOption == PGP ) return compPGP( par );
-    if ( objOption == CROSS_CORR ) return -compAvgCrossCorr( par );
+    double objective_value = 0.0;
+
+    vector<double> centers;
+    ExprPar center_par = param_factory->getDefaults();//Assumed to be in ENERGY_SPACE;
+    center_par = param_factory->changeSpace(center_par,ENERGY_SPACE);//Not much slowdown if already in correct space.
+    center_par.getRawPars(centers, getCoopMat(), getActIndicators(),getRepIndicators());
+
+    vector<double> allpars;
+    ExprPar tmp_energy_space = param_factory->changeSpace(par,ENERGY_SPACE);
+    tmp_energy_space.getRawPars(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
+
+    double l1 = 0.0;
+    double l2 = 0.0;
+
+    for(int i = 0;i<centers.size();i++){
+      double the_diff = abs(allpars[i] - centers[i]);
+      l1 += the_diff;
+      l2 += pow(the_diff,2.0);
+    }
+    l2 = sqrt(l2);
+
+    l1 *= lambda1;
+    l2 *= lambda2;
+
+    objective_value += l1 + l2;
+
+    //BETA_regularization
+    l1 = 0.0;
+    l2 = 0.0;
+    for(int i = 0;i < center_par.betas.size();i++){
+      double the_diff = abs(par.betas[i] - center_par.betas[i]);
+      l1 += the_diff;
+      l2 += pow(the_diff,2.0);
+    }
+    l2 = sqrt(l2);
+    objective_value += lambda1_beta*l1 + lambda2_beta*l2;
+
+    //COOP regularization
+    l1 = 0.0;
+    l2 = 0.0;
+    for(int i = 0;i < center_par.nFactors();i++){
+      for(int j = 0;j< center_par.nFactors();j++)//Does not assume that the matrix is symmetric. Future proof.
+      {
+        double the_diff = abs(par.factorIntMat(i,j) - center_par.factorIntMat(i,j));
+        l1 += the_diff;
+        l2 += pow(the_diff,2.0);
+      }
+    }
+    l2 = sqrt(l2);
+    objective_value += lambda1_coop*l1 + lambda2_coop*l2;
+
+
+
+
+
+    if ( objOption == SSE ) objective_value += compRMSE( par );
+    if ( objOption == CORR ) objective_value -= compAvgCorr( par );
+    if ( objOption == PGP ) objective_value += compPGP( par );
+    if ( objOption == CROSS_CORR ) objective_value -= compAvgCrossCorr( par );
+
+    return objective_value;
 }
 
 
