@@ -6,6 +6,7 @@
 #include "SeqAnnotator.h"
 #include "PredictorTrainer.h"
 #include "ExprPar.h"
+#include "ObjFunc.h"
 
 /*****************************************************
  * Expression Model and Parameters
@@ -170,6 +171,7 @@ class ExprPredictor
         //TODO: decide if this needs to be made private
         // Factory for Parameter vectors;
         ParFactory *param_factory;
+        ObjFunc *trainingObjective;
     private:
         // training data
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
@@ -204,11 +206,7 @@ class ExprPredictor
         ExprFunc* createExprFunc( const ExprPar& par ) const;
 
         // objective functions
-        double compRMSE( const ExprPar& par );    // root mean square error between predicted and observed expressions
-        double compAvgCorr( const ExprPar& par ); // the average Pearson correlation
-                                                  // the average cross correlation -based similarity
-        double compAvgCrossCorr( const ExprPar& par );
-        double compPGP( const ExprPar& par );     // the average cross correlation -based similarity
+        double evalObjective( const ExprPar& par );
 
         // minimize the objective function, using the current model parameters as initial values
                                                   // simplex
@@ -216,7 +214,6 @@ class ExprPredictor
                                                   // gradient: BFGS or conjugate gradient
         int gradient_minimize( ExprPar& par_result, double& obj_result );
         //  	int SA_minimize( ExprPar& par_result, double& obj_result ) const;	// simulated annealing
-	int optimize_beta( ExprPar& par_result, double& obj_result); // find the current best beta with one-step otimization.
 };
 
 // the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize

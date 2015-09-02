@@ -22,9 +22,38 @@
  * Note that (5), (6), (7) and (8) may be empty
  ******************************************************/
 #include "Utils.h"
-#include "IO.h"
 
 #include "SeqAnnotator.h"
+
+
+double SeqAnnotator::alpha = 6.008;
+double SeqAnnotator::beta = 0.207;
+
+/**
+Copied from IO.h so we don't have to include that and a bunch of other stuff.
+*/
+int readFactorThresholdFile( const string& filename, vector< double >& destination, int nFactors){
+
+	ifstream factor_thr_input( filename.c_str() );
+
+	if(!factor_thr_input.is_open() ){
+		cerr << "Cannot open the factor threshold file " << filename << endl;
+		return RET_ERROR;
+	}
+
+	destination.clear();
+
+	for( int index = 0; index < nFactors; index++ )
+        {
+            double temp;
+            factor_thr_input >> temp;
+            destination.push_back( temp );
+        }
+	//Ensure there is only whitespace remaining in the file!
+        factor_thr_input.close();
+
+	return 0;
+}
 
 
 void altered_site_print( ostream& os, const Site& site , vector< string > motifNames )
@@ -61,7 +90,7 @@ int main( int argc, char* argv[] )
 	    traditional_format = true;
     }
 
-    if ( seqFile.empty() || motifFile.empty() ) 
+    if ( seqFile.empty() || motifFile.empty() )
     {
         cerr << "Usage: " << argv[ 0 ] << " -s seqFile -m motifFile [ -et default_factor_energy=<" << eTF << "> -ft <factorThresholdsFile -df <dnase_file> -tf (for traditional output format)]" << endl;
         exit( 1 );
@@ -71,7 +100,7 @@ int main( int argc, char* argv[] )
 
     // additional control parameters
     double gcContent = 0.5;
-    
+
     // read the sequences
     vector< Sequence > seqs;
     vector< string > seqNames;
@@ -96,7 +125,7 @@ int main( int argc, char* argv[] )
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
-    
+
     if( ! factor_thr_file.empty() )
     {
 	int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
