@@ -18,19 +18,19 @@ int readEdgelistGraph( const string& filename, const map<string, int>& factorIdx
 			destination.setElement( idx2, idx1, true);
 		}
 	}
-	
+
 	return 0;
 }
 
 int readFactorThresholdFile( const string& filename, vector< double >& destination, int nFactors){
-	
+
 	ifstream factor_thr_input( filename.c_str() );
 
 	if(!factor_thr_input.is_open() ){
 		cerr << "Cannot open the factor threshold file " << filename << endl;
 		return RET_ERROR;
 	}
-	
+
 	destination.clear();
 
 	for( int index = 0; index < nFactors; index++ )
@@ -61,7 +61,7 @@ int readFactorRoleFile(const string& filename, const map<string, int>& factorIdx
 			cerr << "An entry in the factor information file was out of order or otherwise invalid: " << filename << ":" << i+1 << endl;
 			return RET_ERROR;
 		}
-		
+
 		if( (actRole != 0 && actRole != 1) || (repRole != 0 && repRole !=1) ){
 			cerr << "An invalid role setting was provided in the factor information file: " << filename << ":" << i+1 << endl;
 			return RET_ERROR;
@@ -73,7 +73,7 @@ int readFactorRoleFile(const string& filename, const map<string, int>& factorIdx
 	}
 
 	finfo.close();
-	
+
 	return 0;
 }
 
@@ -128,38 +128,20 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
         fout << predictor.seqs[i].getName();
 
         double beta = par.betas[ i ];
-        
-	double error_or_score;
 
-		if( ExprPredictor::objOption == SSE )
-		{
-			error_or_score = sqrt( least_square( targetExprs, observedExprs, beta , fix_beta) / predictor.nConds() );
-		}
-        	if( ExprPredictor::objOption == PGP ){
-			error_or_score = pgp( targetExprs, observedExprs, beta, fix_beta );
-		}
-        	if( ExprPredictor::objOption == CORR ){
-			error_or_score = corr( targetExprs, observedExprs, beta, fix_beta );
-        	}
-		if( ExprPredictor::objOption == CROSS_CORR ){
-			error_or_score = ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs );
-		}
-        
-	// predictions
-	if(fix_beta){
-		beta = par.betas[i];
-	}
+				double error_or_score;
+
+				vector<vector<double> > multiple_predictions;
+				vector<vector<double> > multiple_observations;
+				multiple_predictions.push_back(targetExprs);
+				multiple_observations.push_back(observedExprs);
+
+				error_or_score = predictor.trainingObjective->eval(multiple_predictions, multiple_observations, &par);
 
         for ( int j = 0; j < predictor.nConds(); j++ ){
-		fout << "\t" << ( beta * targetExprs[j] );
-	}
+						fout << "\t" << ( beta * targetExprs[j] );
+				}
         fout << endl;
-
-        /*if( ExprPredictor::objOption == PGP ){
-            for( int j = 0; j < predictor.nConds(); j++ ){
-                targetExprs[ j ] = beta * targetExprs[ j ];
-            }
-        }*/
 
         // print the agreement bewtween predictions and observations
         cout << predictor.seqs[i].getName() << "\t" << beta << "\t" << error_or_score << endl;
