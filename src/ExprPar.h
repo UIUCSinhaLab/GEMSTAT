@@ -132,12 +132,17 @@ class ParFactory
 
       int nFactors() const {return expr_model.motifs.size();}
 
-      ExprPar maximums; //Should be in the ENERGY_SPACE
-      ExprPar minimums; //Should be in the ENERGY_SPACE
+      const ExprPar& getMaximums(){return maximums;}
+      const ExprPar& getMinimums(){return minimums;}
+      const ExprPar& getDefaults(){return defaults;}
+
     private:
       const vector<bool>& indicator_bool;//TODO: Later work on making this non-const. Original author const'ed everything.
       int nSeqs;
       const ExprModel& expr_model;
+      ExprPar maximums; //Should be in the ENERGY_SPACE
+      ExprPar minimums; //Should be in the ENERGY_SPACE
+      ExprPar defaults; //In the ENERGY_SPACE
 
       void constrained_to_energy_helper(const vector<double>& pars, vector<double>& output, const vector<double>& low, const vector<double>& high) const;
       void energy_to_constrained_helper(const vector<double>& pars, vector<double>& output, const vector<double>& low, const vector<double>& high) const;

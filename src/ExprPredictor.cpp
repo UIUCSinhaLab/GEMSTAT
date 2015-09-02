@@ -491,6 +491,24 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     //expr_model was already initialized. Setup the parameter factory.
     param_factory = new ParFactory(expr_model, nSeqs(), _indicator_bool);
 
+    //TODO: Move this to the front-end or something?
+    //Maybe make it have a default SSE score objective, but anything else gets specified in the front-end.
+    switch(objOption){
+      case CORR:
+        trainingObjective = new AvgCorrObjFunc();
+        break;
+      case PGP:
+        trainingObjective = new PGPObjFunc();
+        break;
+      case CROSS_CORR:
+        trainingObjective = new AvgCrossCorrObjFunc(ExprPredictor::maxShift, ExprPredictor::shiftPenalty);
+        break;
+      case SSE:
+      default:
+        trainingObjective = new RMSEObjFunc();
+        break;
+    }
+
     /* DEBUG
     cout << setprecision(10);
     ExprPar foo = param_factory->createDefaultMinMax(true);
@@ -505,14 +523,13 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 ExprPredictor::~ExprPredictor()
 {
   delete param_factory;
+  delete trainingObjective;
 }
 
 double ExprPredictor::objFunc( const ExprPar& par )
 {
-    if ( objOption == SSE ) return compRMSE( par );
-    if ( objOption == CORR ) return -compAvgCorr( par );
-    if ( objOption == PGP ) return compPGP( par );
-    if ( objOption == CROSS_CORR ) return -compAvgCrossCorr( par );
+      double tmp = evalObjective( par );
+      return tmp;
 }
 
 
@@ -650,58 +667,8 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     return 0;
 }
 
-
-// double ExprPredictor::test( const vector< Sequence >& testSeqs, const Matrix& testExprData, int perfOption ) const
-// {
-// 	assert( perfOption == 0 );
-// 	assert( testExprData.nRows() == testSeqs.size() && testExprData.nCols() == nConds() );
-//
-// 	// make predictions
-// 	Matrix predicted( testSeqs.size(), nConds() );
-// 	for ( int i = 0; i < testSeqs.size(); i++ ) {
-//         vector< double > targetExprs;
-//         predict( targetSeqs[i], targetExprs );
-//         predicted.setRow( i, targetExprs );
-// 	}
-//
-// 	// RMSE between predictions and observations
-// 	if ( perfOption == 0 ) {
-// 		vector< double > corrs;
-// 		for ( int i = 0; i < nExps; i++ ) {
-// 			corrs.push_back( correlation( predicted[ i ], testExprData[ i ] ) );
-// 		}
-//
-// 		return mean( corrs );
-// 	}
-// }
-
 int ExprPredictor::estBindingOption = 1;          // 1. estimate binding parameters; 0. not estimate binding parameters
 ObjType ExprPredictor::objOption = SSE;
-
-double ExprPredictor::exprSimCrossCorr( const vector< double >& x, const vector< double >& y )
-{
-    vector< int > shifts;
-    for ( int s = -maxShift; s <= maxShift; s++ )
-    {
-        shifts.push_back( s );
-    }
-
-    vector< double > cov;
-    vector< double > corr;
-    cross_corr( x, y, shifts, cov, corr );
-    double result = 0, weightSum = 0;
-    //     result = corr[maxShift];
-    result = *max_element( corr.begin(), corr.end() );
-    //     for ( int i = 0; i < shifts.size(); i++ ) {
-    //         double weight = pow( shiftPenalty, abs( shifts[i] ) );
-    //         weightSum += weight;
-    //         result += weight * corr[i];
-    //     }
-    //     result /= weightSum;
-
-    return result;
-}
-
 
 int ExprPredictor::maxShift = 5;
 double ExprPredictor::shiftPenalty = 0.8;
@@ -878,199 +845,47 @@ int indices_of_crm_in_gene[] =
 {
 };
 
-double ExprPredictor::compRMSE( const ExprPar& par )
+double ExprPredictor::evalObjective( const ExprPar& par )
 {
-    ExprFunc* func = createExprFunc( par );
-    vector< SiteVec > seqSites( seqs.size() );
+
     vector< int > seqLengths( seqs.size() );
+    for( int i = 0; i < seqs.size(); i++ ){
+      seqLengths[i] = seqs[i].size();
+    }
+
+    ExprFunc* func = createExprFunc( par );
+
+
+    //Reannotate the sequences.
+    //TODO: It might be good to turn this off if we are not learning the energyThrFactors (if those are fixed.)
+    vector< SiteVec > seqSites( seqs.size() ); //
     SeqAnnotator ann( motifs, par.energyThrFactors );
     for ( int i = 0; i < seqs.size(); i++ ) {
        	ann.annot( seqs[ i ], seqSites[ i ] );
-    	seqLengths[i] = seqs[i].size();
     }
-    // error of each sequence
-    double squaredErr = 0;
+
+    vector<vector<double> > ground_truths;
+    vector<vector<double> > predictions;
+
+    //Create predictions for every sequence and condition
     for ( int i = 0; i < nSeqs(); i++ ) {
+        ground_truths.push_back(exprData.getRow(i));
+
         vector< double > predictedExprs;
-        vector< double > observedExprs;
         for ( int j = 0; j < nConds(); j++ ) {
-		double predicted = -1;
+        		double predicted = -1;
             	vector< double > concs = factorExprData.getCol( j );
             	predicted = func->predictExpr( seqSites[ i ], seqLengths[i], concs, i );
-
-
             // predicted expression for the i-th sequence at the j-th condition
             predictedExprs.push_back( predicted );
-
-            // observed expression for the i-th sequence at the j-th condition
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
         }
-        double beta;
-	#ifdef BETAOPTTOGETHER
-	beta = par.betas[i];
-        squaredErr += least_square( predictedExprs, observedExprs, beta, true );
-	#else
-        squaredErr += least_square( predictedExprs, observedExprs, beta );
-	#endif
-	//(func -> getPar()).betas[ i ] = beta;
+        predictions.push_back(predictedExprs);
     }
 
-    double rmse = sqrt( squaredErr / ( nSeqs() * nConds() ) );//use this line if least_square() is used
-	double penalty = 0;
+    //Evaluate the objective function on that.
+    return trainingObjective->eval(ground_truths, predictions, &par);
 
-	//TODO: R_SEQ Either remove this dead code, or make this a conditional option.
-	//for the random sequences: start
-        /*double sum_max_rand = 0;
-    for ( int i = 0; i < nSeqs(); i++ ) {
-    	double max = 0;
-        for ( int j = 0; j < nConds(); j++ ) {
-		//cout << "inside for cond: " << j + 1 << endl;
-            	vector< double > concs = factorExprData.getCol( i * nConds() +  j );
-            	double predicted = func->predictExpr( r_seqSites[ i ], r_seqLengths[i], concs, i );
-		if( predicted > max ){
-			max = predicted;
-		}
-        }
-	sum_max_rand += max ;
-    }
-	double avg_max_rand = sum_max_rand/nSeqs();
-	if( avg_max_rand > 0.01 )
-		penalty = -1000;
-
-//cout << "end looking at RSs:" << endl;
-*/
-	//for the random sequences: end
-
-    return rmse - penalty;
 }
-
-double ExprPredictor::compAvgCorr( const ExprPar& par )
-{
-    // create the expression function
-    ExprFunc* func = createExprFunc( par );
-    vector< SiteVec > seqSites( seqs.size() );
-    vector< int > seqLengths( seqs.size() );
-    SeqAnnotator ann( motifs, par.energyThrFactors );
-    for ( int i = 0; i < seqs.size(); i++ )
-    {
-        ann.annot( seqs[ i ], seqSites[ i ] );
-        seqLengths[i] = seqs[i].size();
-    }
-
-    // Pearson correlation of each sequence
-    double totalSim = 0;
-    for ( int i = 0; i < nSeqs(); i++ )
-    {
-        vector< double > predictedExprs;
-        vector< double > observedExprs;
-        for ( int j = 0; j < nConds(); j++ )
-        {
-            double predicted = -1;
-            vector< double > concs = factorExprData.getCol( j );
-            predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i );
-
-            if( predicted != predicted )
-            {
-                cout << "DEBUG: nan in predicted value" << endl;
-                exit(1);
-            }
-
-            // predicted expression for the i-th sequence at the j-th condition
-            predictedExprs.push_back( predicted );
-            // observed expression for the i-th sequence at the j-th condition
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
-        }
-	//BETAOPTOGETHER has no meaning for correlation
-        totalSim += corr( predictedExprs, observedExprs );
-        //         cout << "Sequence " << i << "\t" << corr( predictedExprs, observedExprs ) << endl;
-    }
-    delete func;
-    return totalSim / nSeqs();
-}
-
-
-double ExprPredictor::compPGP( const ExprPar& par )
-{
-
-    /*cout << "start samee debug" << endl;
-    printPar( par );
-    cout << "end samee debug" << endl;	*/
-    ExprFunc* func = createExprFunc( par );
-    vector< SiteVec > seqSites( seqs.size() );
-    vector< int > seqLengths( seqs.size() );
-    SeqAnnotator ann( motifs, par.energyThrFactors );
-    for ( int i = 0; i < seqs.size(); i++ )
-    {
-        ann.annot( seqs[ i ], seqSites[ i ] );
-        seqLengths[i] = seqs[i].size();
-    }
-    // PGP of each sequence
-    double totalSim = 0;
-    for ( int i = 0; i < nSeqs(); i++ )
-    {
-        vector< double > predictedExprs;
-        vector< double > observedExprs;
-        for ( int j = 0; j < nConds(); j++ )
-        {
-            double predicted = -1;
-            vector< double > concs = factorExprData.getCol( j );
-            predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i );
-
-            if( predicted != predicted )
-            {
-                cout << "DEBUG: nan in predicted value" << endl;
-                exit(1);
-            }
-            predictedExprs.push_back( predicted );
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
-        }
-        double beta;
-	#ifdef BETAOPTTOGETHER
-	beta = par.betas[i];
-        totalSim += pgp( predictedExprs, observedExprs, beta, true);
-	#else
-	totalSim += pgp( predictedExprs, observedExprs, beta );
-	#endif
-    }
-    delete func;
-    return totalSim / nSeqs();
-}
-
-
-double ExprPredictor::compAvgCrossCorr( const ExprPar& par )
-{
-    // create the expression function
-    ExprFunc* func = createExprFunc( par );
-
-    // cross correlation similarity of each sequence
-    double totalSim = 0;
-    for ( int i = 0; i < nSeqs(); i++ )
-    {
-        vector< double > predictedExprs;
-        vector< double > observedExprs;
-        for ( int j = 0; j < nConds(); j++ )
-        {
-            double predicted = -1;
-            vector< double > concs = factorExprData.getCol( j );
-            predicted = func->predictExpr( seqSites[ i ], seqLengths[i], concs, i );
-
-            // predicted expression for the i-th sequence at the j-th condition
-            predictedExprs.push_back( predicted );
-
-            // observed expression for the i-th sequence at the j-th condition
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
-        }
-        totalSim += exprSimCrossCorr( predictedExprs, observedExprs );
-    }
-
-    delete func;
-    return totalSim / nSeqs();
-}
-
 
 int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
 {
@@ -1096,10 +911,10 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
       vector<double> free_mins;
       vector<double> fix_mins;
 
-      param_factory->separateParams(param_factory->minimums, free_mins, fix_mins, indicator_bool);
+      param_factory->separateParams(param_factory->getMinimums(), free_mins, fix_mins, indicator_bool);
       optimizer.set_lower_bounds(free_mins);
 
-      param_factory->separateParams(param_factory->maximums, free_mins, fix_mins, indicator_bool);
+      param_factory->separateParams(param_factory->getMaximums(), free_mins, fix_mins, indicator_bool);
       optimizer.set_upper_bounds(free_mins);
     }
 
@@ -1163,10 +978,10 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
       vector<double> free_mins;
       vector<double> fix_mins;
 
-      param_factory->separateParams(param_factory->minimums, free_mins, fix_mins, indicator_bool);
+      param_factory->separateParams(param_factory->getMinimums(), free_mins, fix_mins, indicator_bool);
       optimizer.set_lower_bounds(free_mins);
 
-      param_factory->separateParams(param_factory->maximums, free_mins, fix_mins, indicator_bool);
+      param_factory->separateParams(param_factory->getMaximums(), free_mins, fix_mins, indicator_bool);
       optimizer.set_upper_bounds(free_mins);
     }
 
@@ -1191,39 +1006,6 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     return 0;
 }
 
-int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
-        SiteVec unuzedSV = SiteVec();
-
-        for ( int i = 0; i < nSeqs(); i++ ){
-                vector< double > targetExprs;
-                vector< double > observedExprs = exprData.getRow( i );
-
-                predict( unuzedSV, seqs[i].size(), targetExprs, i );
-
-                double beta = par_model.betas[ i ];
-                double error_or_score;
-
-                if( ExprPredictor::objOption == SSE )
-                {
-                        error_or_score = sqrt( least_square( targetExprs, observedExprs, beta , false) / nConds() );
-                }
-                if( ExprPredictor::objOption == PGP ){
-                        error_or_score = pgp( targetExprs, observedExprs, beta, false );
-                }
-                if( ExprPredictor::objOption == CORR ){
-                        error_or_score = corr( targetExprs, observedExprs, beta, false);
-                }
-                if( ExprPredictor::objOption == CROSS_CORR ){
-                        error_or_score = ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs );
-                }
-
-                //TODO: Check for the appropriate indicator value to see if this beta is an optimization parameter or not.
-                par_result.betas[i] = beta;
-
-        }
-
-	obj_result = objFunc( par_result );
-}
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data){
         gsl_vector *xv = vector2gsl(x); //TODO: Ugly, remove (Make all objective functions use native STL vectors)

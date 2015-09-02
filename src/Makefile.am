@@ -14,7 +14,7 @@ endif
 
 AM_CPPFLAGS = $(GSL_CFLAGS) $(BETAOPTFLAGS)
 bin_PROGRAMS = seq2expr seqannot
-seq2expr_SOURCES = seq2expr.cpp FactorIntFunc.cpp FactorIntFunc.h ExprModel.cpp ExprPar.cpp ExprPar.h ExprModel.h PredictorTrainer.h PredictorTrainer.cpp ExprPredictor.cpp ExprPredictor.h SeqAnnotator.cpp SeqAnnotator.h Tools.cpp Tools.h Utils.h IO.cpp IO.h
+seq2expr_SOURCES = seq2expr.cpp FactorIntFunc.cpp FactorIntFunc.h ExprModel.cpp ExprPar.cpp ExprPar.h ExprModel.h PredictorTrainer.h PredictorTrainer.cpp ExprPredictor.cpp ExprPredictor.h SeqAnnotator.cpp SeqAnnotator.h Tools.cpp Tools.h Utils.h IO.cpp IO.h ObjFunc.cpp ObjFunc.h
 seq2expr_LDADD = $(GSL_LIBS) -lnlopt_cxx
-seqannot_SOURCES = seqannot.cpp FactorIntFunc.cpp FactorIntFunc.h ExprModel.cpp ExprPar.cpp ExprPar.h ExprModel.h PredictorTrainer.h PredictorTrainer.cpp ExprPredictor.cpp ExprPredictor.h SeqAnnotator.cpp SeqAnnotator.h Tools.cpp Tools.h Utils.h IO.cpp IO.h
+seqannot_SOURCES = seqannot.cpp SeqAnnotator.cpp SeqAnnotator.h Tools.cpp Tools.h Utils.h
 seqannot_LDADD = $(GSL_LIBS) -lnlopt_cxx
