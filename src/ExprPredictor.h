@@ -4,115 +4,14 @@
 #include "ExprModel.h"
 #include "FactorIntFunc.h"
 #include "SeqAnnotator.h"
-
-enum ObjType
-{
-    SSE,                                          // sum of squared error
-    CORR,                                         // Pearson correlation
-    CROSS_CORR,                                   // cross correlation (maximum in a range of shifts)
-    PGP                                           // PGP score
-};
-
-ObjType getObjOption( const string& objOptionStr );
-string getObjOptionStr( ObjType objOption );
-
-enum SearchType
-{
-    UNCONSTRAINED,                                // unconstrained search
-    CONSTRAINED                                   // constrained search
-};
-
-string getSearchOptionStr( SearchType searchOption );
+#include "PredictorTrainer.h"
+#include "ExprPar.h"
+#include "ObjFunc.h"
 
 /*****************************************************
  * Expression Model and Parameters
  ******************************************************/
 
-/* ExprPar class: the parameters of the expression model */
-class ExprPar
-{
-    public:
-        // constructors
-        ExprPar() : factorIntMat() {}
-        ExprPar( int _nFactors, int _nSeqs );     // default values of parameters
-        ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors );
-                                                  // construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
-        ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );
-        void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis, betas = other.betas, energyThrFactors = other.energyThrFactors, nSeqs = basalTxps.size();  }
-        ExprPar( const ExprPar& other ) { copy( other ); }
-
-        // assignment
-        ExprPar& operator=( const ExprPar& other ) { copy( other ); return *this; }
-
-        // access methods
-        int nFactors() const { return maxBindingWts.size(); }
-
-        // get the free parameters (in the correct/uniform scale)
-        void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
-
-        // print the parameters
-        void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
-
-        // load the parameter values from a file, assuming the parameter has the correct dimensions (and initialized)
-        int load( const string& file, const int num_of_coop_pairs );
-
-        // adjust the values of parameters: if the value is close to min or max allowed value, slightly change it s.t. it is away from the boundary
-        void adjust( const IntMatrix& coopMat  );
-
-        // parameters
-        vector < double > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
-        Matrix factorIntMat;                      // (maximum) interactions between pairs of factors: omega(f,f')
-        vector < double > txpEffects;             // transcriptional effects: alpha for Direct and Quenching model, exp(alpha) for Logistic model (so that the same default values can be used). Equal to 1 if a TF is not an activator under the Quenching model
-        vector < double > repEffects;             // repression effects: beta under ChrMod models (the equlibrium constant of nucleosome association with chromatin). Equal to 0 if a TF is not a repressor.
-        vector < double > basalTxps;              // basal transcription: q_p for Direct and Quenching model, exp(alpha_0) for Logistic model (so that the same default value can be used)
-        vector < double > pis;
-        //     double expRatio; 		// constant factor of measurement to prediction
-
-        vector < double > betas;
-        vector < double > energyThrFactors;
-        int nSeqs;
-
-        static ModelType modelOption;             // model option
-        static SearchType searchOption;           // search option: 0 - unconstrained search; 1 - constrained search
-        static int estBindingOption;              // whether to estimate binding parameters
-        static bool one_qbtm_per_crm;
-
-        static double default_weight;             // default binding weight
-        static double default_interaction;        // default factor interaction
-        static double default_effect_Logistic;    // default transcriptional effect under Logistic model
-        static double default_effect_Thermo;      // default transcriptional effect under thermo. models
-        static double default_repression;         // default repression
-        static double default_basal_Logistic;     // default basal transcription under Logistic model
-        static double default_basal_Thermo;       // default basal transcriptional under thermo. models
-        static double default_pi;
-        static double min_pi;
-        static double max_pi;
-        static double min_weight;                 // min. binding weight
-        static double max_weight;                 // max. binding weight
-        static double min_interaction;            // min. interaction
-        static double max_interaction;            // max. interaction
-        static double min_effect_Logistic;        // min. transcriptional effect under Logistic model
-        static double max_effect_Logistic;        // max. transcriptional effect under Logistic model
-        //     static double min_effect_Direct;   // min. transcriptional effect under Direct model
-        static double min_effect_Thermo;          // min. transcriptional effect under thermo. models
-        static double max_effect_Thermo;          // max. transcriptional effect under thermo. models
-        static double min_repression;             // min. repression
-        static double max_repression;             // max. repression
-        static double min_basal_Logistic;         // min. basal transcription under Logistic model
-        static double max_basal_Logistic;         // max. basal transcription under Logistic model
-        static double min_basal_Thermo;           // min. basal transcription under thermo. models
-        static double max_basal_Thermo;           // max. basal transcription under thermo. models
-        static double min_energyThrFactors;
-        static double max_energyThrFactors;
-        static double default_energyThrFactors;
-        static double delta;                      // a small number for testing the range of parameter values
-        static double default_beta;
-        static double min_beta;                   // a small number for testing the range of parameter values
-        static double max_beta;                   // a small number for testing the range of parameter values
-        // 	static double wt_step;		// step of maxExprWt (log10)
-        // 	static double int_step;		// step of interaction (log10)
-        // 	static double ratio_step;	// step of expRatio
-};
 
 /* ExprFunc class: predict the expression (promoter occupancy) of an enhancer sequence */
 class ExprFunc
@@ -146,7 +45,7 @@ class ExprFunc
         double repressionDistThr;                 // distance threshold for repression: d_R
 
         // model parameters
-        const ExprPar& par;
+        ExprPar par;//NOTE: Removing "const" here caused the copy constructor to be called. Thus the ExprFunc gets its own copy that will not have problems when the original par is changed.
 
         // the sequence whose expression is to be predicted
         SiteVec sites;
@@ -196,7 +95,7 @@ class ExprPredictor
     public:
         // constructors
         ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
-
+        ~ExprPredictor();
         // access methods
         int nSeqs() const
         {
@@ -268,6 +167,11 @@ class ExprPredictor
         vector < double > fix_pars;
         vector < double > free_pars;
         vector < Sequence > seqs;
+
+        //TODO: decide if this needs to be made private
+        // Factory for Parameter vectors;
+        ParFactory *param_factory;
+        ObjFunc *trainingObjective;
     private:
         // training data
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
@@ -283,7 +187,7 @@ class ExprPredictor
         const vector < double >& axis_wts;
 
         // control parameters
-	const ExprModel& expr_model;
+	      const ExprModel& expr_model;
 
         // model parameters and the value of the objective function
         ExprPar par_model;
@@ -302,11 +206,7 @@ class ExprPredictor
         ExprFunc* createExprFunc( const ExprPar& par ) const;
 
         // objective functions
-        double compRMSE( const ExprPar& par );    // root mean square error between predicted and observed expressions
-        double compAvgCorr( const ExprPar& par ); // the average Pearson correlation
-                                                  // the average cross correlation -based similarity
-        double compAvgCrossCorr( const ExprPar& par );
-        double compPGP( const ExprPar& par );     // the average cross correlation -based similarity
+        double evalObjective( const ExprPar& par );
 
         // minimize the objective function, using the current model parameters as initial values
                                                   // simplex
@@ -314,7 +214,6 @@ class ExprPredictor
                                                   // gradient: BFGS or conjugate gradient
         int gradient_minimize( ExprPar& par_result, double& obj_result );
         //  	int SA_minimize( ExprPar& par_result, double& obj_result ) const;	// simulated annealing
-	int optimize_beta( ExprPar& par_result, double& obj_result); // find the current best beta with one-step otimization.
 };
 
 // the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize

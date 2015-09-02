@@ -45,7 +45,7 @@ int main( int argc, char* argv[] )
     bool read_factor_thresh = false;
     double eTF = 0.60;
     unsigned long initialSeed = time(0);
-    
+
     bool cmdline_one_qbtm_per_crm = false;
 
     string free_fix_indicator_filename;
@@ -203,7 +203,7 @@ int main( int argc, char* argv[] )
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
-    
+
     if( ! factor_thr_file.empty() )
     {
 	int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
@@ -333,7 +333,7 @@ int main( int argc, char* argv[] )
     if ( !factorInfoFile.empty() )
     {
 	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators);
-        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");    
+        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");
     }
 
     // read the repression matrix
@@ -416,15 +416,15 @@ int main( int argc, char* argv[] )
     }
     //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
     if( read_factor_thresh ){ par_init.energyThrFactors = energyThrFactors; }
-   
-    //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read. 
+
+    //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
     vector < double > all_pars_for_test;
-    par_init.getFreePars(all_pars_for_test, coopMat, actIndicators, repIndicators);
+    par_init.getRawPars(all_pars_for_test, coopMat, actIndicators, repIndicators);
     ASSERT_MESSAGE(all_pars_for_test.size() == indicator_bool.size(), "For some reason, the number of entries in free_fix did not match the number of free parameters.\n"
-		  "Remember that whatever model, there are 3 parameters for every transcription factor\n"); 
+		  "Remember that whatever model, there are 3 parameters for every transcription factor\n");
     all_pars_for_test.clear();//Won't be used again.
     //It is possible that the user wants to write out to the same par file, doing this after reading the par file means we won't have overridden it before reading
-    
+
     //Check that we can access and write to the par outfile now, so that we can warn the user before a lot of time was spent on the optimization
     if( !par_out_file.empty() ){
         par_out_stream.open( par_out_file.c_str() );
@@ -475,7 +475,7 @@ int main( int argc, char* argv[] )
 
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
-    
+
     // random number generator
     gsl_rng* rng;
     gsl_rng_env_setup();
@@ -500,7 +500,7 @@ int main( int argc, char* argv[] )
 
     // print the predictions
     writePredictions(outFile, *predictor, exprData, expr_condNames, true);
-    
+
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*
         cout << "Max expressions of the random sequences:" << endl;

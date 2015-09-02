@@ -2,593 +2,20 @@
 #include <gsl/gsl_multimin.h>
 
 #include "ExprPredictor.h"
-#include "conf/ExprParConf.hpp"
+#include "ExprPar.h"
 
-ObjType getObjOption( const string& objOptionStr )
+
+ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
 {
-    if ( toupperStr( objOptionStr ) == "SSE" ) return SSE;
-    if ( toupperStr( objOptionStr ) == "CORR" ) return CORR;
-    if ( toupperStr( objOptionStr ) == "CROSS_CORR" ) return CROSS_CORR;
-    if ( toupperStr( objOptionStr ) == "PGP" ) return PGP;
+    par = _par;
 
-    cerr << "objOptionStr is not a valid option of objective function" << endl;
-    exit(1);
-}
-
-
-string getObjOptionStr( ObjType objOption )
-{
-    if ( objOption == SSE ) return "SSE";
-    if ( objOption == CORR ) return "Corr";
-    if ( objOption == CROSS_CORR ) return "Cross_Corr";
-    if ( objOption == PGP ) return "PGP";
-
-    return "Invalid";
-}
-
-
-string getSearchOptionStr( SearchType searchOption )
-{
-    if ( searchOption == UNCONSTRAINED ) return "Unconstrained";
-    if ( searchOption == CONSTRAINED ) return "Constrained";
-
-    return "Invalid";
-}
-
-
-ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
-{
-    assert( _nFactors > 0 );
-
-    for ( int i = 0; i < _nFactors; i++ )
-    {
-        maxBindingWts.push_back( ExprPar::default_weight );
-    }
-
-    factorIntMat.setDimensions( _nFactors, _nFactors );
-    factorIntMat.setAll( ExprPar::default_interaction );
-
-    for ( int i = 0; i < _nFactors; i++ )
-    {
-        double defaultEffect = modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : ExprPar::default_effect_Thermo;
-        txpEffects.push_back( defaultEffect );
-        repEffects.push_back( ExprPar::default_repression );
-    }
-
-    nSeqs = _nSeqs;
-    if( one_qbtm_per_crm  )
-    {
-        for( int i = 0; i < nSeqs; i++ )
-        {
-            double basalTxp_val = modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : ExprPar::default_basal_Thermo;
-            basalTxps.push_back( basalTxp_val );
-        }
-    }
-    else
-    {
-        double basalTxp_val = modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : ExprPar::default_basal_Thermo;
-        basalTxps.push_back( basalTxp_val );
-    }
-    //for the pausing parameters
-
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        pis.push_back( ExprPar::default_pi );
-    }
-    //for the beta parameters
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        betas.push_back( ExprPar::default_beta );
-    }
-    for( int i = 0; i < _nFactors; i++ )
-    {
-        energyThrFactors.push_back( ExprPar::default_energyThrFactors );
-    }
-}
-
-
-ExprPar::ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >& _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector <double>& _energyThrFactors ) : maxBindingWts( _maxBindingWts ), factorIntMat( _factorIntMat ), txpEffects( _txpEffects ), repEffects( _repEffects ), basalTxps( _basalTxps ), pis( _pis), betas( _betas ), nSeqs( _nSeqs ), energyThrFactors( _energyThrFactors )
-{
-    if ( !factorIntMat.isEmpty() ) assert( factorIntMat.nRows() == maxBindingWts.size() && factorIntMat.isSquare() );
-    assert( txpEffects.size() == maxBindingWts.size() && repEffects.size() == maxBindingWts.size() );
-    if ( one_qbtm_per_crm )
-    {
-        assert( basalTxps.size() == nSeqs );
-    }
-    else
-    {
-        assert( basalTxps.size() == 1 );
-    }
-}
-
-
-ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs ) : factorIntMat()
-{
-
-    int _nFactors = actIndicators.size();
-    nSeqs = _nSeqs;
-    assert( coopMat.isSquare() && coopMat.nRows() == _nFactors );
-    assert( repIndicators.size() == _nFactors );
-    //     assert( pars.size() == ( _nFactors * ( _nFactors + 1 ) / 2 + 2 * _nFactors + 2 );
-    int counter = 0;
-
-    // set maxBindingWts
-    if ( estBindingOption )
-    {
-        for ( int i = 0; i < _nFactors; i++ )
-        {
-            double weight = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_weight ), log( max_weight ) ) ) : exp( pars[counter++] );
-            maxBindingWts.push_back( weight );
-        }
-    }
-    else
-    {
-        for ( int i = 0; i < _nFactors; i++ ) maxBindingWts.push_back( ExprPar::default_weight );
-    }
-
-    // set the interaction matrix
-    factorIntMat.setDimensions( _nFactors, _nFactors );
-    for ( int i = 0; i < _nFactors; i++ )
-    {
-        for ( int j = 0; j <= i; j++ )
-        {
-            if ( coopMat( i, j ) )
-            {
-                double interaction = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_interaction ), log( max_interaction ) ) ) : exp( pars[counter++] );
-                factorIntMat( i, j ) = interaction;
-            }
-            else factorIntMat( i, j ) = ExprPar::default_interaction;
-        }
-    }
-    for ( int i = 0; i < _nFactors; i++ )
-    {
-        for ( int j = i + 1; j < _nFactors; j++ )
-        {
-            factorIntMat( i, j ) = factorIntMat( j, i );
-        }
-    }
-
-    // set the transcriptional effects
-    for ( int i = 0; i < _nFactors; i++ )
-    {
-        //         double defaultEffect = modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : ExprPar::default_effect_Thermo;
-        if ( modelOption == LOGISTIC )
-        {
-            double effect = searchOption == CONSTRAINED ? inverse_infty_transform( pars[counter++], min_effect_Logistic, max_effect_Logistic ) : pars[counter++];
-            txpEffects.push_back( effect );
-        }
-        /* else if ( modelOption == DIRECT ) {
-                    double effect = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_effect_Thermo ), log( max_effect_Thermo ) ) ) : exp( pars[counter++] );
-                    txpEffects.push_back( effect );
-                }*/
-        else
-        {
-            if ( actIndicators[i] )
-            {
-                double effect = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_effect_Thermo ), log( max_effect_Thermo ) ) ) : exp( pars[counter++] );
-                txpEffects.push_back( effect );
-            }
-            else
-            {
-                txpEffects.push_back( ExprPar::default_effect_Thermo );
-            }
-        }
-    }
-
-    // set the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
-    {
-        for ( int i = 0; i < _nFactors; i++ )
-        {
-            if ( repIndicators[i] )
-            {
-                double repression = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_repression ), log( max_repression ) ) ) : exp( pars[counter++] );
-                repEffects.push_back( repression );
-            }
-            else
-            {
-                repEffects.push_back( ExprPar::default_repression );
-            }
-        }
-    }
-    else
-    {
-        for ( int i = 0; i < _nFactors; i++ ) repEffects.push_back( ExprPar::default_repression );
-    }
-
-    // set the basal transcription
-    if( one_qbtm_per_crm )
-    {
-        nSeqs = _nSeqs;
-        for( int i = 0; i < nSeqs; i++ )
-        {
-            if ( modelOption == LOGISTIC )
-            {
-                double basal = searchOption == CONSTRAINED ? inverse_infty_transform( pars[counter++], min_basal_Logistic, max_basal_Logistic ) : pars[counter++];
-                basalTxps.push_back( basal );
-            }
-            else
-            {
-                double basal = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_basal_Thermo ), log( max_basal_Thermo ) ) ) : exp( pars[counter++] );
-                basalTxps.push_back( basal );
-            }
-        }
-    }
-    else
-    {
-
-        if ( modelOption == LOGISTIC )
-        {
-            double basal = searchOption == CONSTRAINED ? inverse_infty_transform( pars[counter++], min_basal_Logistic, max_basal_Logistic ) : pars[counter++];
-            basalTxps.push_back( basal );
-        }
-        else
-        {
-            double basal = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_basal_Thermo ), log( max_basal_Thermo ) ) ) : exp( pars[counter++] );
-            basalTxps.push_back( basal );
-        }
-    }
-
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        //cout << "sending for:" << pars[counter] <<"\t" << log(min_pi) << "\t" <<log(max_pi) << endl;
-        double pi_val = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[ counter++ ], log( min_pi ), log( max_pi ) ) ):exp( pars[ counter++ ] ) ;
-        pis.push_back( pi_val );
-    }
-    //cout << "Counter before beta: " << counter << endl;
-    //cout << "nSeqs: " << nSeqs << "\t _nSeqs: " << _nSeqs << endl;
-    //put in the values of the beta params
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        double beta_val = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[ counter ++], log(min_beta), log( max_beta) ) ) : exp( pars[ counter++ ] );
-        betas.push_back( beta_val );
-    }
-    //cout << "Counter after beta: " << counter << endl;
-    for( int i = 0; i < _nFactors; i++ )
-    {
-        double energyThrFactor_val = searchOption == CONSTRAINED ? exp ( inverse_infty_transform( pars[ counter++ ], log( min_energyThrFactors ), log( max_energyThrFactors ) ) ) : exp ( pars[ counter++ ] );
-        energyThrFactors.push_back( energyThrFactor_val );
-    }
-}
-
-
-void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
-{
-    assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
-    assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
-    pars.clear();
-
-    // write maxBindingWts
-    if ( estBindingOption )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            double weight = searchOption == CONSTRAINED ? infty_transform( log( maxBindingWts[ i ] ), log( min_weight ), log( max_weight ) ) : log( maxBindingWts[i] );
-            if( weight != weight )
-            {
-                cout << "DEBUG samee: getFreePars() " << i << endl;
-                exit(1);
-            }
-            pars.push_back( weight );
-        }
-    }
-
-    // write the interaction matrix
-    if ( modelOption != LOGISTIC )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = 0; j <= i; j++ )
-            {
-                if ( coopMat( i, j ) )
-                {
-                    double interaction = searchOption == CONSTRAINED ? infty_transform( log( factorIntMat( i, j ) ), log( min_interaction ), log( max_interaction ) ) : log( factorIntMat( i, j ) );
-                    pars.push_back( interaction );
-                }
-            }
-        }
-    }
-
-    // write the transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( modelOption == LOGISTIC )
-        {
-            double effect = searchOption == CONSTRAINED ? infty_transform( txpEffects[i], min_effect_Logistic, max_effect_Logistic ) : txpEffects[i];
-            pars.push_back( effect );
-        }
-        /*else if ( modelOption == DIRECT ) {
-                    double effect = searchOption == CONSTRAINED ? infty_transform( log( txpEffects[i] ), log( min_effect_Thermo ), log( max_effect_Thermo ) ) : log( txpEffects[i] );
-                    pars.push_back( effect );
-                }*/
-        else
-        {
-            if ( actIndicators[i] )
-            {
-                double effect = searchOption == CONSTRAINED ? infty_transform( log( txpEffects[i] ), log( min_effect_Thermo ), log( max_effect_Thermo ) ) : log( txpEffects[i] );
-                pars.push_back( effect );
-            }
-        }
-    }
-
-    // write the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( repIndicators[i] )
-            {
-                double repression = searchOption == CONSTRAINED ? infty_transform( log( repEffects[i] ), log( min_repression ), log( max_repression ) ) : log( repEffects[i] );
-                pars.push_back( repression );
-            }
-        }
-    }
-
-    for( int i = 0; i < basalTxps.size(); i++ )
-    {
-        // write the basal transcription
-        if ( modelOption == LOGISTIC )
-        {
-            double basal = searchOption == CONSTRAINED ? infty_transform( basalTxps[ i ], min_basal_Logistic, max_basal_Logistic ) : basalTxps[ i ];
-            pars.push_back( basal );
-        }
-        else
-        {
-            double basal = searchOption == CONSTRAINED ? infty_transform( log( basalTxps[ i ] ), log( min_basal_Thermo ), log( max_basal_Thermo ) ) : log( basalTxps[ i ] );
-            pars.push_back( basal );
-        }
-    }
-
-    //write the pis
-    for( int i = 0; i < pis.size(); i++ )
-    {
-        double pi_val = searchOption == CONSTRAINED? infty_transform( log( pis[ i ] ), log( min_pi ), log( max_pi ) ) : log( pis[ i ] );
-        pars.push_back( pi_val );
-    }
-
-    //write the betas
-    for( int i = 0; i < betas.size(); i++ )
-    {
-        double beta_val = searchOption == CONSTRAINED ? infty_transform( log( betas[ i ] ), log( min_beta ), log( max_beta ) ) : log( betas[ i ] );
-        pars.push_back( beta_val );
-    }
-    for( int i = 0; i < energyThrFactors.size(); i++ )
-    {
-        double energyThrFactor_val = searchOption == CONSTRAINED ? infty_transform( log( energyThrFactors[ i ]),log(min_energyThrFactors), log(max_energyThrFactors) ) : log( energyThrFactors[ i ] );
-        pars.push_back( energyThrFactor_val );
-    }
-}
-
-
-void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const
-{
-//    os.setf( ios::fixed );
-//    os.precision( 50 );
-
-    // print the factor information
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        os << motifNames[i] << "\t" << maxBindingWts[i] << "\t" << txpEffects[i];
-        if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT ) os << "\t" << repEffects[i];
-        os << endl;
-    }
-
-    // print the basal transcription
-    os << "basal_transcription = " << basalTxps[ 0 ] << endl;
-    for( int _i = 1; _i < basalTxps.size(); _i++ )
-    {
-        os << basalTxps[ _i ] << endl;
-    }
-
-    //print the pi vals
-    for( int _i = 0; _i < pis.size(); _i++ )
-    {
-        os << pis[ _i ] << endl;
-    }
-    //print the beta values
-    for( int i = 0; i < betas.size(); i++ )
-    {
-        os << betas[ i ] << endl;
-    }
-    // print the cooperative interactions
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        for ( int j = 0; j <= i; j++ )
-        {
-            if ( coopMat( i, j ) ) os << motifNames[i] << "\t" << motifNames[j] << "\t" << factorIntMat( i, j ) << endl;
-        }
-    }
-
-    for( int i = 0; i < energyThrFactors.size(); i++ )
-    {
-        os << energyThrFactors[ i ] << "\t";
-    }
-    os << endl;
-
-}
-
-
-int ExprPar::load( const string& file, const int num_of_coop_pairs )
-{
-    // open the file
-    ifstream fin( file.c_str() );
-    if ( !fin ){ cerr << "Cannot open parameter file " << file << endl; exit( 1 ); }
-
-    // read the factor information
-    vector< string > motifNames( nFactors() );
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        fin >> motifNames[i] >> maxBindingWts[i] >> txpEffects[i];
-        if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT ) fin >> repEffects[i];
-    }
-
-    // factor name to index mapping
-    map< string, int > factorIdxMap;
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        factorIdxMap[motifNames[i]] = i;
-    }
-
-    // read the basal transcription
-    string symbol, eqSign, value;
-    fin >> symbol >> eqSign >> value;
-    if ( symbol != "basal_transcription" || eqSign != "=" ) return RET_ERROR;
-    double basalTxp_val = atof( value.c_str() );
-    basalTxps[ 0 ] =  basalTxp_val ;
-    if( one_qbtm_per_crm )
-    {
-        for( int _i = 1; _i < nSeqs; _i++ )
-        {
-            fin >> value;
-            double basalTxp_val = atof( value.c_str() );
-            basalTxps[ _i ] = basalTxp_val;
-        }
-    }
-    //read the pi values
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        fin >> value;
-        pis[ i ] = atof( value.c_str() );
-    }
-
-    //read the beta values
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        fin >> value;
-        betas[ i ] = atof( value.c_str() );
-    }
-
-    // read the cooperative interactions
-    string factor1, factor2;
-    double coopVal;
-    for( int i = 0; i < num_of_coop_pairs; i++ )
-    {
-        fin >> factor1 >> factor2 >> coopVal;
-        if( !factorIdxMap.count( factor1 ) || !factorIdxMap.count( factor2 ) ) return RET_ERROR;
-        int idx1 = factorIdxMap[factor1];
-        int idx2 = factorIdxMap[factor2];
-        factorIntMat( idx1, idx2 ) = coopVal;
-        factorIntMat( idx2, idx1 ) = coopVal;
-        //cout << factor1 << "\t" << factor2 << "\t" << idx1 << "\t" << idx2 << endl;
-    }
-    double factor_thr_val;
-    energyThrFactors.clear();
-    while( fin >> factor_thr_val )
-    {
-        energyThrFactors.push_back( factor_thr_val );
-    }
-
-    return 0;
-}
-
-
-void ExprPar::adjust( const IntMatrix& coopMat  )
-{
-    // adjust binding paramters
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( maxBindingWts[i] < ExprPar::min_weight * ( 1.0 + ExprPar::delta ) ) { maxBindingWts[i] *= 2.0;}
-        if ( maxBindingWts[i] > ExprPar::max_weight * ( 1.0 - ExprPar::delta ) ) { maxBindingWts[i] /= 2.0;}
-    }
-
-    // adjust the interaction matrix
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        for ( int j = 0; j <= i; j++ )
-        {
-            if ( coopMat( i, j ) &&   factorIntMat( i, j ) < ExprPar::min_interaction * ( 1.0 + ExprPar::delta ) )
-            {
-                factorIntMat( i, j ) *= 2.0;
-                factorIntMat( j, i ) = factorIntMat( i, j );
-            }
-            if ( coopMat( i, j ) &&  factorIntMat( i, j ) > ExprPar::max_interaction * ( 1.0 - ExprPar::delta ) )
-            {
-                factorIntMat( i, j ) /= 2.0;
-                factorIntMat( j, i ) = factorIntMat( i, j );
-            }
-        }
-    }
-    // adjust transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( modelOption == LOGISTIC )
-        {
-            if ( txpEffects[i] < ExprPar::min_effect_Logistic + ExprPar::delta ) txpEffects[i] /= 2.0;
-            if ( txpEffects[i] > ExprPar::max_effect_Logistic - ExprPar::delta ) txpEffects[i] /= 2.0;
-        }
-        else
-        {
-            if ( txpEffects[i] < ExprPar::min_effect_Thermo * ( 1.0 + ExprPar::delta ) ) { txpEffects[i] *= 2.0;}
-            if ( txpEffects[i] > ExprPar::max_effect_Thermo * ( 1.0 - ExprPar::delta ) ) { txpEffects[i] /= 2.0;}
-        }
-
-    }
-
-    // adjust the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( repEffects[i] < ExprPar::min_repression * ( 1.0 + ExprPar::delta ) )
-            {
-                if( repEffects[ i ] > 0 ) repEffects[i] *= 2.0;
-                else repEffects[ i ] = ExprPar::min_repression * ( 1 + 2 * ExprPar::delta );
-            }
-            if ( repEffects[i] > ExprPar::max_repression * ( 1.0 - ExprPar::delta ) ) {repEffects[i] /= 2.0;}
-        }
-    }
-
-    // adjust the basl transcription
-    for( int _i = 0; _i < basalTxps.size(); _i ++ )
-    {
-        if ( modelOption == LOGISTIC )
-        {
-            if ( basalTxps[ _i ] < ExprPar::min_basal_Logistic + ExprPar::delta ) basalTxps[ _i ] /= 2.0;
-            if ( basalTxps[ _i ] > ExprPar::max_basal_Logistic - ExprPar::delta ) basalTxps[ _i ] *= 2.0;
-        }
-        else
-        {
-            if ( basalTxps[ _i ] < ExprPar::min_basal_Thermo * ( 1.0 + ExprPar::delta ) ) basalTxps[ _i ] *= 2.0;
-            if ( basalTxps[ _i ] > ExprPar::max_basal_Thermo * ( 1.0 - ExprPar::delta ) ) basalTxps[ _i ] /= 2.0;
-        }
-    }
-
-    //adjust the pis
-    for( int _i = 0; _i < pis.size(); _i++ )
-    {
-        if( pis[ _i ] < 0 ) pis[ _i] = 0;
-        if( pis[ _i ] > ExprPar::max_pi * ( 1.0 - ExprPar::delta ) ) pis[ _i ] /= 2.0;
-    }
-    //adjust the betas
-    for( int i = 0; i < betas.size(); i++ )
-    {
-
-        if( betas[ i ] < ExprPar::min_beta * ( 1.0 + ExprPar::delta ) ) betas[ i ] *= 2.0;
-        if( betas[ i ] > ExprPar::max_beta )
-        {
-            betas[ i ] = ExprPar::max_beta * ( 1.0 - ExprPar::delta );
-        }
-        else if( betas[ i ] > ExprPar::max_beta * ( 1.0 - ExprPar::delta ) )
-        {
-            betas[ i ] /= 2.0;
-        }
-    }
-    //adjust the energyThrFactors
-    for( int i = 0; i < nFactors(); i++ )
-    {
-        if( energyThrFactors[ i ] < ExprPar::min_energyThrFactors * ( 1.0 + ExprPar::delta ) ) energyThrFactors[ i ] *= 2.0;
-        if( energyThrFactors[ i ] > ExprPar::max_energyThrFactors * ( 1.0 - ExprPar::delta ) ) energyThrFactors[ i ] /= 2.0;
-    }
-}
-
-ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), par( _par )
-{
     int nFactors = par.nFactors();
     assert( motifs.size() == nFactors );
     assert( actIndicators.size() == nFactors );
     assert( repIndicators.size() == nFactors );
     assert( repressionMat.isSquare() && repressionMat.nRows() == nFactors );
     assert( maxContact >= 0 );
+
 }
 
 
@@ -1057,15 +484,49 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 
     // set the option of parameter estimation
     ExprPar::estBindingOption = estBindingOption;
+
+    //expr_model was already initialized. Setup the parameter factory.
+    param_factory = new ParFactory(expr_model, nSeqs(), _indicator_bool);
+
+    //TODO: Move this to the front-end or something?
+    //Maybe make it have a default SSE score objective, but anything else gets specified in the front-end.
+    switch(objOption){
+      case CORR:
+        trainingObjective = new AvgCorrObjFunc();
+        break;
+      case PGP:
+        trainingObjective = new PGPObjFunc();
+        break;
+      case CROSS_CORR:
+        trainingObjective = new AvgCrossCorrObjFunc(ExprPredictor::maxShift, ExprPredictor::shiftPenalty);
+        break;
+      case SSE:
+      default:
+        trainingObjective = new RMSEObjFunc();
+        break;
+    }
+
+    /* DEBUG
+    cout << setprecision(10);
+    ExprPar foo = param_factory->createDefaultMinMax(true);
+    cout << " MAXIMUMS " << endl;
+    printPar(foo);
+    foo = param_factory->createDefaultMinMax(false);
+    cout << " MINIMUMS " << endl;
+    printPar(foo);
+    */
 }
 
+ExprPredictor::~ExprPredictor()
+{
+  delete param_factory;
+  delete trainingObjective;
+}
 
 double ExprPredictor::objFunc( const ExprPar& par )
 {
-    if ( objOption == SSE ) return compRMSE( par );
-    if ( objOption == CORR ) return -compAvgCorr( par );
-    if ( objOption == PGP ) return compPGP( par );
-    if ( objOption == CROSS_CORR ) return -compAvgCrossCorr( par );
+      double tmp = evalObjective( par );
+      return tmp;
 }
 
 
@@ -1128,7 +589,7 @@ int ExprPredictor::train( const ExprPar& par_init, const gsl_rng* rng )
     /*
         //for random starts:
         ExprPar par_rand_start = par_init;
-        randSamplePar( rng, par_rand_start );
+        par_rand_start = param_factor->randSamplePar( rng );
         train( par_rand_start );*/
     // training using the initial values
     train( par_init );
@@ -1142,7 +603,7 @@ int ExprPredictor::train( const ExprPar& par_init, const gsl_rng* rng )
     for ( int i = 0; i < nRandStarts; i++ )
     {
         ExprPar par_curr = par_init;
-        randSamplePar( rng, par_curr );
+        par_curr = param_factory->randSamplePar( rng );
         train( par_curr );
         cout << "Random start " << i + 1 << ":\tParameters = "; printPar( par_model );
         cout << "\tObjective = " << setprecision( 5 ) << obj_model << endl;
@@ -1203,58 +664,8 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     return 0;
 }
 
-
-// double ExprPredictor::test( const vector< Sequence >& testSeqs, const Matrix& testExprData, int perfOption ) const
-// {
-// 	assert( perfOption == 0 );
-// 	assert( testExprData.nRows() == testSeqs.size() && testExprData.nCols() == nConds() );
-//
-// 	// make predictions
-// 	Matrix predicted( testSeqs.size(), nConds() );
-// 	for ( int i = 0; i < testSeqs.size(); i++ ) {
-//         vector< double > targetExprs;
-//         predict( targetSeqs[i], targetExprs );
-//         predicted.setRow( i, targetExprs );
-// 	}
-//
-// 	// RMSE between predictions and observations
-// 	if ( perfOption == 0 ) {
-// 		vector< double > corrs;
-// 		for ( int i = 0; i < nExps; i++ ) {
-// 			corrs.push_back( correlation( predicted[ i ], testExprData[ i ] ) );
-// 		}
-//
-// 		return mean( corrs );
-// 	}
-// }
-
 int ExprPredictor::estBindingOption = 1;          // 1. estimate binding parameters; 0. not estimate binding parameters
 ObjType ExprPredictor::objOption = SSE;
-
-double ExprPredictor::exprSimCrossCorr( const vector< double >& x, const vector< double >& y )
-{
-    vector< int > shifts;
-    for ( int s = -maxShift; s <= maxShift; s++ )
-    {
-        shifts.push_back( s );
-    }
-
-    vector< double > cov;
-    vector< double > corr;
-    cross_corr( x, y, shifts, cov, corr );
-    double result = 0, weightSum = 0;
-    //     result = corr[maxShift];
-    result = *max_element( corr.begin(), corr.end() );
-    //     for ( int i = 0; i < shifts.size(); i++ ) {
-    //         double weight = pow( shiftPenalty, abs( shifts[i] ) );
-    //         weightSum += weight;
-    //         result += weight * corr[i];
-    //     }
-    //     result /= weightSum;
-
-    return result;
-}
-
 
 int ExprPredictor::maxShift = 5;
 double ExprPredictor::shiftPenalty = 0.8;
@@ -1268,86 +679,7 @@ double ExprPredictor::min_delta_f_PGP = 1.0E-8;
 int ExprPredictor::nSimplexIters = 200;
 int ExprPredictor::nGradientIters = 50;
 
-int ExprPredictor::randSamplePar( const gsl_rng* rng, ExprPar& par ) const
-{
-    // sample binding weights
-    if ( estBindingOption )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            double rand_weight = exp( gsl_ran_flat( rng, log( ExprPar::min_weight ), log( ExprPar::max_weight ) ) );
-            par.maxBindingWts[i] = rand_weight;
-        }
-    }
 
-    // sample the interaction matrix
-    if ( expr_model.modelOption != LOGISTIC )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = 0; j <= i; j++ )
-            {
-                double rand_interaction = exp( gsl_ran_flat( rng, log( ExprPar::min_interaction ), log( ExprPar::max_interaction ) ) );
-                if ( expr_model.coopMat( i, j ) ) par.factorIntMat( i, j ) = rand_interaction;
-            }
-        }
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = i + 1; j < nFactors(); j++ )
-            {
-                par.factorIntMat( i, j ) = par.factorIntMat( j, i );
-            }
-        }
-    }
-
-    // sample the transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( expr_model.modelOption == LOGISTIC )
-        {
-            double rand_effect = gsl_ran_flat( rng, ExprPar::min_effect_Logistic, ExprPar::max_effect_Logistic );
-            par.txpEffects[i] = rand_effect;
-        }
-        else if ( expr_model.modelOption == DIRECT )
-        {
-            double rand_effect = exp( gsl_ran_flat( rng, log( ExprPar::min_effect_Thermo ), log( ExprPar::max_effect_Thermo ) ) );
-            par.txpEffects[i] = rand_effect;
-        }
-        else
-        {
-            if ( expr_model.actIndicators[i] )
-            {
-                double rand_effect = exp( gsl_ran_flat( rng, log( ExprPar::min_effect_Thermo ), log( ExprPar::max_effect_Thermo ) ) );
-                par.txpEffects[i] = rand_effect;
-            }
-        }
-    }
-
-    // sample the repression effects
-    if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( expr_model.repIndicators[i] )
-            {
-                double rand_repression = exp( gsl_ran_flat( rng, log( ExprPar::min_repression ), log( ExprPar::max_repression ) ) );
-                par.repEffects[i] = rand_repression;
-            }
-        }
-    }
-
-    // sample the basal transcription
-    double rand_basal;
-    for( int _i = 0; _i < par.basalTxps.size(); _i ++ )
-    {
-        if ( expr_model.modelOption == LOGISTIC )
-            rand_basal = gsl_ran_flat( rng, ExprPar::min_basal_Logistic, ExprPar::max_basal_Logistic );
-        else
-            rand_basal = exp( gsl_ran_flat( rng, log( ExprPar::min_basal_Thermo ), log( ExprPar::max_basal_Thermo ) ) );
-        par.basalTxps[ _i ] = rand_basal;
-    }
-    return 0;
-}
 
 
 bool ExprPredictor::testPar( const ExprPar& par ) const
@@ -1455,7 +787,6 @@ bool ExprPredictor::testPar( const ExprPar& par ) const
     return true;
 }
 
-
 void ExprPredictor::printPar( const ExprPar& par ) const
 {
     cout.setf( ios::fixed );
@@ -1498,7 +829,12 @@ ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
 {
 	//TODO: just make it take an expr_model as a parameter.
 	//Also, it should use a factory to create the ExprFunc, but this is already close to a factory method.
-    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, par );
+
+    //TODO: This makes ExprPredictor act as the factory for ExprFunc objects.
+    //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
+    ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
+
+    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
 }
 
 
@@ -1506,199 +842,47 @@ int indices_of_crm_in_gene[] =
 {
 };
 
-double ExprPredictor::compRMSE( const ExprPar& par )
+double ExprPredictor::evalObjective( const ExprPar& par )
 {
-    ExprFunc* func = createExprFunc( par );
-    vector< SiteVec > seqSites( seqs.size() );
+
     vector< int > seqLengths( seqs.size() );
+    for( int i = 0; i < seqs.size(); i++ ){
+      seqLengths[i] = seqs[i].size();
+    }
+
+    ExprFunc* func = createExprFunc( par );
+
+
+    //Reannotate the sequences.
+    //TODO: It might be good to turn this off if we are not learning the energyThrFactors (if those are fixed.)
+    vector< SiteVec > seqSites( seqs.size() ); //
     SeqAnnotator ann( motifs, par.energyThrFactors );
     for ( int i = 0; i < seqs.size(); i++ ) {
        	ann.annot( seqs[ i ], seqSites[ i ] );
-    	seqLengths[i] = seqs[i].size();
     }
-    // error of each sequence
-    double squaredErr = 0;
+
+    vector<vector<double> > ground_truths;
+    vector<vector<double> > predictions;
+
+    //Create predictions for every sequence and condition
     for ( int i = 0; i < nSeqs(); i++ ) {
+        ground_truths.push_back(exprData.getRow(i));
+
         vector< double > predictedExprs;
-        vector< double > observedExprs;
         for ( int j = 0; j < nConds(); j++ ) {
-		double predicted = -1;
+        		double predicted = -1;
             	vector< double > concs = factorExprData.getCol( j );
             	predicted = func->predictExpr( seqSites[ i ], seqLengths[i], concs, i );
-
-
             // predicted expression for the i-th sequence at the j-th condition
             predictedExprs.push_back( predicted );
-
-            // observed expression for the i-th sequence at the j-th condition
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
         }
-        double beta;
-	#ifdef BETAOPTTOGETHER
-	beta = par.betas[i];
-        squaredErr += least_square( predictedExprs, observedExprs, beta, true );
-	#else
-        squaredErr += least_square( predictedExprs, observedExprs, beta );
-	#endif
-	//(func -> getPar()).betas[ i ] = beta;
+        predictions.push_back(predictedExprs);
     }
 
-    double rmse = sqrt( squaredErr / ( nSeqs() * nConds() ) );//use this line if least_square() is used
-	double penalty = 0;
+    //Evaluate the objective function on that.
+    return trainingObjective->eval(ground_truths, predictions, &par);
 
-	//TODO: R_SEQ Either remove this dead code, or make this a conditional option.
-	//for the random sequences: start
-        /*double sum_max_rand = 0;
-    for ( int i = 0; i < nSeqs(); i++ ) {
-    	double max = 0;
-        for ( int j = 0; j < nConds(); j++ ) {
-		//cout << "inside for cond: " << j + 1 << endl;
-            	vector< double > concs = factorExprData.getCol( i * nConds() +  j );
-            	double predicted = func->predictExpr( r_seqSites[ i ], r_seqLengths[i], concs, i );
-		if( predicted > max ){
-			max = predicted;
-		}
-        }
-	sum_max_rand += max ;
-    }
-	double avg_max_rand = sum_max_rand/nSeqs();
-	if( avg_max_rand > 0.01 )
-		penalty = -1000;
-
-//cout << "end looking at RSs:" << endl;
-*/
-	//for the random sequences: end
-
-    return rmse - penalty;
 }
-
-double ExprPredictor::compAvgCorr( const ExprPar& par )
-{
-    // create the expression function
-    ExprFunc* func = createExprFunc( par );
-    vector< SiteVec > seqSites( seqs.size() );
-    vector< int > seqLengths( seqs.size() );
-    SeqAnnotator ann( motifs, par.energyThrFactors );
-    for ( int i = 0; i < seqs.size(); i++ )
-    {
-        ann.annot( seqs[ i ], seqSites[ i ] );
-        seqLengths[i] = seqs[i].size();
-    }
-
-    // Pearson correlation of each sequence
-    double totalSim = 0;
-    for ( int i = 0; i < nSeqs(); i++ )
-    {
-        vector< double > predictedExprs;
-        vector< double > observedExprs;
-        for ( int j = 0; j < nConds(); j++ )
-        {
-            double predicted = -1;
-            vector< double > concs = factorExprData.getCol( j );
-            predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i );
-
-            if( predicted != predicted )
-            {
-                cout << "DEBUG: nan in predicted value" << endl;
-                exit(1);
-            }
-
-            // predicted expression for the i-th sequence at the j-th condition
-            predictedExprs.push_back( predicted );
-            // observed expression for the i-th sequence at the j-th condition
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
-        }
-	//BETAOPTOGETHER has no meaning for correlation
-        totalSim += corr( predictedExprs, observedExprs );
-        //         cout << "Sequence " << i << "\t" << corr( predictedExprs, observedExprs ) << endl;
-    }
-    delete func;
-    return totalSim / nSeqs();
-}
-
-
-double ExprPredictor::compPGP( const ExprPar& par )
-{
-
-    /*cout << "start samee debug" << endl;
-    printPar( par );
-    cout << "end samee debug" << endl;	*/
-    ExprFunc* func = createExprFunc( par );
-    vector< SiteVec > seqSites( seqs.size() );
-    vector< int > seqLengths( seqs.size() );
-    SeqAnnotator ann( motifs, par.energyThrFactors );
-    for ( int i = 0; i < seqs.size(); i++ )
-    {
-        ann.annot( seqs[ i ], seqSites[ i ] );
-        seqLengths[i] = seqs[i].size();
-    }
-    // PGP of each sequence
-    double totalSim = 0;
-    for ( int i = 0; i < nSeqs(); i++ )
-    {
-        vector< double > predictedExprs;
-        vector< double > observedExprs;
-        for ( int j = 0; j < nConds(); j++ )
-        {
-            double predicted = -1;
-            vector< double > concs = factorExprData.getCol( j );
-            predicted = func->predictExpr( seqSites[ i ], seqLengths[ i ], concs, i );
-
-            if( predicted != predicted )
-            {
-                cout << "DEBUG: nan in predicted value" << endl;
-                exit(1);
-            }
-            predictedExprs.push_back( predicted );
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
-        }
-        double beta;
-	#ifdef BETAOPTTOGETHER
-	beta = par.betas[i];
-        totalSim += pgp( predictedExprs, observedExprs, beta, true);
-	#else
-	totalSim += pgp( predictedExprs, observedExprs, beta );
-	#endif
-    }
-    delete func;
-    return totalSim / nSeqs();
-}
-
-
-double ExprPredictor::compAvgCrossCorr( const ExprPar& par )
-{
-    // create the expression function
-    ExprFunc* func = createExprFunc( par );
-
-    // cross correlation similarity of each sequence
-    double totalSim = 0;
-    for ( int i = 0; i < nSeqs(); i++ )
-    {
-        vector< double > predictedExprs;
-        vector< double > observedExprs;
-        for ( int j = 0; j < nConds(); j++ )
-        {
-            double predicted = -1;
-            vector< double > concs = factorExprData.getCol( j );
-            predicted = func->predictExpr( seqSites[ i ], seqLengths[i], concs, i );
-
-            // predicted expression for the i-th sequence at the j-th condition
-            predictedExprs.push_back( predicted );
-
-            // observed expression for the i-th sequence at the j-th condition
-            double observed = exprData( i, j );
-            observedExprs.push_back( observed );
-        }
-        totalSim += exprSimCrossCorr( predictedExprs, observedExprs );
-    }
-
-    delete func;
-    return totalSim / nSeqs();
-}
-
 
 int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
 {
@@ -1709,27 +893,12 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //for(int i = 0; i < actIndicators.size(); i++) cout << "act: " << i << " " << (actIndicators[i] > 0? 1 : 0) << endl;
     //for(int i = 0; i < repIndicators.size(); i++) cout << "rep: " << i << " " << (repIndicators[i] > 0? 1 : 0) << endl;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
+    //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "pars.size() = " << pars.size() << endl;
     //cout << "DEBUG: out getFreePars()" << endl;
-    //Hassan start:
-    int pars_size = pars.size();
-    /*DEBUG*///cout << "DEBUG: " << pars_size << endl;
-    /*DEBUG*///exit(1);
-    fix_pars.clear();
-    free_pars.clear();
-    for( int index = 0; index < pars_size; index++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            free_pars.push_back( pars[ index ]);
-        }
-        else
-        {
-            fix_pars.push_back( pars[ index ] );
-        }
-    }
-    //cout << "DEBUG: free_pars.size() = " << free_pars.size() << "\t" << "fix_pars.size() = " << fix_pars.size() << endl;
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
+
     pars.clear();
     pars = free_pars;
 
@@ -1771,26 +940,23 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         if ( status ) break;
         //Hassan start:
         free_pars = gsl2vector( s-> x);
-        pars.clear();
-        int free_par_counter = 0;
-        int fix_par_counter = 0;
-        for( int index = 0; index < pars_size; index ++ )
-        {
-            if( indicator_bool[ index ] )
-            {
-                pars.push_back( free_pars[ free_par_counter ++ ]);
-            }
-            else
-            {
-                pars.push_back( fix_pars[ fix_par_counter ++ ]);
-            }
-        }
-        //cout << "DEBUG: pars.size() = " << pars.size() << endl;
-        //cout << "DEBUG: free_pars.size() = " << free_pars.size() << "\t" << "fix_pars.size() = " << fix_pars.size() << "\t";
-        //cout << "free_par_counter = " << free_par_counter << "\t" << "fix_par_counter = " << fix_par_counter << endl;
-        //cout << "samee: " << fix_par_counter << endl;
-        //cout << "DEBUG: init ExprPar start" << endl;
-        ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+
+        param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
+        ExprPar par_curr = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+        par_curr = param_factory->changeSpace(par_curr, PROB_SPACE);
+        /* TEMPORARY BRYAN DEBUG
+        ExprPar par_compare = param_factory->changeSpace(param_factory->create_expr_par(pars,CONSTRAINED_SPACE),PROB_SPACE);
+
+        cout << "FIRST" << endl << flush;
+        printPar(par_curr);
+        cout << par_curr.maxBindingWts.size() << " " << par_curr.txpEffects.size() << " " << par_curr.repEffects.size()  << " " << par_curr.basalTxps.size() << " " << par_curr.pis.size() << " " << par_curr.betas.size() << " " << par_curr.energyThrFactors.size() << endl;
+        cout << flush << "AND THEN " << endl;
+        printPar(par_compare);
+        cout << par_compare.maxBindingWts.size() << " " << par_compare.txpEffects.size() << " " << par_compare.repEffects.size() << " " << par_compare.basalTxps.size() << " " << par_compare.pis.size() << " " << par_compare.betas.size() << " " << par_compare.energyThrFactors.size() << endl;
+        cout << flush << "END" << endl << endl << flush;
+        exit(1);
+        */
+
         //cout << "pars.size() = " << pars.size() << "\tpars_size = " << pars_size << endl;
         //printPar( par_curr );
         //cout << "DEBUG: init ExprPar end" << endl;
@@ -1799,6 +965,12 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
         //the following line should be uncommented if you remove all the changes by Hassan
         //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
 
+        /*
+        if( !testPar( par_curr)){
+          cout << "TEST PAR FAILED" << endl;
+          printPar(par_curr);
+          cout << endl << endl;
+        }*/
         if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ) break;
 
         // check for stopping condition
@@ -1827,22 +999,10 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
     //Hassan start:
     free_pars = gsl2vector( s-> x);
-    pars.clear();
-    int free_par_counter = 0;
-    int fix_par_counter = 0;
-    for( int index = 0; index < pars_size; index ++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            pars.push_back( free_pars[ free_par_counter ++ ]);
-        }
-        else
-        {
-            pars.push_back( fix_pars[ fix_par_counter ++ ]);
-        }
-    }
-    //cout << "DEBUG: init par_result start." << endl;
-    par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+    param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
+    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
+
     printPar( par_result );
     //cout << "DEBUG: init par_result end." << endl;
     //Hassan end
@@ -1865,26 +1025,11 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     // extract initial parameters
     vector< double > pars;
     //cout << "DEBUG: in getFreePars()" << endl;
-    par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
+    //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "DEBUG: out getFreePars()" << endl;
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
 
-    //Hassan start:
-    int pars_size = pars.size();
-    fix_pars.clear();
-    free_pars.clear();
-    for( int index = 0; index < pars_size; index++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            //cout << "testing 1: " << pars[ index ] << endl;
-            free_pars.push_back( pars[ index ]);
-        }
-        else
-        {
-            //cout << "testing 2: " << pars[ index ] << endl;
-            fix_pars.push_back( pars[ index ] );
-        }
-    }
+    param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
     pars.clear();
     pars = free_pars;
@@ -1929,22 +1074,9 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
         // check if the current values of parameters are valid
         //Hassan start:
         free_pars = gsl2vector( s-> x);
-        pars.clear();
-        int free_par_counter = 0;
-        int fix_par_counter = 0;
-        for( int index = 0; index < pars_size; index ++ )
-        {
-            if( indicator_bool[ index ] )
-            {
-                pars.push_back( free_pars[ free_par_counter ++ ]);
-            }
-            else
-            {
-                pars.push_back( fix_pars[ fix_par_counter ++ ]);
-            }
-        }
-
-        ExprPar par_curr = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+        param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
+        ExprPar par_curr = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+        par_curr = param_factory->changeSpace(par_curr, PROB_SPACE);
         //Hassan end
         //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
         if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ){
@@ -1981,22 +1113,10 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     //     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
     //Hassan start:
     free_pars = gsl2vector( s-> x);
-    pars.clear();
-    int free_par_counter = 0;
-    int fix_par_counter = 0;
-    for( int index = 0; index < pars_size; index ++ )
-    {
-        if( indicator_bool[ index ] )
-        {
-            pars.push_back( free_pars[ free_par_counter ++ ]);
-        }
-        else
-        {
-            pars.push_back( fix_pars[ fix_par_counter ++ ]);
-        }
-    }
+    param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
+    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
 
-    par_result = ExprPar ( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators, nSeqs() );
+    par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
     //Hassan end
     //par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
     obj_result = s->f;
@@ -2006,40 +1126,6 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     gsl_multimin_fdfminimizer_free( s );
 
     return 0;
-}
-
-int ExprPredictor::optimize_beta( ExprPar& par_result, double &obj_result ){
-        SiteVec unuzedSV = SiteVec();
-
-        for ( int i = 0; i < nSeqs(); i++ ){
-                vector< double > targetExprs;
-                vector< double > observedExprs = exprData.getRow( i );
-
-                predict( unuzedSV, seqs[i].size(), targetExprs, i );
-
-                double beta = par_model.betas[ i ];
-                double error_or_score;
-
-                if( ExprPredictor::objOption == SSE )
-                {
-                        error_or_score = sqrt( least_square( targetExprs, observedExprs, beta , false) / nConds() );
-                }
-                if( ExprPredictor::objOption == PGP ){
-                        error_or_score = pgp( targetExprs, observedExprs, beta, false );
-                }
-                if( ExprPredictor::objOption == CORR ){
-                        error_or_score = corr( targetExprs, observedExprs, beta, false);
-                }
-                if( ExprPredictor::objOption == CROSS_CORR ){
-                        error_or_score = ExprPredictor::exprSimCrossCorr( observedExprs, targetExprs );
-                }
-
-                //TODO: Check for the appropriate indicator value to see if this beta is an optimization parameter or not.
-                par_result.betas[i] = beta;
-
-        }
-
-	obj_result = objFunc( par_result );
 }
 
 double gsl_obj_f( const gsl_vector* v, void* params )
@@ -2052,23 +1138,11 @@ double gsl_obj_f( const gsl_vector* v, void* params )
     //     for ( int i = 0; i < v->size; i++ ) expv.push_back( exp( gsl_vector_get( v, i ) ) );
     vector <double> temp_free_pars = gsl2vector(v);
     vector < double > all_pars;
-    all_pars.clear();
-    int free_par_counter = 0;
-    int fix_par_counter = 0;
-    for( int index = 0; index < predictor -> indicator_bool.size(); index ++ )
-    {
-        if( predictor ->  indicator_bool[ index ]  )
-        {
-            all_pars.push_back( temp_free_pars[ free_par_counter ++ ]  );
-        }
-        else
-        {
-            all_pars.push_back( predictor ->  fix_pars[ fix_par_counter ++ ]  );
-        }
-    }
 
-    ExprPar par( all_pars, predictor->getCoopMat(), predictor->getActIndicators(), predictor->getRepIndicators(), predictor -> nSeqs() );
-    //ExprPar par( gsl2vector( v ), predictor->getCoopMat(), predictor->getActIndicators(), predictor->getRepIndicators() );
+    predictor->param_factory->joinParams(temp_free_pars, predictor->fix_pars, all_pars, predictor->indicator_bool);
+    ExprPar par = predictor->param_factory->create_expr_par(all_pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    par = predictor->param_factory->changeSpace(par, PROB_SPACE); //TODO: WTF? This shouldn't be required because it's done in the createExprFunc method. Stack corruption or something?
+
 
     // call the ExprPredictor object to evaluate the objective function
     double obj = predictor->objFunc( par );
