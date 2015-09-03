@@ -93,8 +93,34 @@ double AvgCrossCorrObjFunc::eval(const vector<vector<double> >& ground_truth, co
     double totalSim = 0.0;
 
     for(int i = 0;i<ground_truth.size();i++){
-      totalSim += exprSimCrossCorr( prediction[i], ground_truth[i] );
-  }
+        totalSim += exprSimCrossCorr( prediction[i], ground_truth[i] );
+    }
 
   return -totalSim / nSeqs;
   }
+
+
+double LogisticRegressionObjFunc::eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction,
+  const ExprPar* par){
+    assert(ground_truth.size() == prediction.size());
+    int nSeqs = ground_truth.size();
+    int nConds = ground_truth[0].size();
+    double totalLL = 0.0;
+
+    for(int i = 0;i<ground_truth.size();i++){
+      vector<double> Y = ground_truth[i];
+      vector<double> Ypred = prediction[i];
+
+      double one_sequence_LL = 0.0;
+
+      for(int j = 0;j<Y.size();j++){
+        double one_gt = Y[i];
+        double pred_prob = logistic(1*Ypred[j] - bias);
+        double singleLL = one_gt*log(pred_prob) + (1.0 - one_gt)*log(1.0 - pred_prob);
+        one_sequence_LL += singleLL;
+      }
+
+      totalLL += one_sequence_LL;
+    }
+    return -totalLL;
+}

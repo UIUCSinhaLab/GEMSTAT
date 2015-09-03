@@ -500,6 +500,9 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
       case CROSS_CORR:
         trainingObjective = new AvgCrossCorrObjFunc(ExprPredictor::maxShift, ExprPredictor::shiftPenalty);
         break;
+      case LOGISTIC_REGRESSION:
+        trainingObjective = new LogisticRegressionObjFunc();
+        break;
       case SSE:
       default:
         trainingObjective = new RMSEObjFunc();
