@@ -410,7 +410,7 @@ ExprPar ParFactory::randSamplePar( const gsl_rng* rng) const
 ExprPar ParFactory::load(const string& file){
 
   ExprPar tmp_par = create_expr_par();
-  tmp_par.my_space = PROB_SPACE;
+  tmp_par = changeSpace(tmp_par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );//TODO: get rid of this so that logistic models are stored in the same space with the other models.
   // open the file
   ifstream fin( file.c_str() );
   if ( !fin ){ cerr << "Cannot open parameter file " << file << endl; exit( 1 ); }
@@ -674,7 +674,7 @@ ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const 
 
 void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
 {
-  //assert(false); //Depricated
+    assert(false); //Depricated
     assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
     assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
     pars.clear();
