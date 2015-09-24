@@ -108,10 +108,10 @@ ExprPar ParFactory::create_expr_par() const
   double basalTxp_val = expr_model.modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : log( ExprPar::default_basal_Thermo );
   tmp_par.basalTxps.assign( numBTMS, basalTxp_val );
   //for the pausing parameters
-  tmp_par.pis.assign( nSeqs, log( ExprPar::default_pi ) );
+  tmp_par.pis.assign( expr_model.shared_scaling ? 1 : nSeqs, log( ExprPar::default_pi ) );
 
   //for the beta parameters
-  tmp_par.betas.assign( nSeqs, log( ExprPar::default_beta ) );
+  tmp_par.betas.assign( expr_model.shared_scaling ? 1 : nSeqs, log( ExprPar::default_beta ) );
 
   tmp_par.energyThrFactors.assign( _nFactors, log( ExprPar::default_energyThrFactors ) );
   tmp_par.my_space = ENERGY_SPACE;
@@ -217,7 +217,7 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
       }
 
       //for( int i = 0; i < num_qbtm; i++ )//TODO: should be this but that triggers an exception somewhere I don7t want to deal with.
-      for( int i = 0; i < nSeqs; i++ )
+      for( int i = 0; i < (expr_model.shared_scaling ? 1 : nSeqs); i++ )
       {
           //cout << "sending for:" << pars[counter] <<"\t" << log(min_pi) << "\t" <<log(max_pi) << endl;
           double pi_val = pars[ counter++ ] ;
@@ -230,7 +230,7 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
 
       //for( int i = 0; i < num_qbtm; i++ )//TODO: should be this but that triggers an exception somewhere I don7t want to deal with.
 
-      for( int i = 0; i < nSeqs; i++ )
+      for( int i = 0; i < (expr_model.shared_scaling ? 1 : nSeqs); i++ )
       {
           double beta_val = pars[ counter ++];
           tmp_par.betas[i] = beta_val ;
@@ -407,6 +407,82 @@ ExprPar ParFactory::randSamplePar( const gsl_rng* rng) const
 }
 
 
+ExprPar ParFactory::load(const string& file){
+
+  ExprPar tmp_par = create_expr_par();
+  tmp_par.my_space = PROB_SPACE;
+  // open the file
+  ifstream fin( file.c_str() );
+  if ( !fin ){ cerr << "Cannot open parameter file " << file << endl; exit( 1 ); }
+
+  // read the factor information
+  vector< string > motifNames( expr_model.getNFactors() );
+  for ( int i = 0; i < expr_model.getNFactors(); i++ )
+  {
+      fin >> motifNames[i] >> tmp_par.maxBindingWts[i] >> tmp_par.txpEffects[i];
+      if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT ) fin >> tmp_par.repEffects[i];
+  }
+
+  // factor name to index mapping
+  map< string, int > factorIdxMap;
+  for ( int i = 0; i < expr_model.getNFactors(); i++ )
+  {
+      factorIdxMap[motifNames[i]] = i;
+  }
+
+  // read the basal transcription
+  string symbol, eqSign, value;
+  fin >> symbol >> eqSign >> value;
+  if ( symbol != "basal_transcription" || eqSign != "=" ) throw RET_ERROR;
+  double basalTxp_val = atof( value.c_str() );
+  tmp_par.basalTxps[ 0 ] =  basalTxp_val ;
+  if( expr_model.one_qbtm_per_crm )
+  {
+      for( int _i = 1; _i < nSeqs; _i++ )
+      {
+          fin >> value;
+          double basalTxp_val = atof( value.c_str() );
+          tmp_par.basalTxps[ _i ] = basalTxp_val;
+      }
+  }
+  //read the pi values
+  for( int i = 0; i < (expr_model.shared_scaling ? 1 : nSeqs); i++ )
+  {
+      fin >> value;
+      tmp_par.pis[ i ] = atof( value.c_str() );
+  }
+
+  //read the beta values
+  for( int i = 0; i < (expr_model.shared_scaling ? 1 : nSeqs); i++ )
+  {
+      fin >> value;
+      tmp_par.betas[ i ] = atof( value.c_str() );
+  }
+
+  // read the cooperative interactions
+  string factor1, factor2;
+  double coopVal;
+  for( int i = 0; i < expr_model.getNumCoop(); i++ )
+  {
+      fin >> factor1 >> factor2 >> coopVal;
+      if( !factorIdxMap.count( factor1 ) || !factorIdxMap.count( factor2 ) ) throw RET_ERROR;
+      int idx1 = factorIdxMap[factor1];
+      int idx2 = factorIdxMap[factor2];
+      tmp_par.factorIntMat( idx1, idx2 ) = coopVal;
+      tmp_par.factorIntMat( idx2, idx1 ) = coopVal;
+      //cout << factor1 << "\t" << factor2 << "\t" << idx1 << "\t" << idx2 << endl;
+  }
+  double factor_thr_val;
+  tmp_par.energyThrFactors.clear();
+  while( fin >> factor_thr_val )
+  {
+      tmp_par.energyThrFactors.push_back( factor_thr_val );
+  }
+
+  return tmp_par;
+}
+
+
 ExprPar::ExprPar( int _nFactors, int _nSeqs ) : factorIntMat()
 {
     assert( _nFactors > 0 );
@@ -448,7 +524,7 @@ ExprPar::ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorI
 
 ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs ) : factorIntMat()
 {
-
+    assert(false);
     int _nFactors = actIndicators.size();
     nSeqs = _nSeqs;
     assert( coopMat.isSquare() && coopMat.nRows() == _nFactors );
@@ -793,6 +869,13 @@ void ExprPar::getRawPars( vector< double >& pars, const IntMatrix& coopMat, cons
     {
         pars.push_back( energyThrFactors[ i ] );
     }
+}
+
+double ExprPar::getBetaForSeq(int seqID) const {
+    if(betas.size() == 1)
+      return betas[0];
+    else
+      return betas[seqID];
 }
 
 void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const

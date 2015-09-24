@@ -12,7 +12,7 @@ double RMSEObjFunc::eval(const vector<vector<double> >& ground_truth, const vect
       double beta = 1.0;
       #ifdef BETAOPTTOGETHER
         if(NULL != par)
-          beta = par->betas[i];
+          beta = par->getBetaForSeq(i);
         squaredErr += least_square( prediction[i], ground_truth[i], beta, true );
       #else
         squaredErr += least_square( prediction[i], ground_truth[i], beta );
@@ -50,7 +50,7 @@ double PGPObjFunc::eval(const vector<vector<double> >& ground_truth, const vecto
         for(int i = 0;i<ground_truth.size();i++){
           double beta = 1.0;
           #ifdef BETAOPTTOGETHER
-        	beta = par->betas[i];
+        	beta = par->getBetaForSeq(i);
                 totalPGP += pgp(  prediction[i], ground_truth[i], beta, true);
         	#else
         	totalPGP += pgp(  prediction[i], ground_truth[i], beta );

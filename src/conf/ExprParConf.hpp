@@ -29,7 +29,7 @@ double ExprPar::max_basal_Logistic = -1.0;
 double ExprPar::min_basal_Thermo = 1.0E-5;
 double ExprPar::max_basal_Thermo = 0.105;
 double ExprPar::delta = -1.0E-75;       //We accept parameter vectors up to this far (per parameter) INSIDE the constrained space. Negative values mean slack outside the constrained interval. Positive values expose another bug that cannot be fixed immediately.
-double ExprPar::default_beta = 5;
+double ExprPar::default_beta = 1;
 double ExprPar::min_beta = 1.0E-4;
 double ExprPar::max_beta = 500;
 
