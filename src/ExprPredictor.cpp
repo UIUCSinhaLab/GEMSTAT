@@ -533,8 +533,8 @@ double ExprPredictor::objFunc( const ExprPar& par )
 
     //TODO: UGLY, obviously this shouuld be an ObjFunc that acts as a wrapper to an existing ObjFunc.
     vector<double> centers;
-    ExprPar center_par = param_factory->getDefaults();//Assumed to be in ENERGY_SPACE;
-    center_par = param_factory->changeSpace(center_par,ENERGY_SPACE);//Not much slowdown if already in correct space.
+    ExprPar center_par1 = param_factory->getDefaults();//Assumed to be in ENERGY_SPACE;
+    ExprPar center_par = param_factory->changeSpace(center_par1,ENERGY_SPACE);//Not much slowdown if already in correct space.
     center_par.getRawPars(centers, getCoopMat(), getActIndicators(),getRepIndicators());
 
     vector<double> allpars;
@@ -560,7 +560,7 @@ double ExprPredictor::objFunc( const ExprPar& par )
     l1 = 0.0;
     l2 = 0.0;
     for(int i = 0;i < center_par.betas.size();i++){
-      double the_diff = abs(par.betas[i] - center_par.betas[i]);
+      double the_diff = abs(tmp_energy_space.betas[i] - center_par.betas[i]);
       l1 += the_diff;
       l2 += pow(the_diff,2.0);
     }
@@ -573,7 +573,7 @@ double ExprPredictor::objFunc( const ExprPar& par )
     for(int i = 0;i < center_par.nFactors();i++){
       for(int j = 0;j< center_par.nFactors();j++)//Does not assume that the matrix is symmetric. Future proof.
       {
-        double the_diff = abs(par.factorIntMat(i,j) - center_par.factorIntMat(i,j));
+        double the_diff = abs(tmp_energy_space.factorIntMat(i,j) - center_par.factorIntMat(i,j));
         l1 += the_diff;
         l2 += pow(the_diff,2.0);
       }
