@@ -616,15 +616,10 @@ int ExprPredictor::train( const ExprPar& par_init )
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
         par_model.adjust( expr_model.coopMat );
-	#ifdef BETAOPTSEPARATE
-        optimize_beta( par_model, obj_result );
-        #endif
+
         gradient_minimize( par_result, obj_result );
         par_model = par_result;
         par_model.adjust( expr_model.coopMat);
-	#ifdef BETAOPTSEPARATE
-        optimize_beta( par_model, obj_result );
-        #endif
     }
 
     #ifdef BETAOPTBROKEN
@@ -875,7 +870,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
 
     //print the beta values
     cout << "BETAS : " << par.betas << endl;
-    assert( par.betas.size() == nSeqs() );
+    //assert( par.betas.size() == nSeqs() );
     cout << flush;
 }
 
@@ -951,6 +946,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "pars.size() = " << pars.size() << endl;
     //cout << "DEBUG: out getFreePars()" << endl;
+    //cout << "DEBUG: " << expr_model.shared_scaling  << "  " << param_factory->expr_model.shared_scaling << endl;
     ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
     param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 

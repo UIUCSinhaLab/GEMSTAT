@@ -127,7 +127,7 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
         fout << predictor.seqs[i].getName() << "\t" << observedExprs << endl;
         fout << predictor.seqs[i].getName();
 
-        double beta = par.betas[ i ];
+        double beta = par.getBetaForSeq(i);
 
 				double error_or_score;
 

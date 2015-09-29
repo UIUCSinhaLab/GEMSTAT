@@ -26,6 +26,7 @@ public: //TODO: Implement good accessors / mutators instead.
 
 	ModelType modelOption;			//model option TODO: remove this later and use inheritance for that.
 	bool one_qbtm_per_crm;		//Each crm has its own different binding weight for the polymerase
+  bool shared_scaling;
 
 	vector< Motif >& motifs;		//The motifs
 
@@ -45,6 +46,7 @@ public: //TODO: Implement good accessors / mutators instead.
 	double repressionDistThr;		// distance threshold for repression: d_R
 
   int getNFactors() const {return motifs.size();}
+  int getNumCoop() const;
 };
 
 
