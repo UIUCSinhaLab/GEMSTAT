@@ -503,6 +503,9 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
       case CROSS_CORR:
         trainingObjective = new AvgCrossCorrObjFunc(ExprPredictor::maxShift, ExprPredictor::shiftPenalty);
         break;
+      case LOGISTIC_REGRESSION:
+        trainingObjective = new LogisticRegressionObjFunc();
+        break;
       case SSE:
       default:
         trainingObjective = new RMSEObjFunc();
@@ -563,16 +566,11 @@ int ExprPredictor::train( const ExprPar& par_init )
     {
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
-        //par_model.adjust( expr_model.coopMat );
-	#ifdef BETAOPTSEPARATE
-        optimize_beta( par_model, obj_result );
-        #endif
+        par_model.adjust( expr_model.coopMat );
+
         gradient_minimize( par_result, obj_result );
         par_model = par_result;
-        //par_model.adjust( expr_model.coopMat);
-	#ifdef BETAOPTSEPARATE
-        optimize_beta( par_model, obj_result );
-        #endif
+        par_model.adjust( expr_model.coopMat);
     }
 
     #ifdef BETAOPTBROKEN
@@ -823,7 +821,9 @@ void ExprPredictor::printPar( const ExprPar& par ) const
 
     //print the beta values
     cout << "BETAS : " << par.betas << endl;
-    assert( par.betas.size() == nSeqs() );
+    //assert( par.betas.size() == nSeqs() );
+
+    cout << "THRESH : " << par.energyThrFactors << endl;
     cout << flush;
 }
 
