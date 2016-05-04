@@ -819,6 +819,8 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     //print the beta values
     cout << "BETAS : " << par.betas << endl;
     //assert( par.betas.size() == nSeqs() );
+    
+    cout << "THRESH : " << par.energyThrFactors << endl;
     cout << flush;
 }
 
