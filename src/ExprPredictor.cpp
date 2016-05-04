@@ -900,7 +900,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     pars.clear();
     pars = free_pars;
 
-    //SIMPLEX MINIMIZTION with NLOPT
+    //SIMPLEX MINIMIZATION with NLOPT
     nlopt::opt optimizer(nlopt::LN_NELDERMEAD, pars.size());
     optimizer.set_min_objective(nlopt_obj_func, this);
     //optimizer.set_maxmaxeval(nSimplexIters);
@@ -948,7 +948,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     pars.clear();
     pars = free_pars;
 
-    //SIMPLEX MINIMIZTION with NLOPT
+    //GRADIENT MINIMIZATION with NLOPT
     nlopt::opt optimizer(nlopt::LD_LBFGS, pars.size());
     optimizer.set_min_objective(nlopt_obj_func, this);
 
