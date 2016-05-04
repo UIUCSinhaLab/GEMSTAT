@@ -43,4 +43,15 @@ private:
   double shiftPenalty;
 };
 
+class LogisticRegressionObjFunc: public ObjFunc {
+public:
+  LogisticRegressionObjFunc(){ w = 1.0; bias = 0.5;}
+  LogisticRegressionObjFunc(double _w, double _bias){w = _w; bias = _bias;}
+  ~LogisticRegressionObjFunc(){}
+  double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
+private:
+  double w;
+  double bias;
+};
+
 #endif

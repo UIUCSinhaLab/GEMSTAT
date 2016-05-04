@@ -47,6 +47,7 @@ int main( int argc, char* argv[] )
     unsigned long initialSeed = time(0);
 
     bool cmdline_one_qbtm_per_crm = false;
+    bool cmdline_one_beta = false;
 
     string free_fix_indicator_filename;
     ExprPar::one_qbtm_per_crm = false;
@@ -114,6 +115,8 @@ int main( int argc, char* argv[] )
 	    initialSeed = atol( argv[++i] );
 	else if ( !strcmp("-po", argv[ i ]))
 	    par_out_file = argv[ ++i ]; //output file for pars at the en
+  else if ( !strcmp("-onebeta", argv[ i ]))
+      cmdline_one_beta = true;
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -356,7 +359,7 @@ int main( int argc, char* argv[] )
     //Create a new ExprModel with all of the selected options.
     //TODO: Continue here
     ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
-
+    expr_model.shared_scaling = cmdline_one_beta;
 
     // read the axis wt file
     vector < int > axis_start;
@@ -386,8 +389,8 @@ int main( int argc, char* argv[] )
     num_indicators += std::accumulate(actIndicators.begin(), actIndicators.end(),(int)0); //All the alpha act
     num_indicators += std::accumulate(repIndicators.begin(), repIndicators.end(),(int)0); //All the alpha rep
     num_indicators += cmdline_one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
-    num_indicators += nSeqs; //for the pi parameters
-    num_indicators += nSeqs; //for the beta pars per seqs
+    num_indicators += expr_model.shared_scaling ? 1 : nSeqs; //for the pi parameters
+    num_indicators += expr_model.shared_scaling ? 1 : nSeqs; //for the beta pars per seqs
     num_indicators += nFactors; //for the energyThrFactors
 
     vector <bool> indicator_bool(num_indicators, true);
@@ -405,17 +408,27 @@ int main( int argc, char* argv[] )
 	ASSERT_MESSAGE(indicator_bool.size() == num_indicators,"If you use the free_fix file, you must provide the correct number of parameters\n");
     }
 
+    //Setup a parameter factory
+    ParFactory *param_factory = new ParFactory(expr_model, nSeqs, indicator_bool);
+
     // read the initial parameter values
-    ExprPar par_init( nFactors, nSeqs );
+    ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
+    par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
+                                                                //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
     if ( !parFile.empty() ){
-        rval = par_init.load( parFile, num_of_coop_pairs );
-        if ( rval == RET_ERROR ){
+        try{
+          par_init = param_factory->load( parFile );
+        }catch (int& e){
             cerr << "Cannot read parameters from " << parFile << endl;
             exit( 1 );
         }
     }
     //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
-    if( read_factor_thresh ){ par_init.energyThrFactors = energyThrFactors; }
+    if( read_factor_thresh ){
+        par_init = param_factory->changeSpace(par_init, PROB_SPACE);
+        ASSERT_MESSAGE(par_init.my_space == PROB_SPACE,"This should never happen: Preconditions not met for -et option. This is a programming error, and not the fault of the user. For now, you can try avoiding the -et commandline option, and contact the software maintainer.");
+        par_init.energyThrFactors = energyThrFactors;
+    }
 
     //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
     vector < double > all_pars_for_test;
@@ -475,6 +488,7 @@ int main( int argc, char* argv[] )
 
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
+    //predictor->param_factory = param_factory;
 
     // random number generator
     gsl_rng* rng;

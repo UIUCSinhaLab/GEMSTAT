@@ -34,6 +34,8 @@ class ExprPar
         // access methods
         int nFactors() const { return maxBindingWts.size(); }
 
+        double getBetaForSeq(int seqID) const; //Returns the appropriate value of beta for this sequence. This allows some sequences to share one beta value, while others share another, or each have their own.
+
         // get the free parameters (in the correct/uniform scale)
         void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
         void getRawPars(vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;//Temporary until these edits are all done.
@@ -135,6 +137,8 @@ class ParFactory
       const ExprPar& getMaximums(){return maximums;}
       const ExprPar& getMinimums(){return minimums;}
       const ExprPar& getDefaults(){return defaults;}
+
+      ExprPar load(const string& file);//Depricated
 
     private:
       const vector<bool>& indicator_bool;//TODO: Later work on making this non-const. Original author const'ed everything.
