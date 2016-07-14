@@ -132,6 +132,11 @@ class ExprPredictor
             return expr_model.repressionMat;
         }
         const ExprPar& getPar() const { return par_model; }
+
+        const vector< SiteVec >& getSeqSites(){
+          return seqSites;
+        }
+
         double getObj() const { return obj_model; }
 
         // the objective function to be minimized

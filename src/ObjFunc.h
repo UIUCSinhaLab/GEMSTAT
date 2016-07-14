@@ -62,10 +62,7 @@ public:
 
   ObjFunc *wrapped_obj_func;
   vector<int> enhancer_to_promoter_mapping;
-private:
-  /* won't need this quite yet. Beta will handle this.
-  vector<double> inverse_number_of_enhancers_per_promoter;
-  */
+  vector<double> enhancer_weights;
 };
 
 #endif

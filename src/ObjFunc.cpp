@@ -131,7 +131,8 @@ MultiEnhancerObjFunc::MultiEnhancerObjFunc(ObjFunc *to_wrap, vector<int> in_enha
     wrapped_obj_func = to_wrap;
     enhancer_to_promoter_mapping = in_enhancer_promoter_mapping;
 
-    /* Beta can just handle this.
+    enhancer_weights = vector< double >(enhancer_to_promoter_mapping.size(), 0.0);
+
     set< int > tmp_promoter_IDs;
     for(int i = 0;i<enhancer_to_promoter_mapping.size();i++){
       tmp_promoter_IDs.insert(enhancer_to_promoter_mapping[i]);
@@ -143,15 +144,14 @@ MultiEnhancerObjFunc::MultiEnhancerObjFunc(ObjFunc *to_wrap, vector<int> in_enha
       tmp_enhancer_per_promoter_count[enhancer_to_promoter_mapping[i]] += 1;
     }
 
-    inverse_number_of_enhancers_per_promoter = vector<double>(num_promoters,1.0);
+    vector< double > inverse_number_of_enhancers_per_promoter = vector<double>(num_promoters,1.0);
     for(int i = 0;i < num_promoters;i++) {
       inverse_number_of_enhancers_per_promoter[i] = 1.0/tmp_enhancer_per_promoter_count[i];
     }
 
-    cerr << "DEBUG " << inverse_number_of_enhancers_per_promoter << endl;
-    //exit(1);
-    */
-
+    for(int i_enhancer = 0;i_enhancer < enhancer_to_promoter_mapping.size();i_enhancer++){
+      enhancer_weights[i_enhancer] = inverse_number_of_enhancers_per_promoter[enhancer_to_promoter_mapping[i_enhancer]];
+    }
 }
 
 
@@ -168,7 +168,7 @@ double MultiEnhancerObjFunc::eval(const vector<vector<double> >& ground_truth, c
     for(int i = 0;i < prediction.size();i++){
       int promoter_index = enhancer_to_promoter_mapping[i];
       for(int j = 0; j < prediction[i].size();j++){
-        summed_predictions[promoter_index][j] += prediction[i][j];
+        summed_predictions[promoter_index][j] += enhancer_weights[i]*prediction[i][j];
       }
     }
 

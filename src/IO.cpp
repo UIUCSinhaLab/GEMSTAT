@@ -1,3 +1,5 @@
+#include <set>
+
 #include "IO.h"
 
 int readEdgelistGraph( const string& filename, const map<string, int>& factorIdxMap, IntMatrix& destination, bool directed){
@@ -102,6 +104,30 @@ int readAxisWeights(const string& filename, vector< int >& axis_start, vector< i
 }
 
 int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, vector< int > enhancer_to_promoter_mapping, vector< string > promoter_names, bool fix_beta /*= false*/ ){
+	// re figure out the enhancer weights
+	vector< double> enhancer_weights = vector< double >(enhancer_to_promoter_mapping.size(), 0.0);
+
+	set< int > tmp_promoter_IDs;
+	for(int i = 0;i<enhancer_to_promoter_mapping.size();i++){
+		tmp_promoter_IDs.insert(enhancer_to_promoter_mapping[i]);
+	}
+	int num_promoters = tmp_promoter_IDs.size();
+
+	vector<int> tmp_enhancer_per_promoter_count = vector<int>(num_promoters,0);
+	for(int i = 0;i < enhancer_to_promoter_mapping.size();i++){
+		tmp_enhancer_per_promoter_count[enhancer_to_promoter_mapping[i]] += 1;
+	}
+
+	vector< double > inverse_number_of_enhancers_per_promoter = vector<double>(num_promoters,1.0);
+	for(int i = 0;i < num_promoters;i++) {
+		inverse_number_of_enhancers_per_promoter[i] = 1.0/tmp_enhancer_per_promoter_count[i];
+	}
+
+	for(int i_enhancer = 0;i_enhancer < enhancer_to_promoter_mapping.size();i_enhancer++){
+		enhancer_weights[i_enhancer] = inverse_number_of_enhancers_per_promoter[enhancer_to_promoter_mapping[i_enhancer]];
+	}
+
+
 	// print the predictions
 	ofstream fout( filename.c_str() );
 	if ( !fout )
@@ -111,7 +137,7 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 	}
 
 	ExprPar par = predictor.getPar();
-	SiteVec unusedSV = SiteVec();//This is unused in the deeper prediction fuction, but is still required by the API. This makes that more explicit.
+	const vector< SiteVec >& allSeqSites = predictor.getSeqSites();
 
 	fout << "Rows\t" << expr_condNames << endl;
 
@@ -119,7 +145,7 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 
 	for( int i = 0; i < predictor.nSeqs();i++){
 		vector< double > targetExprs;
-		predictor.predict( unusedSV, predictor.seqs[i].size(), targetExprs, i );
+		predictor.predict( allSeqSites[i], predictor.seqs[i].size(), targetExprs, i );
 		per_enhancer_predictions.push_back(targetExprs);
 	}
 
@@ -132,7 +158,7 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 	for(int i = 0;i < per_enhancer_predictions.size();i++){
 		int promoter_index = enhancer_to_promoter_mapping[i];
 		for(int j = 0; j < per_enhancer_predictions[i].size();j++){
-			summed_predictions[promoter_index][j] += per_enhancer_predictions[i][j];
+			summed_predictions[promoter_index][j] += enhancer_weights[i]*per_enhancer_predictions[i][j];
 		}
 	}
 
@@ -157,7 +183,7 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 				multiple_predictions[i] = targetExprs;
 				multiple_observations[i] = observedExprs;
 
-				error_or_score = ((MultiEnhancerObjFunc*)predictor.trainingObjective)->wrapped_obj_func->eval(multiple_predictions, multiple_observations, &par);
+				error_or_score = ((MultiEnhancerObjFunc*)predictor.trainingObjective)->wrapped_obj_func->eval(multiple_observations, multiple_predictions, &par);
 
         for ( int j = 0; j < predictor.nConds(); j++ ){
 						fout << "\t" << ( beta * targetExprs[j] );
@@ -165,8 +191,9 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
         fout << endl;
 
         // print the agreement bewtween predictions and observations
-        cout << promoter_names << "\t" << beta << "\t" << error_or_score << endl;
+        cout << promoter_names[i] << "\t" << beta << "\t" << error_or_score << endl;
     }
+		fout.flush();
 		fout.close();
 
 
@@ -177,6 +204,7 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 			exit( 1 );
 		}
 
+		individual_fout << "Rows\t" << expr_condNames << endl;
 		for(int i = 0;i < per_enhancer_predictions.size();i++){
 
 				vector< double > targetExprs = per_enhancer_predictions[i];
@@ -188,12 +216,12 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 
 
 				for ( int j = 0; j < predictor.nConds(); j++ ){
-					individual_fout << "\t" << ( beta_for_enhancer * targetExprs[j] );
+					individual_fout << "\t" << ( beta_for_enhancer * enhancer_weights[i]*targetExprs[j] );
 				}
 				individual_fout << endl;
 
 		}
-
+		individual_fout.flush();
 		individual_fout.close();
 	return 0;
 }
