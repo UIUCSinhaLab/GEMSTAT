@@ -819,7 +819,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     //print the beta values
     cout << "BETAS : " << par.betas << endl;
     //assert( par.betas.size() == nSeqs() );
-    
+
     cout << "THRESH : " << par.energyThrFactors << endl;
     cout << flush;
 }
@@ -880,7 +880,9 @@ double ExprPredictor::evalObjective( const ExprPar& par )
     }
 
     //Evaluate the objective function on that.
-    return trainingObjective->eval(ground_truths, predictions, &par);
+    double ret_val = trainingObjective->eval(ground_truths, predictions, &par);
+    delete func;
+    return ret_val;
 
 }
 
