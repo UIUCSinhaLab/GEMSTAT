@@ -27,6 +27,8 @@
 #include "ExprModel.h"
 #include "ExprPredictor.h"
 
+#include "ObjFunc.h"
+
 int main( int argc, char* argv[] )
 {
     // command line processing
@@ -166,12 +168,26 @@ int main( int argc, char* argv[] )
     vector< string > condNames;
     rval = readMatrix( exprFile, labels, condNames, data );
     ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the expression data file.");
-    ASSERT_MESSAGE( labels.size() == nSeqs , "Mismatch between number of labels and number of sequences");
-    for ( int i = 0; i < nSeqs; i++ )
+    //ASSERT_MESSAGE( labels.size() == nSeqs , "Mismatch between number of labels and number of sequences");
+    int nPromoters = labels.size();
+    vector< string > promoter_names(labels);
+
+    //create a map of which enhancers activate which promoter.
+    vector < int > enhancer_promoter_mapping;
+    map< string, int > promoterIdxMap;
+    for ( int i = 0; i < labels.size(); i++ )
     {
-        if( labels[ i ] != seqNames[ i ] ) cout << labels[i] << seqNames[i] << endl;
-        ASSERT_MESSAGE( labels[i] == seqNames[i] , "A label and a sequence name did not agree.");
+        promoterIdxMap[labels[i]] = i;
     }
+    for (int i = 0; i < seqNames.size(); i++){
+        //get the promoter name out of the sequence name and add an entry in enhancer_promoter_mapping.
+        int delim_position = seqNames[i].find(":");
+        string substr = seqNames[i].substr(0,delim_position);
+        int which_promoter = promoterIdxMap[substr];
+        enhancer_promoter_mapping.push_back(which_promoter);
+    }
+
+
     Matrix exprData( data );
     int nConds = exprData.nCols();
 
@@ -358,7 +374,7 @@ int main( int argc, char* argv[] )
 
     //Create a new ExprModel with all of the selected options.
     //TODO: Continue here
-    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
+    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr, enhancer_promoter_mapping);
     expr_model.shared_scaling = cmdline_one_beta;
 
     // read the axis wt file
@@ -388,9 +404,9 @@ int main( int argc, char* argv[] )
     num_indicators += num_of_coop_pairs; //For cooperative pairs cooperativities
     num_indicators += std::accumulate(actIndicators.begin(), actIndicators.end(),(int)0); //All the alpha act
     num_indicators += std::accumulate(repIndicators.begin(), repIndicators.end(),(int)0); //All the alpha rep
-    num_indicators += cmdline_one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
-    num_indicators += expr_model.shared_scaling ? 1 : nSeqs; //for the pi parameters
-    num_indicators += expr_model.shared_scaling ? 1 : nSeqs; //for the beta pars per seqs
+    num_indicators += cmdline_one_qbtm_per_crm ? nPromoters : 1; //for q_btm parameter(s)
+    num_indicators += expr_model.shared_scaling ? 1 : nPromoters; //for the pi parameters
+    num_indicators += expr_model.shared_scaling ? 1 : nPromoters; //for the beta pars per seqs
     num_indicators += nFactors; //for the energyThrFactors
 
     vector <bool> indicator_bool(num_indicators, true);
@@ -409,7 +425,7 @@ int main( int argc, char* argv[] )
     }
 
     //Setup a parameter factory
-    ParFactory *param_factory = new ParFactory(expr_model, nSeqs, indicator_bool);
+    ParFactory *param_factory = new ParFactory(expr_model, nPromoters, indicator_bool);
 
     // read the initial parameter values
     ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
@@ -490,6 +506,9 @@ int main( int argc, char* argv[] )
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
     //predictor->param_factory = param_factory;
 
+    //set the predictor's training objective to be a decorator
+    predictor->trainingObjective = new MultiEnhancerObjFunc(predictor->trainingObjective,enhancer_promoter_mapping);
+
     // random number generator
     gsl_rng* rng;
     gsl_rng_env_setup();
@@ -513,7 +532,7 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, exprData, expr_condNames, true);
+    writePredictions(outFile, *predictor, exprData, expr_condNames, enhancer_promoter_mapping, promoter_names, true);
 
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*

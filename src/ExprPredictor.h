@@ -18,7 +18,7 @@ class ExprFunc
 {
     public:
         // constructors
-        ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par );
+        ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par , const ExprModel& _expr_model );
 
         // access methods
         const vector< Motif >& getMotifs() const
@@ -33,6 +33,8 @@ class ExprFunc
         static ModelType modelOption;             // model option
         static bool one_qbtm_per_crm;
     private:
+        const ExprModel& expr_model;
+
         // TF binding motifs
         const vector< Motif >& motifs;
 
@@ -100,6 +102,10 @@ class ExprPredictor
         int nSeqs() const
         {
             return seqs.size();
+        }
+        int nPromoters() const
+        {
+            return exprData.nRows();
         }
         int nFactors() const
         {

@@ -101,7 +101,7 @@ int readAxisWeights(const string& filename, vector< int >& axis_start, vector< i
 	return 0;
 }
 
-int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, bool fix_beta /*= false*/){
+int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, vector< int > enhancer_to_promoter_mapping, vector< string > promoter_names, bool fix_beta /*= false*/ ){
 	// print the predictions
 	ofstream fout( filename.c_str() );
 	if ( !fout )
@@ -115,28 +115,49 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 
 	fout << "Rows\t" << expr_condNames << endl;
 
-	for ( int i = 0; i < predictor.nSeqs(); i++ )
+	vector< vector< double > > per_enhancer_predictions;
+
+	for( int i = 0; i < predictor.nSeqs();i++){
+		vector< double > targetExprs;
+		predictor.predict( unusedSV, predictor.seqs[i].size(), targetExprs, i );
+		per_enhancer_predictions.push_back(targetExprs);
+	}
+
+	vector< vector< double > > summed_predictions(exprData.nRows(),vector< double >(exprData.nCols(),0.0));
+/*    for(int i = 0;i < ground_truth.size();i++){
+		summed_predictions.push_back(vector<double>(ground_truth[i].size(),0.0));
+	}
+	*/
+
+	for(int i = 0;i < per_enhancer_predictions.size();i++){
+		int promoter_index = enhancer_to_promoter_mapping[i];
+		for(int j = 0; j < per_enhancer_predictions[i].size();j++){
+			summed_predictions[promoter_index][j] += per_enhancer_predictions[i][j];
+		}
+	}
+
+	for ( int i = 0; i < exprData.nRows(); i++ )
     {
-        vector< double > targetExprs;
-        predictor.predict( unusedSV, predictor.seqs[i].size(), targetExprs, i );
+        vector< double > targetExprs = summed_predictions[i];
         vector< double > observedExprs = exprData.getRow( i );
 
         // error
         // print the results
 	// observations
-        fout << predictor.seqs[i].getName() << "\t" << observedExprs << endl;
-        fout << predictor.seqs[i].getName();
+        fout << promoter_names[i] << "\t" << observedExprs << endl;
+        fout << promoter_names[i];
 
         double beta = par.getBetaForSeq(i);
 
 				double error_or_score;
 
-				vector<vector<double> > multiple_predictions;
-				vector<vector<double> > multiple_observations;
-				multiple_predictions.push_back(targetExprs);
-				multiple_observations.push_back(observedExprs);
+				//this ensures that the right scaling parameter is applied.
+				vector<vector<double> > multiple_predictions(exprData.nRows(), vector< double >(exprData.nCols(),0.0));
+				vector<vector<double> > multiple_observations(exprData.nRows(), vector< double >(exprData.nCols(),0.0));
+				multiple_predictions[i] = targetExprs;
+				multiple_observations[i] = observedExprs;
 
-				error_or_score = predictor.trainingObjective->eval(multiple_predictions, multiple_observations, &par);
+				error_or_score = ((MultiEnhancerObjFunc*)predictor.trainingObjective)->wrapped_obj_func->eval(multiple_predictions, multiple_observations, &par);
 
         for ( int j = 0; j < predictor.nConds(); j++ ){
 						fout << "\t" << ( beta * targetExprs[j] );
@@ -144,8 +165,35 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
         fout << endl;
 
         // print the agreement bewtween predictions and observations
-        cout << predictor.seqs[i].getName() << "\t" << beta << "\t" << error_or_score << endl;
+        cout << promoter_names << "\t" << beta << "\t" << error_or_score << endl;
     }
+		fout.close();
 
+
+		ofstream individual_fout( (filename + string(".individual")).c_str() );
+		if ( !individual_fout )
+		{
+			cerr << "Cannot open file " << filename << ".individual" << endl;
+			exit( 1 );
+		}
+
+		for(int i = 0;i < per_enhancer_predictions.size();i++){
+
+				vector< double > targetExprs = per_enhancer_predictions[i];
+				vector< double > observedExprs = exprData.getRow( enhancer_to_promoter_mapping[i] );
+
+				double beta_for_enhancer = par.getBetaForSeq(enhancer_to_promoter_mapping[i]);
+				individual_fout << predictor.seqs[i].getName() << "\t" << observedExprs << endl;
+				individual_fout << predictor.seqs[i].getName();
+
+
+				for ( int j = 0; j < predictor.nConds(); j++ ){
+					individual_fout << "\t" << ( beta_for_enhancer * targetExprs[j] );
+				}
+				individual_fout << endl;
+
+		}
+
+		individual_fout.close();
 	return 0;
 }

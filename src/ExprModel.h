@@ -21,7 +21,7 @@ string getModelOptionStr( ModelType modelOption );
 class ExprModel {
 
 public: //TODO: Implement good accessors / mutators instead.
-	ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, FactorIntFunc* _intFunc, int _maxContact, IntMatrix& _coopMat, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr );
+	ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, FactorIntFunc* _intFunc, int _maxContact, IntMatrix& _coopMat, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr, vector<int>& in_enhancer_to_promoter_mapping );
 
 
 	ModelType modelOption;			//model option TODO: remove this later and use inheritance for that.
@@ -47,6 +47,11 @@ public: //TODO: Implement good accessors / mutators instead.
 
   int getNFactors() const {return motifs.size();}
   int getNumCoop() const;
+
+  vector< int>& enhancer_to_promoter_mapping;
+
+  int getPromoterForEnhancer(int enhacer_number) const { return enhancer_to_promoter_mapping[enhacer_number];}
+  int getQbtmNumberForPromoter(int promoter_number) const { return one_qbtm_per_crm ? promoter_number : 0; }
 };
 
 

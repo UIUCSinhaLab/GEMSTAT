@@ -54,4 +54,18 @@ private:
   double bias;
 };
 
+class MultiEnhancerObjFunc: public ObjFunc {
+public:
+  MultiEnhancerObjFunc(ObjFunc *to_wrap, vector<int> in_enhancer_promoter_mapping);
+  ~MultiEnhancerObjFunc(){delete wrapped_obj_func;}
+  double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
+
+  ObjFunc *wrapped_obj_func;
+  vector<int> enhancer_to_promoter_mapping;
+private:
+  /* won't need this quite yet. Beta will handle this.
+  vector<double> inverse_number_of_enhancers_per_promoter;
+  */
+};
+
 #endif

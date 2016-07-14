@@ -5,7 +5,7 @@
 #include "ExprPar.h"
 
 
-ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
+ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par , const ExprModel& _expr_model ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr ), expr_model( _expr_model )
 {
     par = _par;
 
@@ -76,7 +76,7 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
             //             totalEffect = totalEffect / (double)length;
         }
         //         return par.expRatio * logistic( log( par.basalTxp ) + totalEffect );
-        return logistic( par.basalTxps[ seq_num ] + totalEffect );
+        return logistic( par.basalTxps[ expr_model.getQbtmNumberForPromoter(expr_model.getPromoterForEnhancer(seq_num)) ] + totalEffect );
     }
 
     // Thermodynamic models: Direct, Quenching, ChrMod_Unlimited and ChrMod_Limited
@@ -89,8 +89,8 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
     // compute the expression (promoter occupancy)
     double efficiency = Z_on / Z_off;
     //cout << "efficiency = " << efficiency << endl;
-    //cout << "basalTxp = " << par.basalTxps[ seq_num ] << endl;
-    double promoterOcc = efficiency * par.basalTxps[ seq_num ] / ( 1.0 + efficiency * par.basalTxps[ seq_num ] /** ( 1 + par.pis[ seq_num ] )*/ );
+    //cout << "basalTxp = " << par.basalTxps[ expr_model.getPromoterForEnhancer(seq_num) ] << endl;
+    double promoterOcc = efficiency * par.basalTxps[ expr_model.getQbtmNumberForPromoter(expr_model.getPromoterForEnhancer(seq_num)) ] / ( 1.0 + efficiency * par.basalTxps[ expr_model.getQbtmNumberForPromoter(expr_model.getPromoterForEnhancer(seq_num)) ] /** ( 1 + par.pis[ seq_num ] )*/ );
     return promoterOcc;
 }
 
@@ -460,7 +460,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts )
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
-    assert( exprData.nRows() == nSeqs() );
+    //assert( exprData.nRows() == nPromoters() ); // always true
     assert( factorExprData.nRows() == nFactors() && factorExprData.nCols() == nConds() );
     assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
     assert( expr_model.actIndicators.size() == nFactors() );
@@ -486,7 +486,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     ExprPar::estBindingOption = estBindingOption;
 
     //expr_model was already initialized. Setup the parameter factory.
-    param_factory = new ParFactory(expr_model, nSeqs(), _indicator_bool);
+    param_factory = new ParFactory(expr_model, nPromoters(), _indicator_bool);
 
     //TODO: Move this to the front-end or something?
     //Maybe make it have a default SSE score objective, but anything else gets specified in the front-end.
@@ -633,7 +633,7 @@ int ExprPredictor::train()
     gsl_rng_set( rng, time( 0 ) );                // set the seed equal to simulTime(0)
 
     // training using the default initial values with random starts
-    ExprPar par_default( nFactors(), nSeqs() );
+    ExprPar par_default( nFactors(), nPromoters() );
     train( par_default, rng );
 
     return 0;
@@ -645,16 +645,16 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     targetExprs.clear();
 
     // create site representation of the target sequence
-    SiteVec targetSites;
-    SeqAnnotator ann( motifs, par_model.energyThrFactors );
-    ann.annot( seqs[ seq_num ], targetSites );
+    //SiteVec targetSites;
+    //SeqAnnotator ann( motifs, par_model.energyThrFactors );
+    //ann.annot( seqs[ seq_num ], targetSites );
 
     // predict the expression
     ExprFunc* func = createExprFunc( par_model );
     for ( int j = 0; j < nConds(); j++ )
     {
         vector< double > concs = factorExprData.getCol( j );
-        double predicted = func->predictExpr( targetSites, targetSeqLength, concs, seq_num );
+        double predicted = func->predictExpr( targetSites_, targetSeqLength, concs, seq_num );
         targetExprs.push_back( predicted );
     }
 
@@ -818,8 +818,8 @@ void ExprPredictor::printPar( const ExprPar& par ) const
 
     //print the beta values
     cout << "BETAS : " << par.betas << endl;
-    //assert( par.betas.size() == nSeqs() );
-    
+    //assert( par.betas.size() == nPromoters() );
+
     cout << "THRESH : " << par.energyThrFactors << endl;
     cout << flush;
 }
@@ -834,7 +834,7 @@ ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
     //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
     ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
 
-    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
+    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass , expr_model);
 }
 
 
@@ -855,18 +855,24 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 
     //Reannotate the sequences.
     //TODO: It might be good to turn this off if we are not learning the energyThrFactors (if those are fixed.)
+    /*
     vector< SiteVec > seqSites( seqs.size() ); //
     SeqAnnotator ann( motifs, par.energyThrFactors );
     for ( int i = 0; i < seqs.size(); i++ ) {
        	ann.annot( seqs[ i ], seqSites[ i ] );
     }
+    */
 
     vector<vector<double> > ground_truths;
     vector<vector<double> > predictions;
 
+    for ( int i = 0; i < exprData.nRows();i++){
+      ground_truths.push_back(exprData.getRow(i));
+    }
+
     //Create predictions for every sequence and condition
     for ( int i = 0; i < nSeqs(); i++ ) {
-        ground_truths.push_back(exprData.getRow(i));
+
 
         vector< double > predictedExprs;
         for ( int j = 0; j < nConds(); j++ ) {
@@ -880,7 +886,9 @@ double ExprPredictor::evalObjective( const ExprPar& par )
     }
 
     //Evaluate the objective function on that.
-    return trainingObjective->eval(ground_truths, predictions, &par);
+    double ret_val =  trainingObjective->eval(ground_truths, predictions, &par);
+    delete func;
+    return ret_val;
 
 }
 

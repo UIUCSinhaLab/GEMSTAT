@@ -1,3 +1,5 @@
+#include <set>
+
 #include "ObjFunc.h"
 
 double RMSEObjFunc::eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction,
@@ -123,4 +125,60 @@ double LogisticRegressionObjFunc::eval(const vector<vector<double> >& ground_tru
       totalLL += one_sequence_LL;
     }
     return -totalLL;
+}
+
+MultiEnhancerObjFunc::MultiEnhancerObjFunc(ObjFunc *to_wrap, vector<int> in_enhancer_promoter_mapping){
+    wrapped_obj_func = to_wrap;
+    enhancer_to_promoter_mapping = in_enhancer_promoter_mapping;
+
+    /* Beta can just handle this.
+    set< int > tmp_promoter_IDs;
+    for(int i = 0;i<enhancer_to_promoter_mapping.size();i++){
+      tmp_promoter_IDs.insert(enhancer_to_promoter_mapping[i]);
+    }
+    int num_promoters = tmp_promoter_IDs.size();
+
+    vector<int> tmp_enhancer_per_promoter_count = vector<int>(num_promoters,0);
+    for(int i = 0;i < enhancer_to_promoter_mapping.size();i++){
+      tmp_enhancer_per_promoter_count[enhancer_to_promoter_mapping[i]] += 1;
+    }
+
+    inverse_number_of_enhancers_per_promoter = vector<double>(num_promoters,1.0);
+    for(int i = 0;i < num_promoters;i++) {
+      inverse_number_of_enhancers_per_promoter[i] = 1.0/tmp_enhancer_per_promoter_count[i];
+    }
+
+    cerr << "DEBUG " << inverse_number_of_enhancers_per_promoter << endl;
+    //exit(1);
+    */
+
+}
+
+
+double MultiEnhancerObjFunc::eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction,
+  const ExprPar* par){
+    //sum the predictions, creat a new prediction vector vector, and pass that to the wrapped objective function.
+
+    vector< vector< double > > summed_predictions(ground_truth.size(),vector< double >(ground_truth[0].size(),0.0));
+/*    for(int i = 0;i < ground_truth.size();i++){
+      summed_predictions.push_back(vector<double>(ground_truth[i].size(),0.0));
+    }
+    */
+
+    for(int i = 0;i < prediction.size();i++){
+      int promoter_index = enhancer_to_promoter_mapping[i];
+      for(int j = 0; j < prediction[i].size();j++){
+        summed_predictions[promoter_index][j] += prediction[i][j];
+      }
+    }
+
+    /*beta can just handle this. need this code if we go to learning he relative weights.
+    for(int i = 0; i < summed_predictions.size();i++){
+      for(int j = 0; j < summed_predictions[i].size();j++){
+        summed_predictions[i][j] *= inverse_number_of_enhancers_per_promoter;
+      }
+    }
+    */
+
+    return wrapped_obj_func->eval(ground_truth,summed_predictions,par);
 }
