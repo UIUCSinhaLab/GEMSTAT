@@ -109,16 +109,16 @@ int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& e
 		cerr << "Cannot open file " << filename << endl;
 		exit( 1 );
 	}
-
 	ExprPar par = predictor.getPar();
-	SiteVec unusedSV = SiteVec();//This is unused in the deeper prediction fuction, but is still required by the API. This makes that more explicit.
+	//SiteVec unusedSV = SiteVec();
+	const vector< SiteVec >& allSeqSites = predictor.getSeqSites();//Needed if we are no longer reannotating each prediction.
 
 	fout << "Rows\t" << expr_condNames << endl;
 
 	for ( int i = 0; i < predictor.nSeqs(); i++ )
     {
         vector< double > targetExprs;
-        predictor.predict( unusedSV, predictor.seqs[i].size(), targetExprs, i );
+        predictor.predict( allSeqSites[i], predictor.seqs[i].size(), targetExprs, i );
         vector< double > observedExprs = exprData.getRow( i );
 
         // error
