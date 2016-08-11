@@ -574,6 +574,10 @@ int readSites( const string& file, const map< string, int >& factorIdxMap, vecto
             if ( readEnergy ) ss >> energy;
             bool strand = strandChar == '+' ? 1 : 0;
             map<string, int>::const_iterator iter = factorIdxMap.find( factor );
+            if(iter == factorIdxMap.end()){
+              cerr << "The site annotation file reffered to a factor that doesn't exist. \n(Did you use one with factor numbers instead of names? The third column must be textual names.)" << endl;
+              exit(1);
+            } //TODO: Throw an exception if the factor couldn't be found!
             currVec.push_back( Site( start - 1, strand, iter->second , energy, 1 ) );
         }
     }
