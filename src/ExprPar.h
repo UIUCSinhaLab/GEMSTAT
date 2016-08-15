@@ -44,7 +44,7 @@ class ExprPar
         void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
 
         // load the parameter values from a file, assuming the parameter has the correct dimensions (and initialized)
-        int load( const string& file, const int num_of_coop_pairs );
+        int load( const string& file, const int num_of_coop_pairs );//Depricated
 
         // adjust the values of parameters: if the value is close to min or max allowed value, slightly change it s.t. it is away from the boundary
         void adjust( const IntMatrix& coopMat  );
@@ -138,7 +138,7 @@ class ParFactory
       const ExprPar& getMinimums(){return minimums;}
       const ExprPar& getDefaults(){return defaults;}
 
-      ExprPar load(const string& file);//Depricated
+      ExprPar load(const string& file);//Use this.
 
     private:
       const vector<bool>& indicator_bool;//TODO: Later work on making this non-const. Original author const'ed everything.
