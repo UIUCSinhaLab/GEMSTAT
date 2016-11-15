@@ -1,3 +1,5 @@
-install: apt-get install gsl
+#install: apt-get install gsl
+install: aclocal -I m4 --install ; autoconf ; automake --add-missing
+
 
 language: cpp
