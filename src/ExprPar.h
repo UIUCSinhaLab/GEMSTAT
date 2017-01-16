@@ -134,6 +134,8 @@ class ParFactory
 
       int nFactors() const {return expr_model.motifs.size();}
 
+      void setMaximums(const ExprPar& in_maximums){assert(in_maximums.my_space == ENERGY_SPACE); maximums.copy(in_maximums);}
+      void setMinimums(const ExprPar& in_minimums){assert(in_minimums.my_space == ENERGY_SPACE); minimums.copy(in_minimums);}
       const ExprPar& getMaximums(){return maximums;}
       const ExprPar& getMinimums(){return minimums;}
       const ExprPar& getDefaults(){return defaults;}
