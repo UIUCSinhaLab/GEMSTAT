@@ -27,7 +27,7 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
         seq_num = 0;
     // store the sequence
     int n = _sites.size();
-    sites = _sites;
+    sites = SiteVec(_sites);
     sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
     boundaries.push_back( 0 );
     double range = max( intFunc->getMaxDist(), repressionDistThr );
@@ -698,8 +698,12 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
 
     // create site representation of the target sequence
     SiteVec targetSites;
+    #ifdef REANNOTATE_EACH_PREDICTION
     SeqAnnotator ann( motifs, par_model.energyThrFactors );
     ann.annot( seqs[ seq_num ], targetSites );
+    #else
+    targetSites = targetSites_;
+    #endif
 
     // predict the expression
     ExprFunc* func = createExprFunc( par_model );
@@ -871,6 +875,8 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     //print the beta values
     cout << "BETAS : " << par.betas << endl;
     //assert( par.betas.size() == nSeqs() );
+
+    cout << "THRESH : " << par.energyThrFactors << endl;
     cout << flush;
 }
 
@@ -902,14 +908,15 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 
     ExprFunc* func = createExprFunc( par );
 
-
-    //Reannotate the sequences.
-    //TODO: It might be good to turn this off if we are not learning the energyThrFactors (if those are fixed.)
     vector< SiteVec > seqSites( seqs.size() ); //
+    #ifdef REANNOTATE_EACH_PREDICTION
     SeqAnnotator ann( motifs, par.energyThrFactors );
     for ( int i = 0; i < seqs.size(); i++ ) {
        	ann.annot( seqs[ i ], seqSites[ i ] );
     }
+    #else
+    seqSites = this->seqSites;
+    #endif
 
     vector<vector<double> > ground_truths;
     vector<vector<double> > predictions;
@@ -930,7 +937,9 @@ double ExprPredictor::evalObjective( const ExprPar& par )
     }
 
     //Evaluate the objective function on that.
-    return trainingObjective->eval(ground_truths, predictions, &par);
+    double ret_val = trainingObjective->eval(ground_truths, predictions, &par);
+    delete func;
+    return ret_val;
 
 }
 

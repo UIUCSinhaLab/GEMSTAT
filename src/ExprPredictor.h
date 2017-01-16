@@ -125,6 +125,10 @@ class ExprPredictor
         {
             return expr_model.repressionMat;
         }
+
+        const vector< SiteVec >& getSeqSites(){
+          return seqSites;
+        }
         const ExprPar& getPar() const { return par_model; }
         double getObj() const { return obj_model; }
 

@@ -433,7 +433,9 @@ int main( int argc, char* argv[] )
     ParFactory *param_factory = new ParFactory(expr_model, nSeqs, indicator_bool);
 
     // read the initial parameter values
-    ExprPar par_init = param_factory->create_expr_par();
+    ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
+    par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
+                                                                //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
     if ( !parFile.empty() ){
         try{
           par_init = param_factory->load( parFile );
@@ -443,7 +445,11 @@ int main( int argc, char* argv[] )
         }
     }
     //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
-    if( read_factor_thresh ){ par_init.energyThrFactors = energyThrFactors; }
+    if( read_factor_thresh ){
+        par_init = param_factory->changeSpace(par_init, PROB_SPACE);
+        ASSERT_MESSAGE(par_init.my_space == PROB_SPACE,"This should never happen: Preconditions not met for -et option. This is a programming error, and not the fault of the user. For now, you can try avoiding the -et commandline option, and contact the software maintainer.");
+        par_init.energyThrFactors = energyThrFactors;
+    }
 
     //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
     vector < double > all_pars_for_test;
