@@ -1,0 +1,13 @@
+#install: apt-get install gsl
+#before_install:
+#        - sudo apt-get install gsl
+language: cpp
+install: aclocal -I m4 --install ; autoconf ; automake --add-missing
+script: ./configure --with-beta-optimize=together ; make ; make check
+
+addons:
+        apt:
+                packages:
+                        - gsl-bin
+                        - libgsl0-dev
+                        - libgsl0ldbl
