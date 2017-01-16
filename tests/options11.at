@@ -1,6 +1,6 @@
 
 #Test that it can do basic learning of a very simplified input
-AT_SETUP([issue #19, reading default factor thresholds])
+AT_SETUP([issue 19, reading default factor thresholds])
 
 AT_DATA([seqs.fa],
 [>test
