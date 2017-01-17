@@ -45,9 +45,9 @@ AT_DATA([ff.txt],[[1
 ]])
 
 
-AT_CHECK([testexec seq2expr -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -et 0.6 -na 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; cat 1.par], [0], [[foo	7	4	0.01
+AT_CHECK([testexec seq2expr -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -et 0.6 -na 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; cat 1.par | sed 's/\s*$//'], [0], [[foo	7	4	0.01
 basal_transcription = 0.03
-1e-11
+1e-50
 3
 0.6
 ]])
