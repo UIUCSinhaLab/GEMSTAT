@@ -2,9 +2,9 @@
 #before_install:
 #        - sudo apt-get install gsl
 language: cpp
-before_install: wget http://ab-initio.mit.edu/nlopt/nlopt-2.4.2.tar.gz ; tar -zxvof nlopt-2.4.2.tar.gz; cd nlopt-2.4.2; ./configure; make; sudo make install; cd ..
+before_install: pushd ..; wget http://ab-initio.mit.edu/nlopt/nlopt-2.4.2.tar.gz ; tar -zxvof nlopt-2.4.2.tar.gz; cd nlopt-2.4.2; ./configure; make; sudo make install; popd
 install: aclocal -I m4 --install ; autoconf ; automake --add-missing
-script: ./configure --with-beta-optimize=together ; make ; make check
+script: LDFLAGS=-L/usr/local/lib CPPFLAGS=-I/usr/local/include ./configure --with-beta-optimize=together ; make ; make check
 
 addons:
         apt:
