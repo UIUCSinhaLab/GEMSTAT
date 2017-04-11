@@ -926,6 +926,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     }
 
     nlopt::result result = optimizer.optimize(free_pars, obj_result);
+    obj_result = optimizer.last_optimum_value();
     //Done Minimizing
 
     param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
@@ -997,6 +998,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     optimizer.set_maxeval(nGradientIters);
     try{
       nlopt::result result = optimizer.optimize(free_pars, obj_result);
+      obj_result = optimizer.last_optimum_value();
     }catch(std::runtime_error){
       cerr << "There was an exception in the gradient descent!" << endl;
     }
