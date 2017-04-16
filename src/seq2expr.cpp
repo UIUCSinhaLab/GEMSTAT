@@ -58,6 +58,8 @@ int main( int argc, char* argv[] )
     bool cmdline_one_qbtm_per_crm = false;
     bool cmdline_one_beta = false;
 
+    string lower_bound_file; ExprPar lower_bound_par; bool lower_bound_par_read = false;
+    string upper_bound_file; ExprPar upper_bound_par; bool upper_bound_par_read = false;
     string free_fix_indicator_filename;
     ExprPar::one_qbtm_per_crm = false;
     ExprFunc::one_qbtm_per_crm = false;
@@ -126,7 +128,7 @@ int main( int argc, char* argv[] )
 	    par_out_file = argv[ ++i ]; //output file for pars at the en
   else if ( !strcmp("-onebeta", argv[ i ]))
       cmdline_one_beta = true;
-      else if ( !strcmp("-l1", argv[ i ]))
+  else if ( !strcmp("-l1", argv[ i ]))
       l1 = atof(argv[ ++i ]);
   else if ( !strcmp("-l2", argv[ i ]))
       l2 = atof(argv[ ++i ]);
@@ -138,6 +140,10 @@ int main( int argc, char* argv[] )
       l1_coop = atof(argv[ ++i ]);
   else if ( !strcmp("-l2coop", argv[ i ]))
       l2_coop = atof(argv[ ++i ]);
+	else if ( !strcmp("-lower_bound", argv[ i ]))
+	    lower_bound_file = argv[ ++i ];
+  else if ( !strcmp("-upper_bound", argv[ i ]))
+	    upper_bound_file = argv[ ++i ];
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -451,6 +457,28 @@ int main( int argc, char* argv[] )
         par_init.energyThrFactors = energyThrFactors;
     }
 
+    if ( !upper_bound_file.empty() ){
+	try{
+		upper_bound_par = param_factory->load( upper_bound_file );
+		upper_bound_par = param_factory->changeSpace(upper_bound_par, ENERGY_SPACE);
+		upper_bound_par_read = true;
+	}catch (int& e){
+		cerr << "Cannot read upper bounds from " << upper_bound_file << endl;
+		exit( 1 );
+	}
+    }
+
+    if ( !lower_bound_file.empty() ){
+	try{
+		lower_bound_par = param_factory->load( lower_bound_file );
+		lower_bound_par = param_factory->changeSpace(lower_bound_par, ENERGY_SPACE);
+		lower_bound_par_read = true;
+	}catch (int& e){
+		cerr << "Cannot read lower bounds from " << lower_bound_file << endl;
+		exit( 1 );
+	}
+    }
+
     //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
     vector < double > all_pars_for_test;
     par_init.getRawPars(all_pars_for_test, coopMat, actIndicators, repIndicators);
@@ -510,13 +538,19 @@ int main( int argc, char* argv[] )
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
     //predictor->param_factory = param_factory;
-
     predictor->lambda1 = l1;
     predictor->lambda2 = l2;
     predictor->lambda1_beta = l1_beta;
     predictor->lambda2_beta = l2_beta;
     predictor->lambda1_coop = l1_coop;
     predictor->lambda2_coop = l2_coop;
+
+    if(upper_bound_par_read){
+    	predictor->param_factory->setMaximums(upper_bound_par);
+    }
+    if(lower_bound_par_read){
+    	predictor->param_factory->setMinimums(lower_bound_par);
+    }
 
     // random number generator
     gsl_rng* rng;
