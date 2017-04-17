@@ -455,7 +455,7 @@ bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 
 
 ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model,
-		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ),
+		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), factorExprData( _factorExprData ),
 	expr_model( _expr_model),
 	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts )
 {
@@ -647,7 +647,7 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     // create site representation of the target sequence
     SiteVec targetSites;
     #ifdef REANNOTATE_EACH_PREDICTION
-    SeqAnnotator ann( motifs, par_model.energyThrFactors );
+    SeqAnnotator ann( expr_model.motifs, par_model.energyThrFactors );
     ann.annot( seqs[ seq_num ], targetSites );
     #else
     targetSites = targetSites_;
@@ -838,7 +838,7 @@ ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
     //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
     ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
 
-    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
+    return new ExprFunc( expr_model.motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
 }
 
 
@@ -858,7 +858,7 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 
     vector< SiteVec > seqSites( seqs.size() ); //
     #ifdef REANNOTATE_EACH_PREDICTION
-    SeqAnnotator ann( motifs, par.energyThrFactors );
+    SeqAnnotator ann( expr_model.motifs, par.energyThrFactors );
     for ( int i = 0; i < seqs.size(); i++ ) {
        	ann.annot( seqs[ i ], seqSites[ i ] );
     }
