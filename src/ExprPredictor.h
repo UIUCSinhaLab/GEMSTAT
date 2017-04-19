@@ -172,16 +172,6 @@ class ExprPredictor
         vector < double > free_pars;
         vector < Sequence > seqs;
 
-        //Centers for regularization
-        ExprPar regularization_centers;
-        //Labdas for regularization
-        double lambda1;
-        double lambda2;
-        double lambda1_beta;
-        double lambda2_beta;
-        double lambda1_coop;
-        double lambda2_coop;
-
         //TODO: decide if this needs to be made private
         // Factory for Parameter vectors;
         ParFactory *param_factory;

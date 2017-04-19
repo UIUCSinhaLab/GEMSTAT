@@ -4,6 +4,8 @@
 #include "ExprModel.h"
 #include "PredictorTrainer.h"
 
+class ParFactory;
+
 enum ThermodynamicParameterSpace {
   PROB_SPACE, //GEMSTAT dynamic programming algorithms are written for this to be the native parameter space.
               //It is also easier for humans to understand. The exp() of ENERGY_SPACE.
@@ -18,6 +20,7 @@ string parameterSpaceStr(ThermodynamicParameterSpace in);
 /* ExprPar class: the parameters of the expression model */
 class ExprPar
 {
+    friend class ParFactory;
     public:
         // constructors
         ExprPar() : factorIntMat() {}
@@ -25,7 +28,7 @@ class ExprPar
         ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors );
                                                   // construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
         ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );
-        void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis, betas = other.betas, energyThrFactors = other.energyThrFactors, nSeqs = basalTxps.size(); my_space = other.my_space;  }
+        void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis, betas = other.betas, energyThrFactors = other.energyThrFactors, nSeqs = basalTxps.size(); my_space = other.my_space; my_factory = other.my_factory; }
         ExprPar( const ExprPar& other ) { copy( other ); }
 
         // assignment
@@ -36,21 +39,15 @@ class ExprPar
 
         double getBetaForSeq(int seqID) const; //Returns the appropriate value of beta for this sequence. This allows some sequences to share one beta value, while others share another, or each have their own.
 
-        // get the free parameters (in the correct/uniform scale)
-        void getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;
-        void getRawPars(vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const;//Temporary until these edits are all done.
+        //get the parameters into a vector.
+        void getRawPars(vector< double >& pars) const;//Temporary until these edits are all done.
 
         // print the parameters
-        void print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
-
-        // load the parameter values from a file, assuming the parameter has the correct dimensions (and initialized)
-        int load( const string& file, const int num_of_coop_pairs );//Depricated
-
-        // adjust the values of parameters: if the value is close to min or max allowed value, slightly change it s.t. it is away from the boundary
-        void adjust( const IntMatrix& coopMat  );
+        void print(  ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const;
 
         //Which parameter space this ExprPar lives in
         ThermodynamicParameterSpace my_space;
+        const ParFactory* my_factory;
 
         // parameters
         vector < double > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
@@ -109,6 +106,7 @@ class ExprPar
 
 class ParFactory
 {
+    friend class ExprPar;
     public:
       ParFactory( const ExprModel& in_model, int in_nSeqs, const vector<bool>& in_ff);
       ~ParFactory(){};
@@ -142,10 +140,11 @@ class ParFactory
 
       ExprPar load(const string& file);//Use this.
 
+      const ExprModel& expr_model;
     private:
       const vector<bool>& indicator_bool;//TODO: Later work on making this non-const. Original author const'ed everything.
       int nSeqs;
-      const ExprModel& expr_model;
+
       ExprPar maximums; //Should be in the ENERGY_SPACE
       ExprPar minimums; //Should be in the ENERGY_SPACE
       ExprPar defaults; //In the ENERGY_SPACE

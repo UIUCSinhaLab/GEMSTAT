@@ -29,7 +29,7 @@ void ParFactory::separateParams(const ExprPar& input, vector<double>& free_outpu
   //Hassan's code for separating parameters
   vector<double> pars;
 
-  input.getRawPars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
+  input.getRawPars( pars );
   int pars_size = pars.size();
   free_output.clear();
   fixed_output.clear();
@@ -115,6 +115,7 @@ ExprPar ParFactory::create_expr_par() const
 
   tmp_par.energyThrFactors.assign( _nFactors, log( ExprPar::default_energyThrFactors ) );
   tmp_par.my_space = ENERGY_SPACE;
+  tmp_par.my_factory = this;
   return tmp_par;
 }
 
@@ -266,12 +267,12 @@ ExprPar ParFactory::changeSpace(const ExprPar& in_par, const ThermodynamicParame
   vector<double> low_vect;//TODO: Cache this when the high and low exprPar are set.
   vector<double> high_vect;
   if(in_par.my_space == CONSTRAINED_SPACE || new_space == CONSTRAINED_SPACE){
-        maximums.getRawPars(high_vect, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
-        minimums.getRawPars(low_vect, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
+        maximums.getRawPars(high_vect );
+        minimums.getRawPars(low_vect );
   }
 
 
-  in_par.getRawPars(original_pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators);
+  in_par.getRawPars(original_pars );
 
   if(in_par.my_space == CONSTRAINED_SPACE){
     constrained_to_energy_helper(original_pars, as_energy_space,low_vect, high_vect);
@@ -672,115 +673,13 @@ ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const 
 }
 
 
-void ExprPar::getFreePars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
+
+void ExprPar::getRawPars( vector< double >& pars) const
 {
-    assert(false); //Depricated
-    assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
-    assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
-    pars.clear();
+    IntMatrix& coopMat = this->my_factory->expr_model.coopMat;
+    vector< bool >& actIndicators = this->my_factory->expr_model.actIndicators;
+    vector< bool >& repIndicators = this->my_factory->expr_model.repIndicators;
 
-    // write maxBindingWts
-    if ( estBindingOption )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            double weight = searchOption == CONSTRAINED ? infty_transform( log( maxBindingWts[ i ] ), log( min_weight ), log( max_weight ) ) : log( maxBindingWts[i] );
-            if( weight != weight )
-            {
-                cout << "DEBUG samee: getFreePars() " << i << endl;
-                exit(1);
-            }
-            pars.push_back( weight );
-        }
-    }
-
-    // write the interaction matrix
-    if ( modelOption != LOGISTIC )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = 0; j <= i; j++ )
-            {
-                if ( coopMat( i, j ) )
-                {
-                    double interaction = searchOption == CONSTRAINED ? infty_transform( log( factorIntMat( i, j ) ), log( min_interaction ), log( max_interaction ) ) : log( factorIntMat( i, j ) );
-                    pars.push_back( interaction );
-                }
-            }
-        }
-    }
-
-    // write the transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( modelOption == LOGISTIC )
-        {
-            double effect = searchOption == CONSTRAINED ? infty_transform( txpEffects[i], min_effect_Logistic, max_effect_Logistic ) : txpEffects[i];
-            pars.push_back( effect );
-        }
-        /*else if ( modelOption == DIRECT ) {
-                    double effect = searchOption == CONSTRAINED ? infty_transform( log( txpEffects[i] ), log( min_effect_Thermo ), log( max_effect_Thermo ) ) : log( txpEffects[i] );
-                    pars.push_back( effect );
-                }*/
-        else
-        {
-            if ( actIndicators[i] )
-            {
-                double effect = searchOption == CONSTRAINED ? infty_transform( log( txpEffects[i] ), log( min_effect_Thermo ), log( max_effect_Thermo ) ) : log( txpEffects[i] );
-                pars.push_back( effect );
-            }
-        }
-    }
-
-    // write the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( repIndicators[i] )
-            {
-                double repression = searchOption == CONSTRAINED ? infty_transform( log( repEffects[i] ), log( min_repression ), log( max_repression ) ) : log( repEffects[i] );
-                pars.push_back( repression );
-            }
-        }
-    }
-
-    for( int i = 0; i < basalTxps.size(); i++ )
-    {
-        // write the basal transcription
-        if ( modelOption == LOGISTIC )
-        {
-            double basal = searchOption == CONSTRAINED ? infty_transform( basalTxps[ i ], min_basal_Logistic, max_basal_Logistic ) : basalTxps[ i ];
-            pars.push_back( basal );
-        }
-        else
-        {
-            double basal = searchOption == CONSTRAINED ? infty_transform( log( basalTxps[ i ] ), log( min_basal_Thermo ), log( max_basal_Thermo ) ) : log( basalTxps[ i ] );
-            pars.push_back( basal );
-        }
-    }
-
-    //write the pis
-    for( int i = 0; i < pis.size(); i++ )
-    {
-        double pi_val = searchOption == CONSTRAINED? infty_transform( log( pis[ i ] ), log( min_pi ), log( max_pi ) ) : log( pis[ i ] );
-        pars.push_back( pi_val );
-    }
-
-    //write the betas
-    for( int i = 0; i < betas.size(); i++ )
-    {
-        double beta_val = searchOption == CONSTRAINED ? infty_transform( log( betas[ i ] ), log( min_beta ), log( max_beta ) ) : log( betas[ i ] );
-        pars.push_back( beta_val );
-    }
-    for( int i = 0; i < energyThrFactors.size(); i++ )
-    {
-        double energyThrFactor_val = searchOption == CONSTRAINED ? infty_transform( log( energyThrFactors[ i ]),log(min_energyThrFactors), log(max_energyThrFactors) ) : log( energyThrFactors[ i ] );
-        pars.push_back( energyThrFactor_val );
-    }
-}
-void ExprPar::getRawPars( vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators ) const
-{
     assert( coopMat.isSquare() && coopMat.nRows() == nFactors() );
     assert( actIndicators.size() == nFactors() && repIndicators.size() == nFactors() );
     pars.clear();
@@ -923,178 +822,4 @@ void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntM
     }
     os << endl;
 
-}
-
-
-int ExprPar::load( const string& file, const int num_of_coop_pairs )
-{
-    // open the file
-    ifstream fin( file.c_str() );
-    if ( !fin ){ cerr << "Cannot open parameter file " << file << endl; exit( 1 ); }
-
-    // read the factor information
-    vector< string > motifNames( nFactors() );
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        fin >> motifNames[i] >> maxBindingWts[i] >> txpEffects[i];
-        if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT ) fin >> repEffects[i];
-    }
-
-    // factor name to index mapping
-    map< string, int > factorIdxMap;
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        factorIdxMap[motifNames[i]] = i;
-    }
-
-    // read the basal transcription
-    string symbol, eqSign, value;
-    fin >> symbol >> eqSign >> value;
-    if ( symbol != "basal_transcription" || eqSign != "=" ) return RET_ERROR;
-    double basalTxp_val = atof( value.c_str() );
-    basalTxps[ 0 ] =  basalTxp_val ;
-    if( one_qbtm_per_crm )
-    {
-        for( int _i = 1; _i < nSeqs; _i++ )
-        {
-            fin >> value;
-            double basalTxp_val = atof( value.c_str() );
-            basalTxps[ _i ] = basalTxp_val;
-        }
-    }
-    //read the pi values
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        fin >> value;
-        pis[ i ] = atof( value.c_str() );
-    }
-
-    //read the beta values
-    for( int i = 0; i < nSeqs; i++ )
-    {
-        fin >> value;
-        betas[ i ] = atof( value.c_str() );
-    }
-
-    // read the cooperative interactions
-    string factor1, factor2;
-    double coopVal;
-    for( int i = 0; i < num_of_coop_pairs; i++ )
-    {
-        fin >> factor1 >> factor2 >> coopVal;
-        if( !factorIdxMap.count( factor1 ) || !factorIdxMap.count( factor2 ) ) return RET_ERROR;
-        int idx1 = factorIdxMap[factor1];
-        int idx2 = factorIdxMap[factor2];
-        factorIntMat( idx1, idx2 ) = coopVal;
-        factorIntMat( idx2, idx1 ) = coopVal;
-        //cout << factor1 << "\t" << factor2 << "\t" << idx1 << "\t" << idx2 << endl;
-    }
-    double factor_thr_val;
-    energyThrFactors.clear();
-    while( fin >> factor_thr_val )
-    {
-        energyThrFactors.push_back( factor_thr_val );
-    }
-
-    return 0;
-}
-
-
-void ExprPar::adjust( const IntMatrix& coopMat  )
-{
-    // adjust binding paramters
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( maxBindingWts[i] < ExprPar::min_weight * ( 1.0 + ExprPar::delta ) ) { maxBindingWts[i] *= 2.0;}
-        if ( maxBindingWts[i] > ExprPar::max_weight * ( 1.0 - ExprPar::delta ) ) { maxBindingWts[i] /= 2.0;}
-    }
-
-    // adjust the interaction matrix
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        for ( int j = 0; j <= i; j++ )
-        {
-            if ( coopMat( i, j ) &&   factorIntMat( i, j ) < ExprPar::min_interaction * ( 1.0 + ExprPar::delta ) )
-            {
-                factorIntMat( i, j ) *= 2.0;
-                factorIntMat( j, i ) = factorIntMat( i, j );
-            }
-            if ( coopMat( i, j ) &&  factorIntMat( i, j ) > ExprPar::max_interaction * ( 1.0 - ExprPar::delta ) )
-            {
-                factorIntMat( i, j ) /= 2.0;
-                factorIntMat( j, i ) = factorIntMat( i, j );
-            }
-        }
-    }
-    // adjust transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( modelOption == LOGISTIC )
-        {
-            if ( txpEffects[i] < ExprPar::min_effect_Logistic + ExprPar::delta ) txpEffects[i] /= 2.0;
-            if ( txpEffects[i] > ExprPar::max_effect_Logistic - ExprPar::delta ) txpEffects[i] /= 2.0;
-        }
-        else
-        {
-            if ( txpEffects[i] < ExprPar::min_effect_Thermo * ( 1.0 + ExprPar::delta ) ) { txpEffects[i] *= 2.0;}
-            if ( txpEffects[i] > ExprPar::max_effect_Thermo * ( 1.0 - ExprPar::delta ) ) { txpEffects[i] /= 2.0;}
-        }
-
-    }
-
-    // adjust the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( repEffects[i] < ExprPar::min_repression * ( 1.0 + ExprPar::delta ) )
-            {
-                if( repEffects[ i ] > 0 ) repEffects[i] *= 2.0;
-                else repEffects[ i ] = ExprPar::min_repression * ( 1 + 2 * ExprPar::delta );
-            }
-            if ( repEffects[i] > ExprPar::max_repression * ( 1.0 - ExprPar::delta ) ) {repEffects[i] /= 2.0;}
-        }
-    }
-
-    // adjust the basl transcription
-    for( int _i = 0; _i < basalTxps.size(); _i ++ )
-    {
-        if ( modelOption == LOGISTIC )
-        {
-            if ( basalTxps[ _i ] < ExprPar::min_basal_Logistic + ExprPar::delta ) basalTxps[ _i ] /= 2.0;
-            if ( basalTxps[ _i ] > ExprPar::max_basal_Logistic - ExprPar::delta ) basalTxps[ _i ] *= 2.0;
-        }
-        else
-        {
-            if ( basalTxps[ _i ] < ExprPar::min_basal_Thermo * ( 1.0 + ExprPar::delta ) ) basalTxps[ _i ] *= 2.0;
-            if ( basalTxps[ _i ] > ExprPar::max_basal_Thermo * ( 1.0 - ExprPar::delta ) ) basalTxps[ _i ] /= 2.0;
-        }
-    }
-
-    //adjust the pis
-    for( int _i = 0; _i < pis.size(); _i++ )
-    {
-        if( pis[ _i ] < 0 ) pis[ _i] = 0;
-        if( pis[ _i ] > ExprPar::max_pi * ( 1.0 - ExprPar::delta ) ) pis[ _i ] /= 2.0;
-    }
-    //adjust the betas
-    for( int i = 0; i < betas.size(); i++ )
-    {
-
-        if( betas[ i ] < ExprPar::min_beta * ( 1.0 + ExprPar::delta ) ) betas[ i ] *= 2.0;
-        if( betas[ i ] > ExprPar::max_beta )
-        {
-            betas[ i ] = ExprPar::max_beta * ( 1.0 - ExprPar::delta );
-        }
-        else if( betas[ i ] > ExprPar::max_beta * ( 1.0 - ExprPar::delta ) )
-        {
-            betas[ i ] /= 2.0;
-        }
-    }
-    //adjust the energyThrFactors
-    for( int i = 0; i < nFactors(); i++ )
-    {
-        if( energyThrFactors[ i ] < ExprPar::min_energyThrFactors * ( 1.0 + ExprPar::delta ) ) energyThrFactors[ i ] *= 2.0;
-        if( energyThrFactors[ i ] > ExprPar::max_energyThrFactors * ( 1.0 - ExprPar::delta ) ) energyThrFactors[ i ] /= 2.0;
-    }
 }

@@ -530,57 +530,6 @@ double ExprPredictor::objFunc( const ExprPar& par )
 {
     double objective_value = evalObjective( par );
 
-
-    //TODO: UGLY, obviously this shouuld be an ObjFunc that acts as a wrapper to an existing ObjFunc.
-    vector<double> centers;
-    ExprPar center_par1 = param_factory->getDefaults();//Assumed to be in ENERGY_SPACE;
-    ExprPar center_par = param_factory->changeSpace(center_par1,ENERGY_SPACE);//Not much slowdown if already in correct space.
-    center_par.getRawPars(centers, getCoopMat(), getActIndicators(),getRepIndicators());
-
-    vector<double> allpars;
-    ExprPar tmp_energy_space = param_factory->changeSpace(par,ENERGY_SPACE);
-    tmp_energy_space.getRawPars(allpars, getCoopMat(), getActIndicators(), getRepIndicators());
-
-    double l1 = 0.0;
-    double l2 = 0.0;
-
-    for(int i = 0;i<centers.size();i++){
-      double the_diff = abs(allpars[i] - centers[i]);
-      l1 += the_diff;
-      l2 += pow(the_diff,2.0);
-    }
-    l2 = sqrt(l2);
-
-    l1 *= lambda1;
-    l2 *= lambda2;
-
-    objective_value += l1 + l2;
-
-    //BETA_regularization
-    l1 = 0.0;
-    l2 = 0.0;
-    for(int i = 0;i < center_par.betas.size();i++){
-      double the_diff = abs(tmp_energy_space.betas[i] - center_par.betas[i]);
-      l1 += the_diff;
-      l2 += pow(the_diff,2.0);
-    }
-    l2 = sqrt(l2);
-    objective_value += lambda1_beta*l1 + lambda2_beta*l2;
-
-    //COOP regularization
-    l1 = 0.0;
-    l2 = 0.0;
-    for(int i = 0;i < center_par.nFactors();i++){
-      for(int j = 0;j< center_par.nFactors();j++)//Does not assume that the matrix is symmetric. Future proof.
-      {
-        double the_diff = abs(tmp_energy_space.factorIntMat(i,j) - center_par.factorIntMat(i,j));
-        l1 += the_diff;
-        l2 += pow(the_diff,2.0);
-      }
-    }
-    l2 = sqrt(l2);
-    objective_value += lambda1_coop*l1 + lambda2_coop*l2;
-
     return objective_value;
 }
 
@@ -596,7 +545,10 @@ int ExprPredictor::train( const ExprPar& par_init )
     cout << "Objective function value: " << objFunc( par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
-    if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ) par_model.adjust( expr_model.coopMat );
+    if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ){
+      ExprPar tmp_constrained = param_factory->changeSpace(par_model,CONSTRAINED_SPACE);
+      par_model = param_factory->changeSpace(par_model,PROB_SPACE);
+    }
     obj_model = objFunc( par_model );
 
     cout << "*** Diagnostic printing AFTER adjust() ***" << endl;
@@ -615,11 +567,9 @@ int ExprPredictor::train( const ExprPar& par_init )
     {
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
-        par_model.adjust( expr_model.coopMat );
 
         gradient_minimize( par_result, obj_result );
         par_model = par_result;
-        par_model.adjust( expr_model.coopMat);
     }
 
     #ifdef BETAOPTBROKEN
@@ -910,6 +860,7 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 
     vector< SiteVec > seqSites( seqs.size() ); //
     #ifdef REANNOTATE_EACH_PREDICTION
+    //TODO: needs the par in PROB_SPACE
     SeqAnnotator ann( motifs, par.energyThrFactors );
     for ( int i = 0; i < seqs.size(); i++ ) {
        	ann.annot( seqs[ i ], seqSites[ i ] );
