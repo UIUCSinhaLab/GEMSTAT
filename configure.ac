@@ -17,6 +17,7 @@ no) debug=false ;;
 esac], [debug=false])
 AM_CONDITIONAL([DEBUG], [test x${debug} = xtrue])
 
+#beta optimization
 AC_ARG_WITH([beta-optimize],
 [  --with-beta-optimize	How to optimize beta, one of 'broken' (traditional), 'separate', 'together'],
 [case "${withval}" in
@@ -30,12 +31,22 @@ AM_CONDITIONAL([BETAOPTSEPARATE], [test "x${betaopt}" = "xseparate"])
 AM_CONDITIONAL([BETAOPTTOGETHER], [test "x${betaopt}" = "xtogether"])
 
 
+# Checks for libraries.
+AX_PATH_GSL([1.13], [], [AC_MSG_ERROR(Could not find the required version of GSL)])
+
+#
+#turn NLOpt on or off.
+#
+AC_ARG_ENABLE([nlopt],
+[  --disable-nlopt  Disable using the NLOpt optimizer, which enables using the gsl optimizer.],
+[with_nlopt="no"],
+[with_nlopt="yes"])
+AM_CONDITIONAL([DISABLE_NLOPT], [test "x${with_nlopt}" = "xno"])
+
+
 # Checks for programs.
 AC_PROG_CXX
 AC_LANG(C++)
-
-# Checks for libraries.
-AX_PATH_GSL([1.13], [], [AC_MSG_ERROR(Could not find the required version of GSL)])
 
 # Order matters here.
 AC_CHECK_LIB([m], [cos])
