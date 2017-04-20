@@ -550,6 +550,7 @@ int main( int argc, char* argv[] )
                                               tmp_l1,
                                               tmp_l2
                                             );
+      predictor->trainingObjective = tmp_reg_obj_func;
     }
 
     if(upper_bound_par_read){
