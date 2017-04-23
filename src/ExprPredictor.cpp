@@ -1,9 +1,12 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_multimin.h>
 
+#include <nlopt.hpp>
+
 #include "ExprPredictor.h"
 #include "ExprPar.h"
 
+double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data);
 
 ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
 {
@@ -455,7 +458,7 @@ bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 
 
 ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model,
-		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), motifs( _motifs ), factorExprData( _factorExprData ),
+		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), factorExprData( _factorExprData ),
 	expr_model( _expr_model),
 	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts )
 {
@@ -649,7 +652,7 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     // create site representation of the target sequence
     SiteVec targetSites;
     #ifdef REANNOTATE_EACH_PREDICTION
-    SeqAnnotator ann( motifs, par_model.energyThrFactors );
+    SeqAnnotator ann( expr_model.motifs, par_model.energyThrFactors );
     ann.annot( seqs[ seq_num ], targetSites );
     #else
     targetSites = targetSites_;
@@ -840,7 +843,7 @@ ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
     //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
     ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
 
-    return new ExprFunc( motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
+    return new ExprFunc( expr_model.motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
 }
 
 
@@ -860,8 +863,7 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 
     vector< SiteVec > seqSites( seqs.size() ); //
     #ifdef REANNOTATE_EACH_PREDICTION
-    //TODO: needs the par in PROB_SPACE
-    SeqAnnotator ann( motifs, par.energyThrFactors );
+    SeqAnnotator ann( expr_model.motifs, par.energyThrFactors );
     for ( int i = 0; i < seqs.size(); i++ ) {
        	ann.annot( seqs[ i ], seqSites[ i ] );
     }
@@ -899,132 +901,42 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     // 	cout << "Start minimization" << endl;
     // extract initial parameters
     vector < double > pars;
-    /*debug*/
-    //for(int i = 0; i < actIndicators.size(); i++) cout << "act: " << i << " " << (actIndicators[i] > 0? 1 : 0) << endl;
-    //for(int i = 0; i < repIndicators.size(); i++) cout << "rep: " << i << " " << (repIndicators[i] > 0? 1 : 0) << endl;
-    //cout << "DEBUG: in getFreePars()" << endl;
-    //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
-    //cout << "pars.size() = " << pars.size() << endl;
-    //cout << "DEBUG: out getFreePars()" << endl;
-    //cout << "DEBUG: " << expr_model.shared_scaling  << "  " << param_factory->expr_model.shared_scaling << endl;
-    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+
+    //ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ENERGY_SPACE);
     param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
     pars.clear();
     pars = free_pars;
 
-    //Hassan end
-    // set the objective function
-    gsl_multimin_function my_func;
-    my_func.f = &gsl_obj_f;
-    my_func.n = pars.size();
-    my_func.params = (void*)this;
+    //SIMPLEX MINIMIZATION with NLOPT
+    nlopt::opt optimizer(nlopt::LN_NELDERMEAD, pars.size());
+    optimizer.set_min_objective(nlopt_obj_func, this);
+    //optimizer.set_maxmaxeval(nSimplexIters);
+    optimizer.set_initial_step(1.0);//TODO: enforce simplex staring size.
+    optimizer.set_maxeval(nSimplexIters);//TODO: enforce nSimplexIters
 
-    // set the initial values to be searched
-    gsl_vector* x = vector2gsl( pars );
-    //     for ( int i = 0; i < v.size(); i++ ) gsl_vector_set( x, i, v[ i ] );
+    if(ExprPar::searchOption == CONSTRAINED){
+      vector<double> free_mins;
+      vector<double> fix_mins;
 
-    // CHECK POINT: evaluate gsl_obj_f() function
-    // 	cout << "binding at the initial value of parameters = " << gsl_obj_f( x, (void*)this ) << endl;
+      param_factory->separateParams(param_factory->getMinimums(), free_mins, fix_mins, indicator_bool);
+      optimizer.set_lower_bounds(free_mins);
 
-    // choose the method of optimization and set its parameters
-    const gsl_multimin_fminimizer_type* T = gsl_multimin_fminimizer_nmsimplex;
-    gsl_vector* ss = gsl_vector_alloc( my_func.n );
-    gsl_vector_set_all( ss, 1.0 );
+      param_factory->separateParams(param_factory->getMaximums(), free_mins, fix_mins, indicator_bool);
+      optimizer.set_upper_bounds(free_mins);
+    }
 
-    // create the minimizer
-    gsl_multimin_fminimizer* s = gsl_multimin_fminimizer_alloc( T, my_func.n );
-    gsl_multimin_fminimizer_set( s, &my_func, x, ss );
+    nlopt::result result = optimizer.optimize(free_pars, obj_result);
+    obj_result = optimizer.last_optimum_value();
+    //Done Minimizing
 
-    // iteration
-    size_t iter = 0;
-    int status;
-    double size;
-    do
-    {
-        double f_prev = iter ? s->fval : 1.0E6;   // the function starts with some very large number
-
-        iter++;
-        status = gsl_multimin_fminimizer_iterate( s );
-
-        // check for error
-        if ( status ) break;
-        //Hassan start:
-        free_pars = gsl2vector( s-> x);
-
-        param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-        ExprPar par_curr = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
-        par_curr = param_factory->changeSpace(par_curr, PROB_SPACE);
-        /* TEMPORARY BRYAN DEBUG
-        ExprPar par_compare = param_factory->changeSpace(param_factory->create_expr_par(pars,CONSTRAINED_SPACE),PROB_SPACE);
-
-        cout << "FIRST" << endl << flush;
-        printPar(par_curr);
-        cout << par_curr.maxBindingWts.size() << " " << par_curr.txpEffects.size() << " " << par_curr.repEffects.size()  << " " << par_curr.basalTxps.size() << " " << par_curr.pis.size() << " " << par_curr.betas.size() << " " << par_curr.energyThrFactors.size() << endl;
-        cout << flush << "AND THEN " << endl;
-        printPar(par_compare);
-        cout << par_compare.maxBindingWts.size() << " " << par_compare.txpEffects.size() << " " << par_compare.repEffects.size() << " " << par_compare.basalTxps.size() << " " << par_compare.pis.size() << " " << par_compare.betas.size() << " " << par_compare.energyThrFactors.size() << endl;
-        cout << flush << "END" << endl << endl << flush;
-        exit(1);
-        */
-
-        //cout << "pars.size() = " << pars.size() << "\tpars_size = " << pars_size << endl;
-        //printPar( par_curr );
-        //cout << "DEBUG: init ExprPar end" << endl;
-        //Hassan end
-        // check if the current values of parameters are valid
-        //the following line should be uncommented if you remove all the changes by Hassan
-        //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-
-        /*
-        if( !testPar( par_curr)){
-          cout << "TEST PAR FAILED" << endl;
-          printPar(par_curr);
-          cout << endl << endl;
-        }*/
-        if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ) break;
-
-        // check for stopping condition
-        //         double f_curr = s->fval;
-        //         double delta_f = abs( f_curr - f_prev );
-        //         if ( objOption == SSE && delta_f < min_delta_f_SSE ) break;
-        //         if ( objOption == CORR && delta_f < min_delta_f_Corr ) break;
-        //         if ( objOption == CROSS_CORR && delta_f < min_delta_f_CrossCorr ) break;
-
-        size = gsl_multimin_fminimizer_size( s );
-        status = gsl_multimin_test_size( size, 1e-1 );
-        // 		if ( status == GSL_SUCCESS ) { cout << "converged to minimum at " << iter << endl; }
-
-        // print the current parameter and function values
-        /*cout << "======================================" << endl;
-        cout << "======================================" << endl;*/
-        cout << iter << "\t";
-        printPar( par_curr );
-        printf( "\tf() = %8.5f size = %.3f\n", s->fval, size );
-        //par_curr.print( cout, motifNames, coopMat);
-        //cout << "##" << endl << endl;
-    } while ( status == GSL_CONTINUE && iter < nSimplexIters );
-
-    // get the results
-    //     vector< double > expv;
-    //     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
-    //Hassan start:
-    free_pars = gsl2vector( s-> x);
     param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    tmp_par_model = param_factory->create_expr_par(pars, ENERGY_SPACE);
     par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
 
     printPar( par_result );
-    //cout << "DEBUG: init par_result end." << endl;
-    //Hassan end
-    //uncomment the following line if you remove all the changes by Hassan
-    //par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-    obj_result = s->fval;
-
-    // free the minimizer
-    gsl_vector_free( x );
-    gsl_vector_free( ss );
-    gsl_multimin_fminimizer_free( s );
 
     return 0;
 }
@@ -1038,105 +950,94 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     //cout << "DEBUG: in getFreePars()" << endl;
     //par_model.getFreePars( pars, expr_model.coopMat, expr_model.actIndicators, expr_model.repIndicators );
     //cout << "DEBUG: out getFreePars()" << endl;
-    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //ExprPar tmp_par_model = param_factory->changeSpace(par_model, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    ExprPar tmp_par_model = param_factory->changeSpace(par_model, ENERGY_SPACE);
 
     param_factory->separateParams(tmp_par_model, free_pars, fix_pars, indicator_bool );
 
     pars.clear();
     pars = free_pars;
-    //Hassan end
-    // set the objective function and its gradient
-    gsl_multimin_function_fdf my_func;
-    my_func.f = &gsl_obj_f;
-    my_func.df = &gsl_obj_df;
-    my_func.fdf = &gsl_obj_fdf;
-    my_func.n = pars.size();
-    my_func.params = (void*)this;
 
-    // set the initial values to be searched
-    gsl_vector* x = vector2gsl( pars );
+    //GRADIENT MINIMIZATION with NLOPT
+    nlopt::opt optimizer(nlopt::LD_LBFGS, pars.size());
+    optimizer.set_min_objective(nlopt_obj_func, this);
 
-    // CHECK POINT: evaluate gsl_obj_f() function
-    // 	cout << "binding at the initial value of parameters = " << gsl_obj_f( x, (void*)this ) << endl;
+    //TODO: Move this to a nice lookup table or something.
+    //Set the stopping criterion
+    double ftol;
+    switch(objOption){
+      SSE:
+        ftol = min_delta_f_SSE;
+        break;
+      CORR:
+        ftol = min_delta_f_Corr;
+        break;
+      CROSS_CORR:
+        ftol = min_delta_f_CrossCorr;
+        break;
+      PGP:
+        ftol = min_delta_f_PGP;
+        break;
+      default:
+        ftol = 1e-5;
+        break;
+    }
+    optimizer.set_ftol_abs(ftol);
 
-    // choose the method of optimization and set its parameters
-    // 	const gsl_multimin_fdfminimizer_type* T = gsl_multimin_fdfminimizer_conjugate_pr;
-    const gsl_multimin_fdfminimizer_type* T = gsl_multimin_fdfminimizer_vector_bfgs;
+    if(ExprPar::searchOption == CONSTRAINED){
+      vector<double> free_mins;
+      vector<double> fix_mins;
 
-    // create the minimizer
-    gsl_multimin_fdfminimizer* s = gsl_multimin_fdfminimizer_alloc( T, my_func.n );
-    double init_step = 0.02, tol = 0.1;
-    gsl_multimin_fdfminimizer_set( s, &my_func, x, init_step, tol );
+      param_factory->separateParams(param_factory->getMinimums(), free_mins, fix_mins, indicator_bool);
+      optimizer.set_lower_bounds(free_mins);
 
-    // iteration
-    size_t iter = 0;
-    int status;
-    do
-    {
-        double f_prev = iter ? s->f : 1.0E6;      // the function starts with some very large number
+      param_factory->separateParams(param_factory->getMaximums(), free_mins, fix_mins, indicator_bool);
+      optimizer.set_upper_bounds(free_mins);
+    }
 
-        iter++;
-        status = gsl_multimin_fdfminimizer_iterate( s );
-        // 	    if ( prev_f - curr_f < 0.001 ) break;
 
-        // check for error
-        if ( status ) break;
+    //TODO: enforce nGradientIters
+    optimizer.set_maxeval(nGradientIters);
+    try{
+      nlopt::result result = optimizer.optimize(free_pars, obj_result);
+      obj_result = optimizer.last_optimum_value();
+    }catch(std::runtime_error){
+      cerr << "There was an exception in the gradient descent!" << endl;
+    }
 
-        // check if the current values of parameters are valid
-        //Hassan start:
-        free_pars = gsl2vector( s-> x);
-        param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-        ExprPar par_curr = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
-        par_curr = param_factory->changeSpace(par_curr, PROB_SPACE);
-        //Hassan end
-        //ExprPar par_curr = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-        if ( ExprPar::searchOption == CONSTRAINED && !testPar( par_curr ) ){
-		/* TODO: Fix the way exception handlign happens here. See issue #28 on github.
-		 * If this exception happens, the best parameter vector seen so far is not the one that gets saved, maybe it reverts to before the whole run of optimization?
-		 * However, the objective function value of the rejected parameter vector _does_ get saved.
-		 */
-	       	break;
-	}
+    //Done Minimizing
+    //pars now contains the optimal parameters
 
-        // check for stopping condition
-        double f_curr = s->f;
-        double delta_f = abs( f_curr - f_prev );
-        if ( objOption == SSE && delta_f < min_delta_f_SSE ) break;
-        if ( objOption == CORR && delta_f < min_delta_f_Corr ) break;
-        if ( objOption == CROSS_CORR && delta_f < min_delta_f_CrossCorr ) break;
-        if ( objOption == PGP && delta_f < min_delta_f_PGP ) break;
-
-        status = gsl_multimin_test_gradient( s->gradient, 5e-4 );
-        // 		if ( status == GSL_SUCCESS ) { cout << "converged to minimum at " << iter << endl; }
-
-        // print the current parameter and function values
-        /*cout << "========================================" << endl;
-        cout << "========================================" << endl;*/
-        cout << iter << "\t";
-        printPar( par_curr );
-        printf( "\tf() = %8.5f\n", s->f );
-        //par_curr.print( cout, motifNames, coopMat);
-        //cout << "##" << endl << endl;
-    } while ( status == GSL_CONTINUE && iter < nGradientIters );
-
-    // get the results
-    //     vector< double > expv;
-    //     for ( int i = 0; i < ( s->x )->size; i++ ) expv.push_back( exp( gsl_vector_get( s->x, i ) ) );
-    //Hassan start:
-    free_pars = gsl2vector( s-> x);
     param_factory->joinParams(free_pars, fix_pars, pars, indicator_bool);
-    tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //tmp_par_model = param_factory->create_expr_par(pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    tmp_par_model = param_factory->create_expr_par(pars, ENERGY_SPACE);
 
     par_result = param_factory->changeSpace(tmp_par_model, PROB_SPACE);
-    //Hassan end
-    //par_result = ExprPar( gsl2vector( s->x ), coopMat, actIndicators, repIndicators );
-    obj_result = s->f;
-
-    // free the minimizer
-    gsl_vector_free( x );
-    gsl_multimin_fdfminimizer_free( s );
-
+    cout << "DEBUG" << endl;
     return 0;
+}
+
+
+double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data){
+        gsl_vector *xv = vector2gsl(x); //TODO: Ugly, remove (Make all objective functions use native STL vectors)
+        double objective = gsl_obj_f(xv, f_data);
+
+        if(!grad.empty()){
+                gsl_vector *dxv = vector2gsl(grad);
+
+                gsl_obj_df(xv,f_data,dxv);
+
+                for(int i = 0;i< grad.size();i++){
+                        grad[i] = dxv->data[i];
+                }
+                cerr << " obj called, derivative : " << grad << endl;
+                gsl_vector_free(dxv);
+        }
+
+        cerr << " obj called " << objective << endl;
+
+        gsl_vector_free(xv);
+        return objective;
 }
 
 double gsl_obj_f( const gsl_vector* v, void* params )
@@ -1151,7 +1052,8 @@ double gsl_obj_f( const gsl_vector* v, void* params )
     vector < double > all_pars;
 
     predictor->param_factory->joinParams(temp_free_pars, predictor->fix_pars, all_pars, predictor->indicator_bool);
-    ExprPar par = predictor->param_factory->create_expr_par(all_pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    //ExprPar par = predictor->param_factory->create_expr_par(all_pars, ExprPar::searchOption == CONSTRAINED ? CONSTRAINED_SPACE : ENERGY_SPACE);
+    ExprPar par = predictor->param_factory->create_expr_par(all_pars, ENERGY_SPACE);
     par = predictor->param_factory->changeSpace(par, PROB_SPACE); //TODO: WTF? This shouldn't be required because it's done in the createExprFunc method. Stack corruption or something?
 
 
