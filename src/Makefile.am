@@ -2,10 +2,8 @@ AUTOMAKE_OPTIONS = foreign
 
 #optional_nlopt
 if DISABLE_NLOPT
-NLOPT_LIBS =
 NLOPT_CPPFLAGS = -DDISABLE_NLOPT
 else
-NLOPT_LIBS = -lnlopt_cxx
 NLOPT_CPPFLAGS =
 endif
 

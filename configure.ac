@@ -34,6 +34,8 @@ AM_CONDITIONAL([BETAOPTTOGETHER], [test "x${betaopt}" = "xtogether"])
 # Checks for libraries.
 AX_PATH_GSL([1.13], [], [AC_MSG_ERROR(Could not find the required version of GSL)])
 
+AX_PATH_NLOPT()
+
 #
 #turn NLOpt on or off.
 #
