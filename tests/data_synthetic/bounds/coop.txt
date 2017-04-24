@@ -1,0 +1,3 @@
+bcd	bcd
+kni	kni
+
