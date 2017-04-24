@@ -12,14 +12,32 @@ AC_ARG_ENABLE(nlopttest, [  --disable-nlopttest       Do not try to compile and 
 
 have_nlopt="yes"
 
+ac_save_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
+if test "x${nlopt_prefix}" != x ; then
+	export PKG_CONFIG_PATH="${nlopt_prefix}/lib/pkgconfig"
+fi
+
+
 PKG_CHECK_MODULES([NLOPT], [nlopt],
 [
   have_nlopt="yes"
-  NLOPT_LIBS="-lnlopt_cxx -lm"
+  NLOPT_LIBS=${NLOPT_LIBS/-lnlopt /-lnlopt_cxx }
 ],
 [
   have_nlopt="no"
 ])
+
+AC_MSG_NOTICE("NLOPT_LIBS : $NLOPT_LIBS")
+AC_MSG_NOTICE("NLOPT_CFLAGS : $NLOPT_CFLAGS")
+
+export PKG_CONFIG_PATH=${ac_save_PKG_CONFIG_PATH}
+
+if test "x$have_nlopt" = xyes ; then
+	ifelse([$2], , :, [$2])
+else
+	ifelse([$3], , :, [$3])
+fi
+
 
 AC_SUBST(NLOPT_CFLAGS)
 AC_SUBST(NLOPT_LIBS)
