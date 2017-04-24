@@ -67,6 +67,37 @@ void ParFactory::joinParams(const vector<double>& free_pars, const vector<double
 
 }
 
+ExprPar ParFactory::truncateToBounds(const ExprPar& in_par, const vector<bool>& indicator_bool) const
+{
+  //giving an empty indicator bool shall mean that all parameters are subject to truncation
+  //otherwise, only those for which indicator_bool is true shall be.
+  vector<bool> use_indicator_bool = indicator_bool;
+  if(use_indicator_bool.empty()){
+    vector<double> vector_tmpfoo;
+    in_par.getRawPars(vector_tmpfoo);
+    use_indicator_bool = vector<bool>(true,vector_tmpfoo.size());
+  }
+
+  ThermodynamicParameterSpace original_space = in_par.my_space;
+
+  vector< double > adjust_free_pars;
+  vector< double > adjust_fix_pars;
+  vector< double > post_adjust_fix_pars;//Used for penultimate output too
+
+  ExprPar tmp_model_es = this->changeSpace(in_par, ENERGY_SPACE);//Be sure we are in the right parameter space
+  this->separateParams(tmp_model_es, adjust_free_pars, adjust_fix_pars, use_indicator_bool );
+
+  ExprPar tmp_constrained_es = this->changeSpace(
+                                  this->changeSpace(tmp_model_es,CONSTRAINED_SPACE),
+                                  ENERGY_SPACE);
+  this->separateParams(tmp_constrained_es, adjust_free_pars, post_adjust_fix_pars, use_indicator_bool);
+  this->joinParams(adjust_free_pars, adjust_fix_pars, post_adjust_fix_pars, use_indicator_bool);
+
+  ExprPar final_return = this->create_expr_par(post_adjust_fix_pars, ENERGY_SPACE);
+  final_return = this->changeSpace(final_return, original_space);
+  return final_return;
+}
+
 ExprPar ParFactory::createDefaultMinMax(bool min_or_max) const
 {
   //TODO: the model really should know about the number of factors in the model.

@@ -549,8 +549,8 @@ int ExprPredictor::train( const ExprPar& par_init )
     cout << "*******************************************" << endl << endl;
 
     if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ){
-      ExprPar tmp_constrained = param_factory->changeSpace(par_model,CONSTRAINED_SPACE);
-      par_model = param_factory->changeSpace(tmp_constrained,PROB_SPACE);
+      par_model = param_factory->truncateToBounds(par_model, indicator_bool);
+      
     }
     obj_model = objFunc( par_model );
 
