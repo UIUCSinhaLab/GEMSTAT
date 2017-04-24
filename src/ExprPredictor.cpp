@@ -550,7 +550,7 @@ int ExprPredictor::train( const ExprPar& par_init )
 
     if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ){
       par_model = param_factory->truncateToBounds(par_model, indicator_bool);
-      
+
     }
     obj_model = objFunc( par_model );
 
@@ -687,112 +687,6 @@ int ExprPredictor::nSimplexIters = 200;
 int ExprPredictor::nGradientIters = 50;
 
 
-
-
-bool ExprPredictor::testPar( const ExprPar& par ) const
-{
-    // test binding weights
-    if ( estBindingOption )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( par.maxBindingWts[i] < ExprPar::min_weight * ( 1.0 + ExprPar::delta ) || par.maxBindingWts[i] > ExprPar::max_weight * ( 1.0 - ExprPar::delta ) )
-                return false;
-        }
-    }
-
-    //cout << "dbg1" << endl;
-
-    // test the interaction matrix
-    if ( expr_model.modelOption != LOGISTIC )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            for ( int j = 0; j <= i; j++ )
-            {
-                if ( par.factorIntMat( i, j ) < ExprPar::min_interaction * ( 1.0 + ExprPar::delta ) || par.factorIntMat( i, j ) > ExprPar::max_interaction * ( 1.0 - ExprPar::delta ) )
-                    return false;
-            }
-        }
-    }
-
-    // test the transcriptional effects
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        if ( expr_model.modelOption == LOGISTIC )
-        {
-            if ( par.txpEffects[i] < ExprPar::min_effect_Logistic + ExprPar::delta || par.txpEffects[i] > ExprPar::max_effect_Logistic - ExprPar::delta )
-                return false;
-        }
-        else if ( expr_model.modelOption == DIRECT )
-        {
-            if ( par.txpEffects[i] < ExprPar::min_effect_Thermo * ( 1.0 + ExprPar::delta ) || par.txpEffects[i] > ExprPar::max_effect_Thermo * ( 1.0 - ExprPar::delta ) )
-                return false;
-        }
-        else
-        {
-            if ( expr_model.actIndicators[i] )
-            {
-                if ( par.txpEffects[i] < ExprPar::min_effect_Thermo * ( 1.0 + ExprPar::delta ) || par.txpEffects[i] > ExprPar::max_effect_Thermo * ( 1.0 - ExprPar::delta ) )
-                    return false;
-            }
-        }
-    }
-
-    //cout << "dbg2" << endl;
-    // test the repression effects
-    if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT )
-    {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-            if ( expr_model.repIndicators[i] )
-            {
-                if ( par.repEffects[i] < ExprPar::min_repression * ( 1.0 + ExprPar::delta ) || par.repEffects[i] > ExprPar::max_repression * ( 1.0 - ExprPar::delta ) )
-                    return false;
-            }
-        }
-    }
-
-    //cout << "dbg3" << endl;
-    // test the basal transcription
-    for( int _i = 0; _i < par.basalTxps.size(); _i++ )
-    {
-        if ( expr_model.modelOption == LOGISTIC )
-        {
-            if ( par.basalTxps[ _i ] < ExprPar::min_basal_Logistic + ExprPar::delta || par.basalTxps[ _i ] > ExprPar::max_basal_Logistic - ExprPar::delta )
-                return false;
-        }
-        else
-        {
-            if ( par.basalTxps[ _i ] < ExprPar::min_basal_Thermo * ( 1.0 + ExprPar::delta ) || par.basalTxps[ _i ] > ExprPar::max_basal_Thermo * ( 1.0 - ExprPar::delta ) )
-                return false;
-        }
-    }
-    //test the pi values
-
-    for( int _i = 0; _i < par.pis.size(); _i++ )
-    {
-        if( par.pis[ _i ] < 0 || par.pis[ _i ] > ExprPar::max_pi * ( 1.0 - ExprPar::delta ))
-        {
-            return false;
-        }
-    }
-    //cout << "dbg4" << endl;
-    //test the beta values
-    for( int _i = 0; _i < par.betas.size(); _i++ )
-    {
-        if ( par.betas[ _i ] < ExprPar::min_beta * ( 1.0 + ExprPar::delta ) || par.betas[ _i ] > ExprPar::max_beta * ( 1.0 - ExprPar::delta ) )
-            return false;
-    }
-    //cout << "dbg5" << endl;
-    //adjust the energyThrFactors
-    for( int i = 0; i < nFactors(); i++ )
-    {
-        if( par.energyThrFactors[ i ] < ExprPar::min_energyThrFactors * ( 1.0 + ExprPar::delta ) ) return false;
-        if( par.energyThrFactors[ i ] > ExprPar::max_energyThrFactors * ( 1.0 - ExprPar::delta ) ) return false;
-    }
-    return true;
-}
 
 void ExprPredictor::printPar( const ExprPar& par ) const
 {

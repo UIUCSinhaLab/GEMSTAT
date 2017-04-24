@@ -98,6 +98,27 @@ ExprPar ParFactory::truncateToBounds(const ExprPar& in_par, const vector<bool>& 
   return final_return;
 }
 
+bool ParFactory::testWithinBounds(const ExprPar& in_par) const
+{
+  vector< double > mins;
+  vector< double > maxes;
+  vector< double > totest;
+
+
+  this->minimums.getRawPars(mins);
+  this->maximums.getRawPars(maxes);
+
+  assert(this->minimums.my_space == this->maximums.my_space);
+  ExprPar to_test_es = this->changeSpace(in_par,this->minimums.my_space);//should be ENERGY_SPACE
+  to_test_es.getRawPars(totest);
+
+  int iter_end = totest.size()
+  for(i=0;i<iter_end;i++){
+    if(totest[i] < minimums[i] || totest[i] > maximums[i]){return false;}
+  }
+  return true;
+}
+
 ExprPar ParFactory::createDefaultMinMax(bool min_or_max) const
 {
   //TODO: the model really should know about the number of factors in the model.

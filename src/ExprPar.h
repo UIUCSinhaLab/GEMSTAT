@@ -129,6 +129,7 @@ class ParFactory
       void separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool) const;
 
       ExprPar truncateToBounds(const ExprPar& in_par, const vector<bool>& indicator_bool) const;
+      bool testWithinBounds(const ExprPar& in_par) const;
 
       ExprPar randSamplePar( const gsl_rng* rng) const;
 

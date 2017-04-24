@@ -104,9 +104,6 @@ private:
             // randomly sample parameter values (only those free parameters), the parameters should be initialized
                     int randSamplePar( const gsl_rng* rng, ExprPar& par ) const;
 
-                    // check if some parameter combination is valid
-                    bool testPar( const ExprPar& par ) const;
-
                     // print the parameter values (the ones that are estimated) in a single line
                     void printPar( const ExprPar& par ) const;
 
