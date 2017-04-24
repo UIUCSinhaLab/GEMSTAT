@@ -8,13 +8,7 @@ AT_SETUP([Program Executes and fails with no input])
 AT_CHECK([testexec seq2expr > /dev/null 2> /dev/null ], [1])
 AT_CLEANUP
 
-m4_define([SVERSION],m4_cond([AT_PACKAGE_VERSION],[1.1],
-[11],
-[AT_PACKAGE_VERSION],[1.2],
-[12],
-[]))
-
-m4_include(m4_join([],[basic],SVERSION,[.at]))
-m4_include(m4_join([],[options],SVERSION,[.at]))
-m4_include(m4_join([],[enforcebounds],SVERSION,[.at]))
-m4_include(m4_join([],[enforcefreefix],SVERSION,[.at]))
+m4_include(m4_join([],[basic.at]))
+m4_include(m4_join([],[options.at]))
+m4_include(m4_join([],[enforcebounds.at]))
+m4_include(m4_join([],[enforcefreefix.at]))
