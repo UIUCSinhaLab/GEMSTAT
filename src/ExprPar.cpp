@@ -112,9 +112,9 @@ bool ParFactory::testWithinBounds(const ExprPar& in_par) const
   ExprPar to_test_es = this->changeSpace(in_par,this->minimums.my_space);//should be ENERGY_SPACE
   to_test_es.getRawPars(totest);
 
-  int iter_end = totest.size()
-  for(i=0;i<iter_end;i++){
-    if(totest[i] < minimums[i] || totest[i] > maximums[i]){return false;}
+  int iter_end = totest.size();
+  for(int i=0;i<iter_end;i++){
+    if(totest[i] < mins[i] || totest[i] > maxes[i]){return false;}
   }
   return true;
 }
