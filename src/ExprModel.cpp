@@ -44,13 +44,32 @@ int ExprModel::getNumCoop() const {
 
 ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
 {
-  ExprPar parToPass = par.my_factory->changeSpace(par, this->modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
-  return new ExprFunc( this->motifs,
+  ExprPar parToPass;
+  ExprFunc* return_exprfunc = NULL;
+  switch(this->modelOption) {
+    case LOGISTIC :
+      parToPass = par.my_factory->changeSpace(par, ENERGY_SPACE);
+      return_exprfunc = new Logistic_ExprFunc(this->motifs,
+                          this->intFunc,
+                          this->actIndicators,
+                          this->maxContact,
+                          this->repIndicators,
+                          this->repressionMat,
+                          this->repressionDistThr,
+                          parToPass );
+      break;
+    default :
+      parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
+      return_exprfunc = new ExprFunc( this->motifs,
                         this->intFunc,
                         this->actIndicators,
                         this->maxContact,
                         this->repIndicators,
                         this->repressionMat,
                         this->repressionDistThr,
-                        par );
+                        parToPass );
+      break;
+  }
+
+  return return_exprfunc;
 }

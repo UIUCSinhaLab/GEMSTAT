@@ -25,12 +25,15 @@ class ExprFunc
         }
 
         // predict the expression value of a given sequence (its site representation, sorted by the start positions) under given TF concentrations
-        double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
+        virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
         const ExprPar& getPar() const { return par; }
 
         static ModelType modelOption;             // model option
         static bool one_qbtm_per_crm;
-    private:
+    protected:
+        //setup functions that may be useful to subclasses
+        inline void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
+        inline void setupBindingWeights(const vector< double >& factorConcs);
         // TF binding motifs
         const vector< Motif >& motifs;
 
@@ -81,10 +84,15 @@ class ExprFunc
 
         // test if one site represses another site
         bool testRepression( const Site& a, const Site& b ) const;
+    private:
+};
 
-        //setup functions that may be useful to subclasses
-        inline void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
-        inline void setupBindingWeights(const vector< double >& factorConcs);
+class Logistic_ExprFunc : public ExprFunc {
+  public:
+      // constructors
+      Logistic_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+
+      double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
 };
 
 #endif

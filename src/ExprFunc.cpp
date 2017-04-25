@@ -65,30 +65,6 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
     // compute the Boltzman weights of binding for all sites
     setupBindingWeights(factorConcs);
 
-    // Logistic model
-    if ( modelOption == LOGISTIC )
-    {
-                                                  // total occupancy of each factor
-        vector< double > factorOcc( motifs.size(), 0 );
-        for ( int i = 1; i < sites.size(); i++ )
-        {
-            factorOcc[ sites[i].factorIdx ] += bindingWts[i] / ( 1.0 + bindingWts[i] );
-        }
-        double totalEffect = 0;
-        //         cout << "factor\toccupancy\ttxp_effect" << endl;
-        for ( int i = 0; i < motifs.size(); i++ )
-        {
-            double effect = par.txpEffects[i] * factorOcc[i];
-            totalEffect += effect;
-            //             cout << i << "\t" << factorOcc[i] << "\t" << effect << endl;
-
-            // length correction
-            //             totalEffect = totalEffect / (double)length;
-        }
-        //         return par.expRatio * logistic( log( par.basalTxp ) + totalEffect );
-        return logistic( par.basalTxps[ seq_num ] + totalEffect );
-    }
-
     // Thermodynamic models: Direct, Quenching, ChrMod_Unlimited and ChrMod_Limited
     // compute the partition functions
     double Z_off = compPartFuncOff();
@@ -102,6 +78,35 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
     //cout << "basalTxp = " << par.basalTxps[ seq_num ] << endl;
     double promoterOcc = efficiency * par.basalTxps[ seq_num ] / ( 1.0 + efficiency * par.basalTxps[ seq_num ] /** ( 1 + par.pis[ seq_num ] )*/ );
     return promoterOcc;
+}
+
+double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num ){
+  //initialize the sites and boundaries and whatnot.
+  setupSitesAndBoundaries(_sites,length,seq_num);
+
+  // compute the Boltzman weights of binding for all sites
+  setupBindingWeights(factorConcs);
+
+
+  // total occupancy of each factor
+  vector< double > factorOcc( motifs.size(), 0 );
+  for ( int i = 1; i < sites.size(); i++ )
+  {
+      factorOcc[ sites[i].factorIdx ] += bindingWts[i] / ( 1.0 + bindingWts[i] );
+  }
+  double totalEffect = 0;
+  //         cout << "factor\toccupancy\ttxp_effect" << endl;
+  for ( int i = 0; i < motifs.size(); i++ )
+  {
+      double effect = par.txpEffects[i] * factorOcc[i];
+      totalEffect += effect;
+      //             cout << i << "\t" << factorOcc[i] << "\t" << effect << endl;
+
+      // length correction
+      //             totalEffect = totalEffect / (double)length;
+  }
+  //         return par.expRatio * logistic( log( par.basalTxp ) + totalEffect );
+  return logistic( par.basalTxps[ seq_num ] + totalEffect );
 }
 
 ModelType ExprFunc::modelOption = QUENCHING;
