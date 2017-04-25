@@ -55,26 +55,6 @@ class ExprFunc
         // intermediate computational results
         vector< double > bindingWts;
 
-        // compute the partition function when the basal transcriptional machinery (BTM) is not bound
-        double compPartFuncOff() const;
-
-        // compute the partition function when the BTM is not bound: ChrMod model
-        double compPartFuncOffChrMod() const;
-
-        // compute the partition function when the BTM is bound
-        double compPartFuncOn() const;
-
-        // compute the paritition function when the BTM is bound: Direct model
-        double compPartFuncOnDirect() const;
-
-        // compute the paritition function when the BTM is bound: Quenching model
-        double compPartFuncOnQuenching() const;
-
-        // compute the paritition function when the BTM is bound: ChrMod_Unlimited model
-        double compPartFuncOnChrMod_Unlimited() const;
-
-        // compute the paritition function when the BTM is bound: ChrMod_Limited model
-        double compPartFuncOnChrMod_Limited() const;
 
         // compute the TF-TF interaction between two occupied sites
         double compFactorInt( const Site& a, const Site& b ) const;
@@ -84,6 +64,15 @@ class ExprFunc
 
         // test if one site represses another site
         bool testRepression( const Site& a, const Site& b ) const;
+
+        // compute the partition function when the BTM is bound
+        virtual double compPartFuncOn() const;
+        // compute the partition function when the basal transcriptional machinery (BTM) is not bound
+        virtual double compPartFuncOff() const;
+
+        // compute the partition function when the BTM is not bound: ChrMod model
+        double compPartFuncOffChrMod() const;
+
     private:
 };
 
@@ -94,5 +83,56 @@ class Logistic_ExprFunc : public ExprFunc {
 
       double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
 };
+
+class Direct_ExprFunc : public ExprFunc {
+  public:
+      // constructors
+      Direct_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+  protected:
+    // compute the partition function when the BTM is bound
+    double compPartFuncOn() const;
+
+};
+
+class Quenching_ExprFunc : public ExprFunc {
+  public:
+      // constructors
+      Quenching_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+  protected:
+    // compute the partition function when the BTM is bound
+    double compPartFuncOn() const;
+
+};
+
+class ChrMod_ExprFunc : public ExprFunc {
+  public:
+      // constructors
+      ChrMod_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+  protected:
+    // compute the partition function when the BTM is bound
+    virtual double compPartFuncOn() const = 0;
+    // compute the partition function when the basal transcriptional machinery (BTM) is not bound
+    double compPartFuncOff() const;
+
+};
+
+class ChrModUnlimited_ExprFunc : public ChrMod_ExprFunc {
+  public:
+      // constructors
+      ChrModUnlimited_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+  protected:
+    // compute the partition function when the BTM is bound
+    double compPartFuncOn() const;
+};
+
+class ChrModLimited_ExprFunc : public ChrMod_ExprFunc {
+  public:
+      // constructors
+      ChrModLimited_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+  protected:
+    // compute the partition function when the BTM is bound
+    double compPartFuncOn() const;
+};
+
 
 #endif

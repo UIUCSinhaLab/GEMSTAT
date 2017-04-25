@@ -113,7 +113,9 @@ ModelType ExprFunc::modelOption = QUENCHING;
 
 double ExprFunc::compPartFuncOff() const
 {
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED ) return compPartFuncOffChrMod();
+    #ifdef DEBUG
+      assert(modelOption != CHRMOD_UNLIMITED && modelOption != CHRMOD_LIMITED );
+    #endif
 
     int n = sites.size() - 1;
     // initialization
@@ -170,7 +172,7 @@ double ExprFunc::compPartFuncOff() const
 }
 
 
-double ExprFunc::compPartFuncOffChrMod() const
+double ChrMod_ExprFunc::compPartFuncOff() const
 {
     int n = sites.size()- 1;
 
@@ -216,15 +218,16 @@ double ExprFunc::compPartFuncOffChrMod() const
 
 double ExprFunc::compPartFuncOn() const
 {
-    if ( modelOption == DIRECT ) return compPartFuncOnDirect();
-    if ( modelOption == QUENCHING ) return compPartFuncOnQuenching();
-    if ( modelOption == CHRMOD_UNLIMITED) return compPartFuncOnChrMod_Unlimited();
-    if ( modelOption == CHRMOD_LIMITED ) return compPartFuncOnChrMod_Limited();
+    if ( modelOption == DIRECT ) assert(false);//should never make it here.
+    if ( modelOption == QUENCHING ) assert(false);
+    if ( modelOption == CHRMOD_UNLIMITED) assert(false);//return compPartFuncOnChrMod_Unlimited();
+    if ( modelOption == CHRMOD_LIMITED ) assert(false);//return compPartFuncOnChrMod_Limited();
 //TODO: A compiler warning is generated here. Shouldn't there be some defensive coding?
+    assert(false);
 }
 
 
-double ExprFunc::compPartFuncOnDirect() const
+double Direct_ExprFunc::compPartFuncOn() const
 {
     int n = sites.size() - 1;
 
@@ -266,7 +269,7 @@ double ExprFunc::compPartFuncOnDirect() const
 }
 
 
-double ExprFunc::compPartFuncOnQuenching() const
+double Quenching_ExprFunc::compPartFuncOn() const
 {
     int n = sites.size() - 1;
     int N0 = maxContact;
@@ -341,7 +344,7 @@ double ExprFunc::compPartFuncOnQuenching() const
 }
 
 
-double ExprFunc::compPartFuncOnChrMod_Unlimited() const
+double ChrModUnlimited_ExprFunc::compPartFuncOn() const
 {
     int n = sites.size()- 1;
 
@@ -385,7 +388,7 @@ double ExprFunc::compPartFuncOnChrMod_Unlimited() const
 }
 
 
-double ExprFunc::compPartFuncOnChrMod_Limited() const
+double ChrModLimited_ExprFunc::compPartFuncOn() const
 {
     int n = sites.size()- 1;
 
