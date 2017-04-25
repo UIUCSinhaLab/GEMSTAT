@@ -81,6 +81,10 @@ class ExprFunc
 
         // test if one site represses another site
         bool testRepression( const Site& a, const Site& b ) const;
+
+        //setup functions that may be useful to subclasses
+        inline void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
+        inline void setupBindingWeights(const vector< double >& factorConcs);
 };
 
 #endif

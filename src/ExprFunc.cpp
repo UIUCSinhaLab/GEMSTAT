@@ -17,42 +17,53 @@ ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFun
 
 }
 
+inline void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
+  boundaries.clear();
 
+  if( !one_qbtm_per_crm )
+      seq_num = 0;
+  // store the sequence
+  int n = _sites.size();
+  sites = SiteVec(_sites);
+  sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
+  boundaries.push_back( 0 );
+  double range = max( intFunc->getMaxDist(), repressionDistThr );
+  for ( int i = 1; i <= n; i++ )
+  {
+      int j;
+      for ( j = i - 1; j >= 1; j-- )
+      {
+          if ( ( sites[i].start - sites[j].start ) > range ) break;
+      }
+      int boundary = j;
+      boundaries.push_back( boundary );
+  }
+}
+
+inline void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
+  bindingWts.clear();
+  bindingWts.push_back( 1.0 );
+  int n = sites.size();
+  for ( int i = 1; i < n; i++ )
+  {
+      bindingWts.push_back( par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio );
+      /*
+      double samee = par.maxBindingWts[sites[i].factorIdx]*factorConcs[sites[i].factorIdx]*sites[i].prior_probability*sites[i].wtRatio;
+      if(samee != samee)
+      {
+          cout << "DEBUG: samee for " << i << "\t" << sites[i].factorIdx << "\t" <<  par.maxBindingWts[sites[i].factorIdx] <<"\t" << factorConcs[sites[i].factorIdx] <<"\t" << sites[i].prior_probability <<"\t" << sites[i].wtRatio << endl;
+          exit(1);
+      }
+      */
+  }
+}
 double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
 {
-    bindingWts.clear(); boundaries.clear();
-
-    if( !one_qbtm_per_crm )
-        seq_num = 0;
-    // store the sequence
-    int n = _sites.size();
-    sites = SiteVec(_sites);
-    sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
-    boundaries.push_back( 0 );
-    double range = max( intFunc->getMaxDist(), repressionDistThr );
-    for ( int i = 1; i <= n; i++ )
-    {
-        int j;
-        for ( j = i - 1; j >= 1; j-- )
-        {
-            if ( ( sites[i].start - sites[j].start ) > range ) break;
-        }
-        int boundary = j;
-        boundaries.push_back( boundary );
-    }
+    //initialize the sites and boundaries and whatnot.
+    setupSitesAndBoundaries(_sites,length,seq_num);
 
     // compute the Boltzman weights of binding for all sites
-    bindingWts.push_back( 1.0 );
-    for ( int i = 1; i <= n; i++ )
-    {
-        bindingWts.push_back( par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio );
-        double samee = par.maxBindingWts[sites[i].factorIdx]*factorConcs[sites[i].factorIdx]*sites[i].prior_probability*sites[i].wtRatio;
-        if(samee != samee)
-        {
-            cout << "DEBUG: samee for " << i << "\t" << sites[i].factorIdx << "\t" <<  par.maxBindingWts[sites[i].factorIdx] <<"\t" << factorConcs[sites[i].factorIdx] <<"\t" << sites[i].prior_probability <<"\t" << sites[i].wtRatio << endl;
-            exit(1);
-        }
-    }
+    setupBindingWeights(factorConcs);
 
     // Logistic model
     if ( modelOption == LOGISTIC )
