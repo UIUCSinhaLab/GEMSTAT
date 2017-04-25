@@ -282,14 +282,8 @@ void ExprPredictor::printPar( const ExprPar& par ) const
 
 ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par ) const
 {
-	//TODO: just make it take an expr_model as a parameter.
-	//Also, it should use a factory to create the ExprFunc, but this is already close to a factory method.
 
-    //TODO: This makes ExprPredictor act as the factory for ExprFunc objects.
-    //Since a par factory is not needed to go between ENERGY_SPACE and PROB_SPACE, this could get moved into the ExprFunc constructor. That would be better for inheritance.
-    ExprPar parToPass = param_factory->changeSpace(par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
-
-    return new ExprFunc( expr_model.motifs, expr_model.intFunc, expr_model.actIndicators, expr_model.maxContact, expr_model.repIndicators, expr_model.repressionMat, expr_model.repressionDistThr, parToPass );
+    return expr_model.createNewExprFunc( par );
 }
 
 

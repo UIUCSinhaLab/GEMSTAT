@@ -41,3 +41,16 @@ int ExprModel::getNumCoop() const {
 
   return num_of_coop_pairs;
 }
+
+ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
+{
+  ExprPar parToPass = par.my_factory->changeSpace(par, this->modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
+  return new ExprFunc( this->motifs,
+                        this->intFunc,
+                        this->actIndicators,
+                        this->maxContact,
+                        this->repIndicators,
+                        this->repressionMat,
+                        this->repressionDistThr,
+                        par );
+}

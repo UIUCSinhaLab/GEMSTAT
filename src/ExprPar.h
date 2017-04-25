@@ -5,6 +5,7 @@
 #include "PredictorTrainer.h"
 
 class ParFactory;
+class ExprModel;
 
 enum ThermodynamicParameterSpace {
   PROB_SPACE, //GEMSTAT dynamic programming algorithms are written for this to be the native parameter space.
@@ -61,7 +62,7 @@ class ExprPar
         vector < double > betas;
         vector < double > energyThrFactors;
         int nSeqs;
-
+        
         static ModelType modelOption;             // model option
         static SearchType searchOption;           // search option: 0 - unconstrained search; 1 - constrained search
         static int estBindingOption;              // whether to estimate binding parameters
@@ -133,7 +134,7 @@ class ParFactory
 
       ExprPar randSamplePar( const gsl_rng* rng) const;
 
-      int nFactors() const {return expr_model.motifs.size();}
+      int nFactors() const;
 
       void setMaximums(const ExprPar& in_maximums){assert(in_maximums.my_space == ENERGY_SPACE); maximums.copy(in_maximums);}
       void setMinimums(const ExprPar& in_minimums){assert(in_minimums.my_space == ENERGY_SPACE); minimums.copy(in_minimums);}
