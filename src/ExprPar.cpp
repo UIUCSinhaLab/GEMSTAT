@@ -24,6 +24,11 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in
   defaults = create_expr_par();
 }
 
+int ParFactory::nFactors() const
+{
+  return expr_model.motifs.size();
+}
+
 void ParFactory::separateParams(const ExprPar& input, vector<double>& free_output, vector<double>& fixed_output, const vector<bool>& indicator_bool) const
 {
   //Hassan's code for separating parameters

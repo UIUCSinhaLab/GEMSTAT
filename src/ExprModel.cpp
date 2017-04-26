@@ -41,3 +41,79 @@ int ExprModel::getNumCoop() const {
 
   return num_of_coop_pairs;
 }
+
+ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
+{
+  ExprPar parToPass;
+  ExprFunc* return_exprfunc = NULL;
+  switch(this->modelOption) {
+    case LOGISTIC :
+      parToPass = par.my_factory->changeSpace(par, ENERGY_SPACE);
+      return_exprfunc = new Logistic_ExprFunc(this->motifs,
+                          this->intFunc,
+                          this->actIndicators,
+                          this->maxContact,
+                          this->repIndicators,
+                          this->repressionMat,
+                          this->repressionDistThr,
+                          parToPass );
+      break;
+    case DIRECT :
+      parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
+      return_exprfunc = new Direct_ExprFunc( this->motifs,
+                        this->intFunc,
+                        this->actIndicators,
+                        this->maxContact,
+                        this->repIndicators,
+                        this->repressionMat,
+                        this->repressionDistThr,
+                        parToPass );
+      break;
+    case QUENCHING :
+        parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
+        return_exprfunc = new Quenching_ExprFunc( this->motifs,
+                          this->intFunc,
+                          this->actIndicators,
+                          this->maxContact,
+                          this->repIndicators,
+                          this->repressionMat,
+                          this->repressionDistThr,
+                          parToPass );
+        break;
+    case CHRMOD_LIMITED :
+        parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
+        return_exprfunc = new ChrModLimited_ExprFunc( this->motifs,
+                          this->intFunc,
+                          this->actIndicators,
+                          this->maxContact,
+                          this->repIndicators,
+                          this->repressionMat,
+                          this->repressionDistThr,
+                          parToPass );
+        break;
+    case CHRMOD_UNLIMITED :
+        parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
+        return_exprfunc = new ChrModUnlimited_ExprFunc( this->motifs,
+                          this->intFunc,
+                          this->actIndicators,
+                          this->maxContact,
+                          this->repIndicators,
+                          this->repressionMat,
+                          this->repressionDistThr,
+                          parToPass );
+        break;
+    default :
+      parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
+      return_exprfunc = new ExprFunc( this->motifs,
+                        this->intFunc,
+                        this->actIndicators,
+                        this->maxContact,
+                        this->repIndicators,
+                        this->repressionMat,
+                        this->repressionDistThr,
+                        parToPass );
+      break;
+  }
+
+  return return_exprfunc;
+}

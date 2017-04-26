@@ -5,14 +5,19 @@
 //#include "ExprPredictor.h"
 #include "SeqAnnotator.h"
 
-enum ModelType
+class ExprFunc; // forward reference to avoid circular issues. #include "ExprFunc.h"
+class ExprPar;
+
+typedef enum ModelType
 {
     LOGISTIC,                                     // logistic regression
     DIRECT,                                       // direct interaction between TF and BTM, repressor works through BTM
     QUENCHING,                                    // repressor stops activator from interacting with BTM
     CHRMOD_UNLIMITED,                             // repressor works by chromatin modification (making it unaccessible), unlimited activation
     CHRMOD_LIMITED                                // repressor works by chromatin modification (making it unaccessible), limited activation
-};
+} ModelType;
+
+#include "ExprPar.h"
 
 ModelType getModelOption( const string& modelOptionStr );
 string getModelOptionStr( ModelType modelOption );
@@ -47,6 +52,8 @@ public: //TODO: Implement good accessors / mutators instead.
 
   int getNFactors() const {return motifs.size();}
   int getNumCoop() const;
+
+  ExprFunc* createNewExprFunc( const ExprPar& par ) const;
 };
 
 
