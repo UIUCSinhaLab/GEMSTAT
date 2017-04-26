@@ -14,7 +14,7 @@ string parameterSpaceStr(ThermodynamicParameterSpace in){
 }
 
 
-ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs, const vector<bool>& in_ff) : expr_model(in_model), nSeqs(in_nSeqs), indicator_bool(in_ff)
+ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in_model), nSeqs(in_nSeqs)
 {
   //maximums = ExprPar( expr_model.motifs.size(), nSeqs );
   maximums = createDefaultMinMax(true);

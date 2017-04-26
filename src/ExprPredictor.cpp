@@ -489,7 +489,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     ExprPar::estBindingOption = estBindingOption;
 
     //expr_model was already initialized. Setup the parameter factory.
-    param_factory = new ParFactory(expr_model, nSeqs(), _indicator_bool);
+    param_factory = new ParFactory(expr_model, nSeqs());
 
     //TODO: Move this to the front-end or something?
     //Maybe make it have a default SSE score objective, but anything else gets specified in the front-end.

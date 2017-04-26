@@ -424,7 +424,7 @@ int main( int argc, char* argv[] )
     }
 
     //Setup a parameter factory
-    ParFactory *param_factory = new ParFactory(expr_model, nSeqs, indicator_bool);
+    ParFactory *param_factory = new ParFactory(expr_model, nSeqs);
 
     // read the initial parameter values
     ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
