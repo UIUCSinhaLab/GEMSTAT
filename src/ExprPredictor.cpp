@@ -485,9 +485,6 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
         //ExprPar::min_interaction = 0.99;
     }
 
-    // set the option of parameter estimation
-    ExprPar::estBindingOption = estBindingOption;
-
     //expr_model was already initialized. Setup the parameter factory.
     param_factory = new ParFactory(expr_model, nSeqs(), _indicator_bool);
 
@@ -671,7 +668,6 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     return 0;
 }
 
-int ExprPredictor::estBindingOption = 1;          // 1. estimate binding parameters; 0. not estimate binding parameters
 ObjType ExprPredictor::objOption = SSE;
 
 int ExprPredictor::maxShift = 5;

@@ -65,7 +65,6 @@ public:
 
 	//std::ofstream gene_crm_fout;
 
-	static int estBindingOption;              // whether estimate binding parameters
 	static ObjType objOption;                 // option of the objective function
 
 	// the similarity between two expression patterns, using cross-correlation

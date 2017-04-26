@@ -3,7 +3,6 @@
 
 ModelType ExprPar::modelOption = CHRMOD_UNLIMITED;
 SearchType ExprPar::searchOption = UNCONSTRAINED;
-int ExprPar::estBindingOption = 1;                // 1. estimate binding parameters; 0. not estimate binding parameters
 
 double ExprPar::default_weight = 1.0;
 double ExprPar::default_interaction = 1.0;

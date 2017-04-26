@@ -147,7 +147,6 @@ int main( int argc, char* argv[] )
     double gcContent = 0.5;
     FactorIntType intOption = BINARY;             // type of interaction function
     ExprPar::searchOption = CONSTRAINED;          // search option: unconstrained; constrained.
-    ExprPar::estBindingOption = 1;
 
     ExprPredictor::nRandStarts = 0;
     ExprPredictor::min_delta_f_SSE = 1.0E-10;

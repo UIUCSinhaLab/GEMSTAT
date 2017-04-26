@@ -64,7 +64,6 @@ class ExprPar
 
         static ModelType modelOption;             // model option
         static SearchType searchOption;           // search option: 0 - unconstrained search; 1 - constrained search
-        static int estBindingOption;              // whether to estimate binding parameters
         static bool one_qbtm_per_crm;
 
         static double default_weight;             // default binding weight

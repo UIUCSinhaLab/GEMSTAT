@@ -183,18 +183,10 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
 
       // set maxBindingWts
       tmp_par.maxBindingWts.clear();
-      if ( ExprPar::estBindingOption ) // TODO: get rid of ugly static variable. Frankly, get rid of estBindingOption altogether. Just fix them to 1.0 if you don7t want to estimate.
+      for ( int i = 0; i < _nFactors; i++ )
       {
-          for ( int i = 0; i < _nFactors; i++ )
-          {
-              double weight = pars[counter++] ;
-              tmp_par.maxBindingWts.push_back( weight );
-          }
-      }
-      else
-      {
-          assert(false);
-          tmp_par.maxBindingWts.assign(_nFactors, ExprPar::default_weight );//TODO: Needs to take into account which space this default is in.
+          double weight = pars[counter++] ;
+          tmp_par.maxBindingWts.push_back( weight );
       }
 
       // set the interaction matrix
@@ -585,18 +577,10 @@ ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const 
     //     assert( pars.size() == ( _nFactors * ( _nFactors + 1 ) / 2 + 2 * _nFactors + 2 );
     int counter = 0;
 
-    // set maxBindingWts
-    if ( estBindingOption )
+    for ( int i = 0; i < _nFactors; i++ )
     {
-        for ( int i = 0; i < _nFactors; i++ )
-        {
-            double weight = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_weight ), log( max_weight ) ) ) : exp( pars[counter++] );
-            maxBindingWts.push_back( weight );
-        }
-    }
-    else
-    {
-        for ( int i = 0; i < _nFactors; i++ ) maxBindingWts.push_back( ExprPar::default_weight );
+        double weight = searchOption == CONSTRAINED ? exp( inverse_infty_transform( pars[counter++], log( min_weight ), log( max_weight ) ) ) : exp( pars[counter++] );
+        maxBindingWts.push_back( weight );
     }
 
     // set the interaction matrix
@@ -737,12 +721,9 @@ void ExprPar::getRawPars( vector< double >& pars) const
     pars.clear();
 
     // write maxBindingWts
-    if ( estBindingOption )
+    for ( int i = 0; i < nFactors(); i++ )
     {
-        for ( int i = 0; i < nFactors(); i++ )
-        {
-          pars.push_back( maxBindingWts[ i ] );
-        }
+      pars.push_back( maxBindingWts[ i ] );
     }
 
     // write the interaction matrix
