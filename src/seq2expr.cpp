@@ -420,7 +420,13 @@ int main( int argc, char* argv[] )
     vector <bool> indicator_bool(num_indicators, true);
     if( !free_fix_indicator_filename.empty() )
     {
-        ExprPar param_ff = param_factory->load( free_fix_indicator_filename );
+        ExprPar param_ff;
+        try{
+          param_ff = param_factory->load( free_fix_indicator_filename );
+        }catch (int& e){
+          cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
+          exit(1);
+        }
         vector < double > tmp_ff;
         param_ff.getRawPars(tmp_ff);
         indicator_bool.clear();
