@@ -397,31 +397,6 @@ int main( int argc, char* argv[] )
         axis_wts.push_back( 100 );
     }
 
-    //read the free fix indicator information
-    int num_indicators = 0;
-    num_indicators += nFactors;//The K values for every factor
-    num_indicators += num_of_coop_pairs; //For cooperative pairs cooperativities
-    num_indicators += std::accumulate(actIndicators.begin(), actIndicators.end(),(int)0); //All the alpha act
-    num_indicators += std::accumulate(repIndicators.begin(), repIndicators.end(),(int)0); //All the alpha rep
-    num_indicators += cmdline_one_qbtm_per_crm ? nSeqs : 1; //for q_btm parameter(s)
-    num_indicators += expr_model.shared_scaling ? 1 : nSeqs; //for the pi parameters
-    num_indicators += expr_model.shared_scaling ? 1 : nSeqs; //for the beta pars per seqs
-    num_indicators += nFactors; //for the energyThrFactors
-
-    vector <bool> indicator_bool(num_indicators, true);
-    if( !free_fix_indicator_filename.empty() )
-    {
-    	indicator_bool.clear();
-        ifstream free_fix_indicator_file ( free_fix_indicator_filename.c_str() );
-	int indicator_var = -1;
-        while( free_fix_indicator_file >> indicator_var)
-        {
-            assert ( indicator_var == 0 || indicator_var == 1 );
-            indicator_bool.push_back( indicator_var );
-            indicator_var = -1;
-        }
-	ASSERT_MESSAGE(indicator_bool.size() == num_indicators,"If you use the free_fix file, you must provide the correct number of parameters\n");
-    }
 
     //Setup a parameter factory
     ParFactory *param_factory = new ParFactory(expr_model, nSeqs);
@@ -438,6 +413,28 @@ int main( int argc, char* argv[] )
             exit( 1 );
         }
     }
+
+    //Load free_fix from the same format as parameter vectors!
+    vector< double > tmp_vector;
+    par_init.getRawPars(tmp_vector);
+    int num_indicators = tmp_vector.size();
+    vector <bool> indicator_bool(num_indicators, true);
+    if( !free_fix_indicator_filename.empty() )
+    {
+        ExprPar param_ff = param_factory->load( free_fix_indicator_filename );
+        vector < double > tmp_ff;
+        param_ff.getRawPars(tmp_ff);
+        indicator_bool.clear();
+        for(vector<double>::iterator iter = tmp_ff.begin();iter != tmp_ff.end();++iter){
+          double one_val = *iter;
+          if( -0.00000001 < one_val && 0.0000001 > one_val){ indicator_bool.push_back(false); }
+          else if (0.9999999 < one_val && 1.0000001 > one_val){ indicator_bool.push_back(true);}
+          else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
+        }
+    }
+
+
+
     //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
     if( read_factor_thresh ){
         par_init = param_factory->changeSpace(par_init, PROB_SPACE);
