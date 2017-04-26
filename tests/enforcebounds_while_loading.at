@@ -43,9 +43,9 @@ basal_transcription = 0.01
 0.72345
 ]])
 
-AT_DATA([ff.txt],[[1
-1
-1
+
+AT_DATA([ff.txt],[[foo	1	1	1
+basal_transcription = 1
 0
 1
 0

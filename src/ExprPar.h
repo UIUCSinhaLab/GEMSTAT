@@ -107,7 +107,7 @@ class ParFactory
 {
     friend class ExprPar;
     public:
-      ParFactory( const ExprModel& in_model, int in_nSeqs, const vector<bool>& in_ff);
+      ParFactory( const ExprModel& in_model, int in_nSeqs);
       ~ParFactory(){};
 
       //the raison d'etre for this class
@@ -144,7 +144,6 @@ class ParFactory
 
       const ExprModel& expr_model;
     private:
-      const vector<bool>& indicator_bool;//TODO: Later work on making this non-const. Original author const'ed everything.
       int nSeqs;
 
       ExprPar maximums; //Should be in the ENERGY_SPACE
