@@ -57,6 +57,11 @@ inline void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
       */
   }
 }
+
+double ExprFunc::predictExpr( const SiteVec& _sites, int length, const Condition& in_condition, int seq_num ){
+  return this->predictExpr(_sites,length, in_condition.concs, seq_num);
+}
+
 double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
 {
     //initialize the sites and boundaries and whatnot.

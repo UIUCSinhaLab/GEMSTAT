@@ -218,6 +218,11 @@ int main( int argc, char* argv[] )
     Matrix factorExprData( data );
     ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
 
+    //Initialize the dataset that is actually provided
+    DataSet training_dataset(factorExprData,exprData);
+
+
+
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
 
@@ -526,7 +531,7 @@ int main( int argc, char* argv[] )
 
 
     // create the expression predictor
-    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, exprData, motifs, factorExprData, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
+    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
 
     //Setup regularization
     if(0.0 != l1 || 0.0 != l2){
@@ -585,7 +590,7 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, exprData, expr_condNames, true);
+    writePredictions(outFile, *predictor, training_dataset.exprData, expr_condNames, true);
 
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*

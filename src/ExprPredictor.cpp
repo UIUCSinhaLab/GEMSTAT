@@ -9,14 +9,15 @@
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data);
 
-ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model,
-		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), exprData( _exprData ), factorExprData( _factorExprData ),
+ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
+		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), training_data( _training_data ),
 	expr_model( _expr_model),
 	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts )
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
-    assert( exprData.nRows() == nSeqs() );
-    assert( factorExprData.nRows() == nFactors() && factorExprData.nCols() == nConds() );
+		cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
+    assert( training_data.exprData.nRows() == nSeqs() );
+    assert( training_data.factorExprData.nRows() == nFactors() && training_data.factorExprData.nCols() == nConds() );
     assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
     assert( expr_model.actIndicators.size() == nFactors() );
     assert( expr_model.maxContact > 0 );
@@ -211,7 +212,7 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
     ExprFunc* func = createExprFunc( par_model );
     for ( int j = 0; j < nConds(); j++ )
     {
-        vector< double > concs = factorExprData.getCol( j );
+				Condition concs = training_data.getCondition( j );
         double predicted = func->predictExpr( targetSites, targetSeqLength, concs, seq_num );
         targetExprs.push_back( predicted );
     }
@@ -312,12 +313,12 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 
     //Create predictions for every sequence and condition
     for ( int i = 0; i < nSeqs(); i++ ) {
-        ground_truths.push_back(exprData.getRow(i));
+        ground_truths.push_back(training_data.exprData.getRow(i));
 
         vector< double > predictedExprs;
         for ( int j = 0; j < nConds(); j++ ) {
         		double predicted = -1;
-            	vector< double > concs = factorExprData.getCol( j );
+							Condition concs = training_data.getCondition( j );
             	predicted = func->predictExpr( seqSites[ i ], seqLengths[i], concs, i );
             // predicted expression for the i-th sequence at the j-th condition
             predictedExprs.push_back( predicted );

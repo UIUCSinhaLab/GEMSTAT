@@ -101,7 +101,7 @@ int readAxisWeights(const string& filename, vector< int >& axis_start, vector< i
 	return 0;
 }
 
-int writePredictions(const string& filename, ExprPredictor& predictor, Matrix& exprData, vector< string >& expr_condNames, bool fix_beta /*= false*/){
+int writePredictions(const string& filename, ExprPredictor& predictor, const Matrix& exprData, vector< string >& expr_condNames, bool fix_beta /*= false*/){
 	// print the predictions
 	ofstream fout( filename.c_str() );
 	if ( !fout )

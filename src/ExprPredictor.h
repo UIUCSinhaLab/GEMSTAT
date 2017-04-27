@@ -8,6 +8,7 @@
 #include "ExprPar.h"
 #include "ObjFunc.h"
 #include "ExprFunc.h"
+#include "DataSet.h"
 
 /*****************************************************
  * Model Training and Testing
@@ -18,7 +19,7 @@ class ExprPredictor
 {
     public:
         // constructors
-        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const Matrix& _exprData, const vector< Motif >& _motifs, const Matrix& _factorExprData, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
+        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
         ~ExprPredictor();
         // access methods
         int nSeqs() const
@@ -31,7 +32,7 @@ class ExprPredictor
         }
         int nConds() const
         {
-            return exprData.nCols();
+            return training_data.nConds();
         }
         const IntMatrix& getCoopMat() const
         {
@@ -106,8 +107,8 @@ class ExprPredictor
         //TODO: R_SEQ Either remove this dead feature or revive it and make it conditional.
         const vector <SiteVec>& r_seqSites;
         const vector< int >& r_seqLengths;        // lengths of all sequences
-        const Matrix& exprData;                   // expressions of the corresponding sequences across multiple conditions
-        const Matrix& factorExprData;             // [TF] of all factors over multiple conditions
+
+        const DataSet& training_data;
         const vector < int >& axis_start;
         const vector < int >& axis_end;
         const vector < double >& axis_wts;
