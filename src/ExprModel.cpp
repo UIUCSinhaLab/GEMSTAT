@@ -103,16 +103,8 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
                           parToPass );
         break;
     default :
-      parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-      return_exprfunc = new ExprFunc( this->motifs,
-                        this->intFunc,
-                        this->actIndicators,
-                        this->maxContact,
-                        this->repIndicators,
-                        this->repressionMat,
-                        this->repressionDistThr,
-                        parToPass );
-      break;
+        cerr << "Somehow, an invalid model argument was passed. " << endl;
+        assert(false);//Should never reach here.
   }
 
   return return_exprfunc;

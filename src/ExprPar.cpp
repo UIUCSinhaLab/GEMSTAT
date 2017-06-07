@@ -732,7 +732,7 @@ void ExprPar::getRawPars( vector< double >& pars) const
     }
 
     // write the interaction matrix
-    if ( modelOption != LOGISTIC )
+    if ( modelOption != LOGISTIC )//TODO: just make the coopMat all false for LOGISTIC models.
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
@@ -749,7 +749,7 @@ void ExprPar::getRawPars( vector< double >& pars) const
     // write the transcriptional effects
     for ( int i = 0; i < nFactors(); i++ )
     {
-        if ( modelOption == LOGISTIC )
+        if ( modelOption == LOGISTIC )//TODO: just make actIndicators all true for LOGISTIC model.
         {
           pars.push_back( txpEffects[i] );
         }
@@ -759,7 +759,7 @@ void ExprPar::getRawPars( vector< double >& pars) const
                 }*/
         else
         {
-            if ( actIndicators[i] )
+            if ( actIndicators[i] ) //TODO: make actIndicators all true for DIRECT model
             {
                 pars.push_back( txpEffects[i] );
             }
@@ -780,15 +780,7 @@ void ExprPar::getRawPars( vector< double >& pars) const
 
     for( int i = 0; i < basalTxps.size(); i++ )
     {
-        // write the basal transcription
-        if ( modelOption == LOGISTIC )
-        {
-            pars.push_back( basalTxps[ i ] );
-        }
-        else
-        {
-            pars.push_back( basalTxps[ i ] );
-        }
+        pars.push_back( basalTxps[ i ] );
     }
 
     //write the pis
