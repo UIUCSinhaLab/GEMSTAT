@@ -25,7 +25,7 @@ broken) betaopt="broken" ;;
 separate) betaopt="separate" ;;
 together) betaopt="together" ;;
 *) AC_MSG_ERROR([bad value ${withvar} for --with-beta-optimize])  ;;
-esac], [betaopt="broken"])
+esac], [betaopt="together"])
 AM_CONDITIONAL([BETAOPTBROKEN], [test "x${betaopt}" = "xbroken"])
 AM_CONDITIONAL([BETAOPTSEPARATE], [test "x${betaopt}" = "xseparate"])
 AM_CONDITIONAL([BETAOPTTOGETHER], [test "x${betaopt}" = "xtogether"])
