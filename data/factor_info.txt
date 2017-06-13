@@ -1,0 +1,6 @@
+bcd	1	0
+cad	1	0
+gt	1	0
+hb	1	0
+kni	1	0
+Kr	1	0
