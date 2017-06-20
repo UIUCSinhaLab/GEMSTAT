@@ -156,10 +156,12 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
   rev_bounds.push_back(n+1);
   assert(rev_bounds[n] == n+1);
 
+  /*
   cerr << "BOUNDARIES " << n << endl;
   cerr << boundaries << endl;
   cerr << "rev bounds " << endl;
   cerr << rev_bounds << endl;
+  */
 
   bindingWts.clear();
   bindingWts.push_back( 1.0 );
@@ -208,17 +210,18 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
 
 
 
-    vector< double > final_Z(Zt.size(),0.0);
-    vector< double > final_Zt(Zt.size(),0.0);
+    vector< double > final_Z(Zt.size()-2,0.0);
+    vector< double > final_Zt(Zt.size()-2,0.0);
 
-    vector< double > bindprobs(Zt.size(),0.0);
+    vector< double > bindprobs(Zt.size()-2,0.0);
 
-    for(int i = 0;i<Zt.size();i++){
-      final_Z[i] = Z[i] * backward_Z[i];
-      final_Zt[i] = Zt[i] * backward_Zt[i];
+    for(int i = 0;i<n;i++){
+      final_Z[i] = Z[i+1] * backward_Z[i+1];
+      final_Zt[i] = Zt[i+1] * backward_Zt[i+1];
+      bindprobs[i] = final_Z[i] / final_Zt[i];
     }
 
-
+    /*
     cout << endl;
     cerr << "=====DEBUG=====" << endl;
 
@@ -230,53 +233,7 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
     cerr << "====" << endl;
     cerr << "final_Z " << endl << final_Z << endl;
     cerr << "====" << endl;
-    assert(false);
-    /*
-    double Zt_final = forward_Zt[forward_Zt.size()-1];
-    bool check_passed = true;
-    for(int i = 0;i < n;i++){
-      final_Z[i] = forward_Z[i+1] * backward_Z[i];
-      //final_Zt[i] = forward_Zt[i+1] * backward_Zt[i];
-
-      bindprobs[i] = (final_Z[i] +0.00000001)/ (Zt_final + 0.00000001); //TODO: check that all Zt are the same.
-      //TODO: why do I need a whitening factor!?
-
-      if( bindprobs[i] < 0.0 || bindprobs[i] > 1.0 ){
-        check_passed = false;
-      }
-      //assert(bindprobs[i] >= 0.0);
-      //assert(bindprobs[i] <= 1.0);
-    }
-    if(!check_passed){
-        cout << endl << endl << endl;
-        cerr << "Marginals problem ";
-        cerr << "FINAL Z " << Zt_final << endl;
-        cerr << "====" << endl;
-        cerr << final_Z << endl;
-        cerr << "BINDPROBS" << endl;
-        cerr << bindprobs << endl;
-        assert(false);
-    }
-
-
-    //DEBUG
-    /*
-    cout << endl;
-    cerr << "=====DEBUG=====" << endl;
-
-    //cerr << "Backward_Zt[0] " << backward_Zt[0] << endl;
-    cerr << "Forward_Zt " << forward_Zt << endl;
-    //cerr << "Backward_Zt " << backward_Zt << endl;
-    //cerr << "Final Zts " << final_Zt << endl;
-    cerr << "Final Zs " << final_Z << endl;
-    //assert(false);
-    /*
-    for(int i = 1;i< n;i++){
-      assert(final_Zt[0] == final_Zt[i]);
-    }
-    */
-    //cerr << "FOOBAR" << endl;
-    //cout << bindprobs << endl;
+    /**/
     return this->expr_from_config(_sites, length, seq_num, bindprobs);
 }
 
@@ -305,8 +262,7 @@ double Markov_ExprFunc::expr_from_config(const SiteVec& _sites, int length, int 
 
   //TODO: do I need to make it negative?....
   //TODO: check one_qbtm_per_crm only once, higher up.
-  double Z_on = exp(-1.0*sum_total)*par.basalTxps[ one_qbtm_per_crm ? 0 : seq_num ];
-
+  double Z_on = exp(sum_total)*par.basalTxps[ one_qbtm_per_crm ? 0 : seq_num ];
   return Z_on / (1.0 + Z_on);
 
 }

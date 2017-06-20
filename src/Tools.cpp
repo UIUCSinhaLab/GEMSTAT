@@ -936,7 +936,7 @@ double std_dev( const vector< double >& x )
     double* data = new double[ x.size() ];
     for ( int i = 0; i < x.size(); i++ ) data[ i ] = x[ i ];
     double ret_result = gsl_stats_sd( data, 1, x.size() );
-    delete data;
+    delete[] data;
     return ret_result;
 }
 
@@ -1002,7 +1002,7 @@ double pgp( const vector<double>& profile1, const vector<double>& profile2, doub
 	for ( int i = 0; i < profile2.size(); i++ ) {
 		if (profile2[i] > max2) max2 = profile2[i];
 	}
-	
+
 	double max1 = 0;
 	for( int i = 0; i < profile1.size(); i++ ){
 		if( profile1[ i ] > max1 ) max1 = profile1[ i ];
@@ -1158,11 +1158,11 @@ double wted_least_square( const vector< double >& x, const vector< double >& y, 
 	on_xy = 0;
 	off_x2 = 0;
 	on_x2 = 0;
-	
+
 	int off_count = 0;
 	int on_count;
 	for( int i = 0; i < n; i++ ){
-		
+
 		if( y[ i ] < on_thr ){
 			off_xy += x[ i ] * y[ i ];
 			off_x2 += x[ i ] * x[ i ];
@@ -1172,7 +1172,7 @@ double wted_least_square( const vector< double >& x, const vector< double >& y, 
 			on_xy += x[ i ] * y[ i ];
 			on_x2 += x[ i ] * x[ i ];
 		}
-		
+
 	}
 	on_count = n - off_count;
 
@@ -1189,7 +1189,7 @@ double wted_least_square( const vector< double >& x, const vector< double >& y, 
     for ( int i = 0; i < n; i++ ) {
     	if( y[ i ] < on_thr ){
 		rss_off += ( y[ i ] - beta * x[ i ] ) * ( y[ i ] - beta * x[ i ] );
-	}    
+	}
 	else{
 		rss_on += ( y[ i ] - beta * x[ i ] ) * ( y[ i ] - beta * x[ i ] );
 	}
