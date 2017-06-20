@@ -15,6 +15,8 @@ ModelType getModelOption( const string& modelOptionStr )
     if ( toupperStr( modelOptionStr ) == "QUENCHING" ) return QUENCHING;
     if ( toupperStr( modelOptionStr ) == "CHRMOD_UNLIMITED" ) return CHRMOD_UNLIMITED;
     if ( toupperStr( modelOptionStr ) == "CHRMOD_LIMITED" ) return CHRMOD_LIMITED;
+    if ( toupperStr( modelOptionStr ) == "RATES" ) return RATES;
+    if ( toupperStr( modelOptionStr ) == "MARKOV" ) return MARKOV;
 
     cerr << "modelOptionStr is not a valid model option" << endl;
     exit(1);
@@ -28,6 +30,8 @@ string getModelOptionStr( ModelType modelOption )
     if ( modelOption == QUENCHING ) return "Quenching";
     if ( modelOption == CHRMOD_UNLIMITED ) return "ChrMod_Unlimited";
     if ( modelOption == CHRMOD_LIMITED ) return "ChrMod_Limited";
+    if ( modelOption == RATES ) return "Rates";
+    if ( modelOption == MARKOV ) return "Markov";
 
     return "Invalid";
 }
@@ -94,6 +98,17 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
     case CHRMOD_UNLIMITED :
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
         return_exprfunc = new ChrModUnlimited_ExprFunc( this->motifs,
+                          this->intFunc,
+                          this->actIndicators,
+                          this->maxContact,
+                          this->repIndicators,
+                          this->repressionMat,
+                          this->repressionDistThr,
+                          parToPass );
+        break;
+    case MARKOV:
+        parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
+        return_exprfunc = new Markov_ExprFunc( this->motifs,
                           this->intFunc,
                           this->actIndicators,
                           this->maxContact,

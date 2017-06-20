@@ -17,7 +17,7 @@ ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFun
 
 }
 
-inline void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
+void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
   boundaries.clear();
 
   if( !one_qbtm_per_crm )
@@ -40,7 +40,7 @@ inline void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length,
   }
 }
 
-inline void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
+void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
   bindingWts.clear();
   bindingWts.push_back( 1.0 );
   int n = sites.size();
@@ -112,6 +112,185 @@ double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const 
   }
   //         return par.expRatio * logistic( log( par.basalTxp ) + totalEffect );
   return logistic( par.basalTxps[ seq_num ] + totalEffect );
+}
+
+double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
+{
+  boundaries.clear();
+
+  if( !one_qbtm_per_crm )
+      seq_num = 0;
+  // store the sequence
+  int n = _sites.size();
+  sites = SiteVec(_sites);
+  sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
+  boundaries.push_back( 0 );
+  double range = max( intFunc->getMaxDist(), repressionDistThr );
+  for ( int i = 1; i <= n; i++ )
+  {
+      int j;
+      for ( j = i - 1; j >= 1; j-- )
+      {
+          if ( ( sites[i].start - sites[j].start ) > range ) break;
+      }
+      int boundary = j;
+      boundaries.push_back( boundary );
+  }
+
+  bindingWts.clear();
+  bindingWts.push_back( 1.0 );
+  for ( int i = 1; i <= n; i++ )
+  {
+      bindingWts.push_back( par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio );
+  }
+
+    // initialization
+    vector< double > Z( n + 1 );
+    Z[0] = 1.0;
+    vector< double > Zt( n + 1 );
+    Zt[0] = 1.0;
+
+    // recurrence forward
+    for ( int i = 1; i <= n; i++ )
+    {
+        double sum = Zt[boundaries[i]];
+        for ( int j = boundaries[i] + 1; j < i; j++ )
+        {
+            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+            sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
+        }
+        Z[ i ] = bindingWts[ i ] * sum;
+        Zt[i] = Z[i] + Zt[i - 1];
+    }
+
+    vector< double > forward_Z(Z);
+    vector< double > forward_Zt(Zt);
+
+    //reverse the sites.
+    SiteVec reversed_sites(n);
+    int sites_size = _sites.size();
+    for(int i = sites_size-1;i >= 0;i-- ){
+      reversed_sites.push_back(Site(_sites[i]));
+      reversed_sites[i].strand = (int)(1 - reversed_sites[i].strand);
+      reversed_sites[i].start = length - reversed_sites[i].start - motifs[sites[i].factorIdx].length(); //TODO: need to subtract length of motif, currently unavailable.
+
+    }
+    //cerr << "MADE IT HERE" << endl;
+
+    sites.clear();
+    //initialize the sites and boundaries and whatnot.
+    setupSitesAndBoundaries(_sites,length,seq_num);
+    // compute the Boltzman weights of binding for all sites
+    setupBindingWeights(factorConcs);
+
+
+    Z = vector<double>( n + 1 );//reallocate
+    Z[0] = 1.0;
+    Zt = vector<double>( n + 1 );//reallocate
+    Zt[0] = 1.0;
+
+    // recurrence backward
+    for ( int i = 1; i <= n; i++ )
+    {
+        double sum = Zt[boundaries[i]];
+        for ( int j = boundaries[i] + 1; j < i; j++ )
+        {
+            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+            sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
+        }
+        Z[ i ] =  sum*bindingWts[i];
+        Zt[i] = Z[i] + Zt[i - 1] ;
+    }
+
+    vector< double > backward_Z(0);
+    //vector< double > backward_Zt(0);
+    for(int i = n;i>0;i--){
+      backward_Z.push_back(Z[i]);
+    //  backward_Zt.push_back(Zt[i]);
+    }
+
+    vector< double > final_Z(n,0.0);
+    //vector< double > final_Zt(n,0.0);
+
+    vector< double > bindprobs(n,0.0);
+
+    double Zt_final = forward_Zt[forward_Zt.size()-1];
+    bool check_passed = true;
+    for(int i = 0;i < n;i++){
+      final_Z[i] = forward_Z[i+1] * backward_Z[i];
+      //final_Zt[i] = forward_Zt[i+1] * backward_Zt[i];
+
+      bindprobs[i] = (final_Z[i] +0.00000001)/ (Zt_final + 0.00000001); //TODO: check that all Zt are the same.
+      //TODO: why do I need a whitening factor!?
+
+      if( bindprobs[i] < 0.0 || bindprobs[i] > 1.0 ){
+        check_passed = false;
+      }
+      //assert(bindprobs[i] >= 0.0);
+      //assert(bindprobs[i] <= 1.0);
+    }
+    if(!check_passed){
+        cout << endl << endl << endl;
+        cerr << "Marginals problem ";
+        cerr << "FINAL Z " << Zt_final << endl;
+        cerr << "====" << endl;
+        cerr << final_Z << endl;
+        cerr << "BINDPROBS" << endl;
+        cerr << bindprobs << endl;
+        assert(false);
+    }
+
+
+    //DEBUG
+    /*
+    cout << endl;
+    cerr << "=====DEBUG=====" << endl;
+
+    //cerr << "Backward_Zt[0] " << backward_Zt[0] << endl;
+    cerr << "Forward_Zt " << forward_Zt << endl;
+    //cerr << "Backward_Zt " << backward_Zt << endl;
+    //cerr << "Final Zts " << final_Zt << endl;
+    cerr << "Final Zs " << final_Z << endl;
+    //assert(false);
+    /*
+    for(int i = 1;i< n;i++){
+      assert(final_Zt[0] == final_Zt[i]);
+    }
+    */
+    //cerr << "FOOBAR" << endl;
+    //cout << bindprobs << endl;
+    return this->expr_from_config(_sites, length, seq_num, bindprobs);
+}
+
+double Markov_ExprFunc::expr_from_config(const SiteVec& _sites, int length, int seq_num, const vector< double >& marginals){
+  double sum_total = 0.0;
+  int n = _sites.size();
+
+
+  assert(_sites.size() == marginals.size());
+
+  for(int i = 0; i < n; i++){
+
+    double log_effect = 0.0;
+
+    if( actIndicators[ _sites[ i ].factorIdx ] )
+    {
+        log_effect = log(par.txpEffects[ _sites[ i ].factorIdx ]);
+    }
+    if( repIndicators[ _sites[ i ].factorIdx ] )
+    {
+        log_effect = log(par.repEffects[ _sites[ i ].factorIdx ]);
+    }
+
+    sum_total += log_effect*marginals[i];
+  }
+
+  //TODO: do I need to make it negative?....
+  //TODO: check one_qbtm_per_crm only once, higher up.
+  double Z_on = exp(-1.0*sum_total)*par.basalTxps[ one_qbtm_per_crm ? 0 : seq_num ];
+
+  return Z_on / (1.0 + Z_on);
+
 }
 
 ModelType ExprFunc::modelOption = QUENCHING;

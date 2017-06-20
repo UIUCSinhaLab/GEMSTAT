@@ -501,7 +501,7 @@ double gsl_obj_f( const gsl_vector* v, void* params )
 
 void gsl_obj_df( const gsl_vector* v, void* params, gsl_vector* grad )
 {
-    double step = 1.0E-3;
+    double step = 1.0E-6;
     numeric_deriv( grad, gsl_obj_f, v, params, step );
 }
 

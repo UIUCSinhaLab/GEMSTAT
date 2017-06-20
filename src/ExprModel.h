@@ -14,7 +14,9 @@ typedef enum ModelType
     DIRECT,                                       // direct interaction between TF and BTM, repressor works through BTM
     QUENCHING,                                    // repressor stops activator from interacting with BTM
     CHRMOD_UNLIMITED,                             // repressor works by chromatin modification (making it unaccessible), unlimited activation
-    CHRMOD_LIMITED                                // repressor works by chromatin modification (making it unaccessible), limited activation
+    CHRMOD_LIMITED,                                // repressor works by chromatin modification (making it unaccessible), limited activation
+    RATES,
+    MARKOV
 } ModelType;
 
 #include "ExprPar.h"
