@@ -124,6 +124,8 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
   int n = _sites.size();
   sites = SiteVec(_sites);
   sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
+  sites.push_back(Site());//and another at the end
+  sites[sites.size()-1].start = length + 1000;
   boundaries.push_back( 0 );
   double range = max( intFunc->getMaxDist(), repressionDistThr );
   for ( int i = 1; i <= n; i++ )
@@ -136,6 +138,28 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
       int boundary = j;
       boundaries.push_back( boundary );
   }
+  boundaries.push_back(n);//self-boundary for ending pseudosite?
+
+  vector<int> rev_bounds(boundaries.size(), n+1);
+  rev_bounds[rev_bounds.size()-1] = n+1;
+  rev_bounds[0] = 1;
+  for ( int i = n; i > 0; i-- )
+  {
+      int j;
+      for ( j = i+1; j <= n; j++ )
+      {
+          if ( ( sites[j].start - sites[i].start) > range ) break;
+      }
+      int boundary = j;
+      rev_bounds[i] = ( boundary );
+  }
+  rev_bounds.push_back(n+1);
+  assert(rev_bounds[n] == n+1);
+
+  cerr << "BOUNDARIES " << n << endl;
+  cerr << boundaries << endl;
+  cerr << "rev bounds " << endl;
+  cerr << rev_bounds << endl;
 
   bindingWts.clear();
   bindingWts.push_back( 1.0 );
@@ -143,12 +167,18 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
   {
       bindingWts.push_back( par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio );
   }
+  bindingWts.push_back(1.0);
 
     // initialization
-    vector< double > Z( n + 1 );
+    vector< double > Z( n + 2 );
     Z[0] = 1.0;
-    vector< double > Zt( n + 1 );
+    vector< double > Zt( n + 2 );
     Zt[0] = 1.0;
+
+    vector< double > backward_Z(n+2,0.0);
+    backward_Z[backward_Z.size()-1] = 1.0;
+    vector< double > backward_Zt(n+2,0.0);
+    backward_Zt[backward_Zt.size()-1] = 1.0;
 
     // recurrence forward
     for ( int i = 1; i <= n; i++ )
@@ -163,57 +193,45 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
         Zt[i] = Z[i] + Zt[i - 1];
     }
 
-    vector< double > forward_Z(Z);
-    vector< double > forward_Zt(Zt);
-
-    //reverse the sites.
-    SiteVec reversed_sites(n);
-    int sites_size = _sites.size();
-    for(int i = sites_size-1;i >= 0;i-- ){
-      reversed_sites.push_back(Site(_sites[i]));
-      reversed_sites[i].strand = (int)(1 - reversed_sites[i].strand);
-      reversed_sites[i].start = length - reversed_sites[i].start - motifs[sites[i].factorIdx].length(); //TODO: need to subtract length of motif, currently unavailable.
-
-    }
-    //cerr << "MADE IT HERE" << endl;
-
-    sites.clear();
-    //initialize the sites and boundaries and whatnot.
-    setupSitesAndBoundaries(_sites,length,seq_num);
-    // compute the Boltzman weights of binding for all sites
-    setupBindingWeights(factorConcs);
-
-
-    Z = vector<double>( n + 1 );//reallocate
-    Z[0] = 1.0;
-    Zt = vector<double>( n + 1 );//reallocate
-    Zt[0] = 1.0;
-
     // recurrence backward
-    for ( int i = 1; i <= n; i++ )
+    for ( int i = n; i >= 1; i-- )
     {
-        double sum = Zt[boundaries[i]];
-        for ( int j = boundaries[i] + 1; j < i; j++ )
+        double sum = backward_Zt[rev_bounds[i]];
+        for ( int j = rev_bounds[i] - 1; j > i; j-- )
         {
             if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
-            sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
+            sum += compFactorInt( sites[ i ], sites[ j ] ) * backward_Z[ j ];
         }
-        Z[ i ] =  sum*bindingWts[i];
-        Zt[i] = Z[i] + Zt[i - 1] ;
+        backward_Z[ i ] =  sum*bindingWts[i];
+        backward_Zt[i] = backward_Z[i] + backward_Zt[i + 1] ;
     }
 
-    vector< double > backward_Z(0);
-    //vector< double > backward_Zt(0);
-    for(int i = n;i>0;i--){
-      backward_Z.push_back(Z[i]);
-    //  backward_Zt.push_back(Zt[i]);
+
+
+    vector< double > final_Z(Zt.size(),0.0);
+    vector< double > final_Zt(Zt.size(),0.0);
+
+    vector< double > bindprobs(Zt.size(),0.0);
+
+    for(int i = 0;i<Zt.size();i++){
+      final_Z[i] = Z[i] * backward_Z[i];
+      final_Zt[i] = Zt[i] * backward_Zt[i];
     }
 
-    vector< double > final_Z(n,0.0);
-    //vector< double > final_Zt(n,0.0);
 
-    vector< double > bindprobs(n,0.0);
+    cout << endl;
+    cerr << "=====DEBUG=====" << endl;
 
+    cerr << "Forward_Zt " << endl << Zt << endl;
+    cerr << "====" << endl;
+    cerr << "Backward_Zt " << endl << backward_Zt << endl;
+    cerr << "====" << endl;
+    cerr << "final_Zt " << endl << final_Zt << endl;
+    cerr << "====" << endl;
+    cerr << "final_Z " << endl << final_Z << endl;
+    cerr << "====" << endl;
+    assert(false);
+    /*
     double Zt_final = forward_Zt[forward_Zt.size()-1];
     bool check_passed = true;
     for(int i = 0;i < n;i++){
