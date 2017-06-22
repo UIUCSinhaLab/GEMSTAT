@@ -233,7 +233,7 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
     cerr << "====" << endl;
     cerr << "final_Z " << endl << final_Z << endl;
     cerr << "====" << endl;
-    /**/
+    */
     return this->expr_from_config(_sites, length, seq_num, bindprobs);
 }
 
