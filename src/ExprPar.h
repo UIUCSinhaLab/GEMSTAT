@@ -62,7 +62,7 @@ class ExprPar
         vector < double > betas;
         vector < double > energyThrFactors;
         int nSeqs;
-        
+
         static ModelType modelOption;             // model option
         static SearchType searchOption;           // search option: 0 - unconstrained search; 1 - constrained search
         static bool one_qbtm_per_crm;
@@ -142,6 +142,9 @@ class ParFactory
       const ExprPar& getDefaults(){return defaults;}
 
       ExprPar load(const string& file);//Use this.
+      ExprPar load_old(istream& fin);//Don't use this directly
+      ExprPar load_1_6a(istream& fin);//Don't use this directly TODO:Add exceptions
+
 
       const ExprModel& expr_model;
     private:

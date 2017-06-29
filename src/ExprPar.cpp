@@ -2,6 +2,12 @@
 #include "ExprPredictor.h"
 #include "conf/ExprParConf.hpp"
 
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
+
 
 string parameterSpaceStr(ThermodynamicParameterSpace in){
     if(in == CONSTRAINED_SPACE)
@@ -458,12 +464,65 @@ ExprPar ParFactory::randSamplePar( const gsl_rng* rng) const
 
 
 ExprPar ParFactory::load(const string& file){
-
-  ExprPar tmp_par = create_expr_par();
-  tmp_par = changeSpace(tmp_par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );//TODO: get rid of this so that logistic models are stored in the same space with the other models.
+  ExprPar ret_par;
   // open the file
   ifstream fin( file.c_str() );
   if ( !fin ){ cerr << "Cannot open parameter file " << file << endl; exit( 1 ); }
+
+  std::string header;
+  std::getline(fin,header);
+
+  if(0 == header.compare("#GSPAR1.6a")) {//TODO: remove any whitespace off the end of header.
+    ret_par = load_1_6a(fin);
+  }else{
+    fin.seekg(0,fin.beg);
+    ret_par = load_old(fin);
+  }
+
+  fin.close();
+
+  return ret_par;
+}
+
+ExprPar ParFactory::load_1_6a(istream& fin){
+    ExprPar tmp_par = create_expr_par();
+    tmp_par = changeSpace(tmp_par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );//TODO: get rid of this so that logistic models are stored in the same space with the other models.
+
+    vector< string > motifNames;
+
+    cerr << "LOADING 1.6 parfile" << endl;
+    //https://stackoverflow.com/questions/7868936/read-file-line-by-line
+    //https://stackoverflow.com/questions/236129/split-a-string-in-c
+    std:string line;
+    while(std::getline(fin,line)){
+        std::istringstream foobar(line);
+        vector<string> tokens;
+        copy(istream_iterator<string>(foobar),
+            istream_iterator<string>(),
+            back_inserter(tokens));
+
+        string cmd = tokens[0];
+        if(0==cmd.compare("TF")){
+
+        }else if(0==cmd.compare("TFET")){
+          
+        }
+
+    }
+    cerr << "This feature is not yet fully implemented. Sorry." << endl;
+    exit(1);
+
+
+
+    return tmp_par;
+}
+
+ExprPar ParFactory::load_old(istream& fin){
+
+  ExprPar tmp_par = create_expr_par();
+  tmp_par = changeSpace(tmp_par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );//TODO: get rid of this so that logistic models are stored in the same space with the other models.
+
+
 
   // read the factor information
   vector< string > motifNames( expr_model.getNFactors() );
