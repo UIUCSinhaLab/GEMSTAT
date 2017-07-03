@@ -211,17 +211,19 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
 
 
     vector< double > final_Z(Zt.size()-2,0.0);
-    vector< double > final_Zt(Zt.size()-2,0.0);
+    //vector< double > final_Zt(Zt.size()-2,0.0);
 
     vector< double > bindprobs(Zt.size()-2,0.0);
 
     for(int i = 0;i<n;i++){
+      //Notice the i+1, we are skipping the pseudosite.
       final_Z[i] = Z[i+1] * backward_Z[i+1];
-      final_Zt[i] = Zt[i+1] * backward_Zt[i+1];
-      bindprobs[i] = final_Z[i] / final_Zt[i];
+      //final_Zt[i] = Zt[i+1] * backward_Zt[i+1];
+      //bindprobs[i] = final_Z[i] / final_Zt[i];
+      bindprobs[i] = final_Z[i] / backward_Zt[1];
     }
 
-    /*
+    #ifdef DEBUG
     cout << endl;
     cerr << "=====DEBUG=====" << endl;
 
@@ -229,11 +231,11 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
     cerr << "====" << endl;
     cerr << "Backward_Zt " << endl << backward_Zt << endl;
     cerr << "====" << endl;
-    cerr << "final_Zt " << endl << final_Zt << endl;
-    cerr << "====" << endl;
+    //cerr << "final_Zt " << endl << final_Zt << endl;
+    //cerr << "====" << endl;
     cerr << "final_Z " << endl << final_Z << endl;
     cerr << "====" << endl;
-    */
+    #endif
     return this->expr_from_config(_sites, length, seq_num, bindprobs);
 }
 
