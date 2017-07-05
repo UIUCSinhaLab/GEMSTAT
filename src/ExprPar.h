@@ -18,6 +18,20 @@ enum ThermodynamicParameterSpace {
 
 string parameterSpaceStr(ThermodynamicParameterSpace in);
 
+typedef double GEMSTAT_PAR_FLOAT_T;
+
+typedef struct {
+  GEMSTAT_PAR_FLOAT_T bindingWeight;
+  GEMSTAT_PAR_FLOAT_T txpEffect;
+  GEMSTAT_PAR_FLOAT_T repEffect;
+} GEMSTAT_TF_DATA_T;
+
+typedef struct {
+  GEMSTAT_PAR_FLOAT_T basal_trans;
+  GEMSTAT_PAR_FLOAT_T pi;
+  GEMSTAT_PAR_FLOAT_T beta;
+} GEMSTAT_PROMOTER_DATA_T;
+
 /* ExprPar class: the parameters of the expression model */
 class ExprPar
 {
@@ -38,7 +52,10 @@ class ExprPar
         // access methods
         int nFactors() const { return maxBindingWts.size(); }
 
-        double getBetaForSeq(int seqID) const; //Returns the appropriate value of beta for this sequence. This allows some sequences to share one beta value, while others share another, or each have their own.
+        GEMSTAT_PAR_FLOAT_T getBetaForSeq(int enhancer_ID) const; //Returns the appropriate value of beta for this sequence. This allows some sequences to share one beta value, while others share another, or each have their own.
+
+        GEMSTAT_PROMOTER_DATA_T getPromoterData(int enhancer_ID) const;
+
 
         //get the parameters into a vector.
         void getRawPars(vector< double >& pars) const;//Temporary until these edits are all done.
@@ -50,19 +67,21 @@ class ExprPar
         ThermodynamicParameterSpace my_space;
         const ParFactory* my_factory;
 
+
+
         // parameters
-        vector < double > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
+        vector < GEMSTAT_PAR_FLOAT_T > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
         Matrix factorIntMat;                      // (maximum) interactions between pairs of factors: omega(f,f')
-        vector < double > txpEffects;             // transcriptional effects: alpha for Direct and Quenching model, exp(alpha) for Logistic model (so that the same default values can be used). Equal to 1 if a TF is not an activator under the Quenching model
-        vector < double > repEffects;             // repression effects: beta under ChrMod models (the equlibrium constant of nucleosome association with chromatin). Equal to 0 if a TF is not a repressor.
-        vector < double > basalTxps;              // basal transcription: q_p for Direct and Quenching model, exp(alpha_0) for Logistic model (so that the same default value can be used)
-        vector < double > pis;
+        vector < GEMSTAT_PAR_FLOAT_T > txpEffects;             // transcriptional effects: alpha for Direct and Quenching model, exp(alpha) for Logistic model (so that the same default values can be used). Equal to 1 if a TF is not an activator under the Quenching model
+        vector < GEMSTAT_PAR_FLOAT_T > repEffects;             // repression effects: beta under ChrMod models (the equlibrium constant of nucleosome association with chromatin). Equal to 0 if a TF is not a repressor.
+        vector < GEMSTAT_PAR_FLOAT_T > basalTxps;              // basal transcription: q_p for Direct and Quenching model, exp(alpha_0) for Logistic model (so that the same default value can be used)
+        vector < GEMSTAT_PAR_FLOAT_T > pis;
         //     double expRatio; 		// constant factor of measurement to prediction
 
-        vector < double > betas;
-        vector < double > energyThrFactors;
+        vector < GEMSTAT_PAR_FLOAT_T > betas;
+        vector < GEMSTAT_PAR_FLOAT_T > energyThrFactors;
         int nSeqs;
-        
+
         static ModelType modelOption;             // model option
         static SearchType searchOption;           // search option: 0 - unconstrained search; 1 - constrained search
         static bool one_qbtm_per_crm;

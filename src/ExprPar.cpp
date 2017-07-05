@@ -800,11 +800,22 @@ void ExprPar::getRawPars( vector< double >& pars) const
     }
 }
 
-double ExprPar::getBetaForSeq(int seqID) const {
-    if(betas.size() == 1)
-      return betas[0];
-    else
-      return betas[seqID];
+GEMSTAT_PAR_FLOAT_T ExprPar::getBetaForSeq(int enhancer_ID) const {
+    int use_enhancerID = (this->my_factory->expr_model.shared_scaling ? 0 : enhancer_ID);
+    return betas[ use_enhancerID ];
+}
+
+GEMSTAT_PROMOTER_DATA_T ExprPar::getPromoterData(int enhancer_ID) const {
+    GEMSTAT_PROMOTER_DATA_T the_return_value;
+
+    //TODO: we can create a more complicated mapping later.
+    int use_enhancerID = (this->my_factory->expr_model.shared_scaling ? 0 : enhancer_ID);
+    int use_basal = (this->my_factory->expr_model.one_qbtm_per_crm ? 0 : use_enhancerID);
+    the_return_value.basal_trans = basalTxps[ use_basal ];
+    the_return_value.pi = pis[ use_enhancerID ];
+    the_return_value.beta = betas[ use_enhancerID ];
+
+    return the_return_value;
 }
 
 void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntMatrix& coopMat ) const
