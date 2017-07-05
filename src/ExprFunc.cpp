@@ -243,6 +243,7 @@ double Markov_ExprFunc::expr_from_config(const SiteVec& _sites, int length, int 
   double sum_total = 0.0;
   int n = _sites.size();
 
+  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
 
   assert(_sites.size() == marginals.size());
 
@@ -264,7 +265,7 @@ double Markov_ExprFunc::expr_from_config(const SiteVec& _sites, int length, int 
 
   //TODO: do I need to make it negative?....
   //TODO: check one_qbtm_per_crm only once, higher up.
-  double Z_on = exp(sum_total)*par.basalTxps[ one_qbtm_per_crm ? 0 : seq_num ];
+  double Z_on = exp(sum_total)*my_promoter.basal_trans;
   return Z_on / (1.0 + Z_on);
 
 }
