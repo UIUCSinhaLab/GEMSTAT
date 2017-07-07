@@ -14,6 +14,7 @@ ObjType getObjOption( const string& objOptionStr )
     if ( toupperStr( objOptionStr ) == "CROSS_CORR" ) return CROSS_CORR;
     if ( toupperStr( objOptionStr ) == "PGP" ) return PGP;
     if ( toupperStr( objOptionStr ) == "LOGISTIC_REGRESSION") return LOGISTIC_REGRESSION;
+    if ( toupperStr( objOptionStr ) == "PEAK_WEIGHTED") return PEAK_WEIGHTED;
 
     cerr << "objOptionStr is not a valid option of objective function" << endl;
     exit(1);
@@ -27,6 +28,7 @@ string getObjOptionStr( ObjType objOption )
     if ( objOption == CROSS_CORR ) return "Cross_Corr";
     if ( objOption == PGP ) return "PGP";
     if ( objOption == LOGISTIC_REGRESSION ) return "LOGISTIC_REGRESSION";
+    if ( objOption == PEAK_WEIGHTED) return "PEAK_WEIGHTED";
 
     return "Invalid";
 }

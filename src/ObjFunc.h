@@ -70,4 +70,10 @@ private:
   //vector<double> cache_sq_diffs;
 };
 
+class PeakWeightedObjFunc: public ObjFunc {
+public:
+  ~PeakWeightedObjFunc(){}
+  double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
+};
+
 #endif
