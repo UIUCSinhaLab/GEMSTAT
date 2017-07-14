@@ -114,6 +114,7 @@ double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const 
   // compute the Boltzman weights of binding for all sites
   setupBindingWeights(factorConcs);
 
+  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
 
   // total occupancy of each factor
   vector< double > factorOcc( motifs.size(), 0 );
@@ -132,8 +133,8 @@ double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const 
       // length correction
       //             totalEffect = totalEffect / (double)length;
   }
-  //         return par.expRatio * logistic( log( par.basalTxp ) + totalEffect );
-  return logistic( par.basalTxps[ seq_num ] + totalEffect );
+  //         return par.expRatio * logistic( log( my_promoter.basal_trans ) + totalEffect );
+  return logistic( my_promoter.basal_trans + totalEffect );
 }
 
 ModelType ExprFunc::modelOption = QUENCHING;
