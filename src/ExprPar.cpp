@@ -810,7 +810,7 @@ GEMSTAT_PROMOTER_DATA_T ExprPar::getPromoterData(int enhancer_ID) const {
 
     //TODO: we can create a more complicated mapping later.
     int use_enhancerID = (this->my_factory->expr_model.shared_scaling ? 0 : enhancer_ID);
-    int use_basal = (this->my_factory->expr_model.one_qbtm_per_crm ? 0 : use_enhancerID);
+    int use_basal = (this->my_factory->expr_model.one_qbtm_per_crm ? use_enhancerID : 0);
     the_return_value.basal_trans = basalTxps[ use_basal ];
     the_return_value.pi = pis[ use_enhancerID ];
     the_return_value.beta = betas[ use_enhancerID ];
