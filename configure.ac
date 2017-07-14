@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 #AC_PREREQ([2.69])
-AC_INIT(gemstat, 1.1)
+AC_INIT(gemstat, 1.6)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_SRCDIR([src/seq2expr.cpp])
@@ -25,7 +25,7 @@ broken) betaopt="broken" ;;
 separate) betaopt="separate" ;;
 together) betaopt="together" ;;
 *) AC_MSG_ERROR([bad value ${withvar} for --with-beta-optimize])  ;;
-esac], [betaopt="broken"])
+esac], [betaopt="together"])
 AM_CONDITIONAL([BETAOPTBROKEN], [test "x${betaopt}" = "xbroken"])
 AM_CONDITIONAL([BETAOPTSEPARATE], [test "x${betaopt}" = "xseparate"])
 AM_CONDITIONAL([BETAOPTTOGETHER], [test "x${betaopt}" = "xtogether"])
