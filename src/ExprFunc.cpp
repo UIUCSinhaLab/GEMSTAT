@@ -91,7 +91,7 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
     
     GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
     
-    double promoterOcc = efficiency * my_promoter.basal_trans / ( 1.0 + efficiency * my_promoter.basal_trans /** ( 1 + par.pis[ seq_num ] )*/ );
+    double promoterOcc = efficiency * my_promoter.basal_trans / ( 1.0 + efficiency * my_promoter.basal_trans /** ( 1 + my_promoter.pi )*/ );
     #ifdef DEBUG
     if(promoterOcc < 0.0 || promoterOcc != promoterOcc){
 	cerr << "Ridiculous in Direct!" << endl;
