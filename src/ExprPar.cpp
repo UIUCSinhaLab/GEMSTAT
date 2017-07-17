@@ -540,10 +540,8 @@ ExprPar ParFactory::load_1_6a(istream& fin){
             0 == tokens[1].compare("="));
     //assert(tokens.size() == 2 + tmp_par.basalTxps.size());
     //If there is one provided, but we are using multiple qbtm_per (or one and one)
-    if( (expr_model.one_qbtm_per_crm ? nFactors() : 1) == reading_basal.size()){
-      //tmp_par.basalTxps.clear();
-      //std::copy(reading_basal.begin(),reading_basal.end(),tmp_par.basalTxps.begin());
-      tmp_par.basalTxps = reading_basal;
+    if( tmp_par.basalTxps.size() == reading_basal.size()){
+      std::copy(reading_basal.begin(),reading_basal.end(),tmp_par.basalTxps.begin());
     }else{//Mismatch size
       double avg = 0.0;
       for(tf_i = 0;tf_i<reading_basal.size();tf_i++){
@@ -576,7 +574,6 @@ ExprPar ParFactory::load_1_6a(istream& fin){
       the_pis.push_back(atof(tokens[tf_i].c_str()));
     }
     if(tmp_par.pis.size() == the_pis.size()){
-      tmp_par.pis.clear();
       std::copy(the_pis.begin(),the_pis.end(),tmp_par.pis.begin());
     }else{//Mismatch size
       double avg = 0.0;
@@ -602,7 +599,6 @@ ExprPar ParFactory::load_1_6a(istream& fin){
       the_betas.push_back(atof(tokens[tf_i].c_str()));
     }
     if(tmp_par.betas.size() == the_betas.size()){
-      tmp_par.betas.clear();
       std::copy(the_betas.begin(),the_betas.end(),tmp_par.betas.begin());
     }else{//Mismatch size
       double avg = 0.0;
@@ -613,7 +609,6 @@ ExprPar ParFactory::load_1_6a(istream& fin){
       tmp_par.betas.assign(tmp_par.betas.size(),avg);
     }
   }
-
   //TODO: load Cooperativities
   // read the cooperative interactions
   string factor1, factor2;
@@ -628,6 +623,7 @@ ExprPar ParFactory::load_1_6a(istream& fin){
       tmp_par.factorIntMat( idx2, idx1 ) = coopVal;
       //cout << factor1 << "\t" << factor2 << "\t" << idx1 << "\t" << idx2 << endl;
   }
+
   //TODO: load annotation thresholds
   double factor_thr_val;
   tmp_par.energyThrFactors.clear();
