@@ -471,14 +471,13 @@ ExprPar ParFactory::load(const string& file){
 
   std::string header;
   std::getline(fin,header);
+  fin.seekg(0,fin.beg);//Every loader can expect to be at the beginning of the file.
 
   if(0 == header.compare("#GSPAR1.6a")) {//TODO: remove any whitespace off the end of header.
     ret_par = load_1_6a(fin);
   }else{
-    fin.seekg(0,fin.beg);
     ret_par = load_old(fin);
   }
-
   fin.close();
 
   return ret_par;
@@ -490,27 +489,159 @@ ExprPar ParFactory::load_1_6a(istream& fin){
 
     vector< string > motifNames;
 
-    cerr << "LOADING 1.6 parfile" << endl;
+
+    std::string header;
+    std::getline(fin,header);
+    assert(0 == header.compare("#GSPAR1.6a"));
+
+    cerr << "LOADING 1.6a parfile" << endl;
     //https://stackoverflow.com/questions/7868936/read-file-line-by-line
     //https://stackoverflow.com/questions/236129/split-a-string-in-c
     std:string line;
-    while(std::getline(fin,line)){
-        std::istringstream foobar(line);
-        vector<string> tokens;
-        copy(istream_iterator<string>(foobar),
+    //std::istringstream line_ss;
+    vector<string> tokens;
+
+    //Read the TF lines.
+    int tf_i = 0;
+    for(tf_i = 0; tf_i < expr_model.getNFactors() && std::getline(fin,line);tf_i++){
+        tokens.clear();
+        std::istringstream line_ss(line);
+        copy(istream_iterator<string>(line_ss),
             istream_iterator<string>(),
             back_inserter(tokens));
 
-        string cmd = tokens[0];
-        if(0==cmd.compare("TF")){
-
-        }else if(0==cmd.compare("TFET")){
-          
+        //Read a TF line.
+        assert(tokens.size() == 3 || tokens.size() == 4);
+        motifNames.push_back(string(tokens[0]));
+        tmp_par.maxBindingWts[tf_i] = atof(tokens[1].c_str());
+        tmp_par.txpEffects[tf_i] = atof(tokens[2].c_str());
+        if(tokens.size() >= 4){
+          tmp_par.repEffects[tf_i] = atof(tokens[3].c_str());
         }
 
     }
-    cerr << "This feature is not yet fully implemented. Sorry." << endl;
-    exit(1);
+
+    //Expect the basal transcription line
+    tokens.clear();
+    std::getline(fin,line);
+    {
+    std::istringstream line_ss(line);
+    copy(istream_iterator<string>(line_ss),
+        istream_iterator<string>(),
+        back_inserter(tokens));
+    vector<double> reading_basal;
+    reading_basal.clear();
+    for(tf_i=2;tf_i<tokens.size();tf_i++){
+      reading_basal.push_back(atof(tokens[tf_i].c_str()));
+    }
+
+    assert(tokens.size() >= 3);
+    assert(0 == tokens[0].compare("basal_transcription") &&
+            0 == tokens[1].compare("="));
+    //assert(tokens.size() == 2 + tmp_par.basalTxps.size());
+    //If there is one provided, but we are using multiple qbtm_per (or one and one)
+    if( (expr_model.one_qbtm_per_crm ? nFactors() : 1) == reading_basal.size()){
+      //tmp_par.basalTxps.clear();
+      //std::copy(reading_basal.begin(),reading_basal.end(),tmp_par.basalTxps.begin());
+      tmp_par.basalTxps = reading_basal;
+    }else{//Mismatch size
+      double avg = 0.0;
+      for(tf_i = 0;tf_i<reading_basal.size();tf_i++){
+        avg += reading_basal[tf_i];
+      }
+      avg /= (reading_basal.size());
+      tmp_par.basalTxps.assign(tmp_par.basalTxps.size(),avg);
+    }
+  }
+
+    //Done reading the basal transcription
+    // factor name to index mapping
+    map< string, int > factorIdxMap;
+    for ( int i = 0; i < expr_model.getNFactors(); i++ )
+    {
+        factorIdxMap[motifNames[i]] = i;
+    }
+
+    //PIS
+    {
+    tokens.clear();
+    std::getline(fin,line);
+    std::istringstream line_ss(line);
+    copy(istream_iterator<string>(line_ss),
+        istream_iterator<string>(),
+        back_inserter(tokens));
+    vector< double > the_pis;
+    the_pis.clear();
+    for(tf_i=0;tf_i<tokens.size();tf_i++){
+      the_pis.push_back(atof(tokens[tf_i].c_str()));
+    }
+    if(tmp_par.pis.size() == the_pis.size()){
+      tmp_par.pis.clear();
+      std::copy(the_pis.begin(),the_pis.end(),tmp_par.pis.begin());
+    }else{//Mismatch size
+      double avg = 0.0;
+      for(tf_i = 0;tf_i<the_pis.size();tf_i++){
+        avg += the_pis[tf_i];
+      }
+      avg /= (the_pis.size());
+      tmp_par.pis.assign(tmp_par.pis.size(),avg);
+    }
+  }
+
+    //BETA
+    {
+    tokens.clear();
+    std::getline(fin,line);
+    std::istringstream line_ss(line);
+    copy(istream_iterator<string>(line_ss),
+        istream_iterator<string>(),
+        back_inserter(tokens));
+    vector< double > the_betas;
+    the_betas.clear();
+    for(tf_i=0;tf_i<tokens.size();tf_i++){
+      the_betas.push_back(atof(tokens[tf_i].c_str()));
+    }
+    if(tmp_par.betas.size() == the_betas.size()){
+      tmp_par.betas.clear();
+      std::copy(the_betas.begin(),the_betas.end(),tmp_par.betas.begin());
+    }else{//Mismatch size
+      double avg = 0.0;
+      for(tf_i = 0;tf_i<the_betas.size();tf_i++){
+        avg += the_betas[tf_i];
+      }
+      avg /= (the_betas.size());
+      tmp_par.betas.assign(tmp_par.betas.size(),avg);
+    }
+  }
+
+  //TODO: load Cooperativities
+  // read the cooperative interactions
+  string factor1, factor2;
+  double coopVal;
+  for( int i = 0; i < expr_model.getNumCoop(); i++ )
+  {
+      fin >> factor1 >> factor2 >> coopVal;
+      if( !factorIdxMap.count( factor1 ) || !factorIdxMap.count( factor2 ) ) throw RET_ERROR;
+      int idx1 = factorIdxMap[factor1];
+      int idx2 = factorIdxMap[factor2];
+      tmp_par.factorIntMat( idx1, idx2 ) = coopVal;
+      tmp_par.factorIntMat( idx2, idx1 ) = coopVal;
+      //cout << factor1 << "\t" << factor2 << "\t" << idx1 << "\t" << idx2 << endl;
+  }
+  //TODO: load annotation thresholds
+  double factor_thr_val;
+  tmp_par.energyThrFactors.clear();
+  while( fin >> factor_thr_val )
+  {
+      tmp_par.energyThrFactors.push_back( factor_thr_val );
+  }
+
+    //TODO: write output for this format.
+
+
+    //tmp_par.print(cerr,motifNames,expr_model.coopMat);
+    //cerr << "This feature is not yet fully implemented. Sorry." << endl;
+    //exit(1);
 
 
 
@@ -881,7 +1012,7 @@ void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntM
 {
 //    os.setf( ios::fixed );
 //    os.precision( 50 );
-
+    os << "#GSPAR1.6a" << endl; //par file version header.
     // print the factor information
     for ( int i = 0; i < nFactors(); i++ )
     {
@@ -891,22 +1022,33 @@ void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntM
     }
 
     // print the basal transcription
-    os << "basal_transcription = " << basalTxps[ 0 ] << endl;
+    os << "basal_transcription = " << basalTxps[ 0 ];
     for( int _i = 1; _i < basalTxps.size(); _i++ )
     {
-        os << basalTxps[ _i ] << endl;
+        os << "\t" << basalTxps[ _i ];
     }
+    os << endl;
 
     //print the pi vals
     for( int _i = 0; _i < pis.size(); _i++ )
     {
-        os << pis[ _i ] << endl;
+        if(_i > 0){
+          os << "\t";
+        }
+        os << pis[ _i ];
     }
+    os << endl;
+
     //print the beta values
     for( int i = 0; i < betas.size(); i++ )
     {
-        os << betas[ i ] << endl;
+      if(i > 0){
+        os << "\t";
+      }
+        os << betas[ i ];
     }
+    os << endl;
+
     // print the cooperative interactions
     for ( int i = 0; i < nFactors(); i++ )
     {
