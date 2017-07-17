@@ -18,7 +18,8 @@ enum ObjType
     CORR,                                         // Pearson correlation
     CROSS_CORR,                                   // cross correlation (maximum in a range of shifts)
     PGP,                                           // PGP score
-    LOGISTIC_REGRESSION                            // Logistic Regression
+    LOGISTIC_REGRESSION,                            // Logistic Regression
+    PEAK_WEIGHTED                                  // SSE with equal weight to peaks and non-peaks
 };
 
 ObjType getObjOption( const string& objOptionStr );
