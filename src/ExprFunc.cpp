@@ -17,7 +17,7 @@ ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFun
 
 }
 
-inline void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
+void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
   boundaries.clear();
 
   if( !one_qbtm_per_crm )
@@ -40,7 +40,7 @@ inline void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length,
   }
 }
 
-inline void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
+void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
   bindingWts.clear();
   bindingWts.push_back( 1.0 );
   int n = sites.size();
@@ -135,6 +135,179 @@ double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const 
   }
   //         return par.expRatio * logistic( log( my_promoter.basal_trans ) + totalEffect );
   return logistic( my_promoter.basal_trans + totalEffect );
+}
+
+double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
+{
+  boundaries.clear();
+
+  if( !one_qbtm_per_crm )
+      seq_num = 0;
+  // store the sequence
+  int n = _sites.size();
+  sites = SiteVec(_sites);
+  sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
+  sites.push_back(Site());//and another at the end
+  sites[sites.size()-1].start = length + 1000;
+  boundaries.push_back( 0 );
+  double range = max( intFunc->getMaxDist(), repressionDistThr );
+  for ( int i = 1; i <= n; i++ )
+  {
+      int j;
+      for ( j = i - 1; j >= 1; j-- )
+      {
+          if ( ( sites[i].start - sites[j].start ) > range ) break;
+      }
+      int boundary = j;
+      boundaries.push_back( boundary );
+  }
+  boundaries.push_back(n);//self-boundary for ending pseudosite?
+
+  vector<int> rev_bounds(boundaries.size(), n+1);
+  rev_bounds[rev_bounds.size()-1] = n+1;
+  rev_bounds[0] = 1;
+  for ( int i = n; i > 0; i-- )
+  {
+      int j;
+      for ( j = i+1; j <= n; j++ )
+      {
+          if ( ( sites[j].start - sites[i].start) > range ) break;
+      }
+      int boundary = j;
+      rev_bounds[i] = ( boundary );
+  }
+  rev_bounds.push_back(n+1);
+  assert(rev_bounds[n] == n+1);
+
+  /*
+  cerr << "BOUNDARIES " << n << endl;
+  cerr << boundaries << endl;
+  cerr << "rev bounds " << endl;
+  cerr << rev_bounds << endl;
+  */
+
+  bindingWts.clear();
+  bindingWts.push_back( 1.0 );
+  for ( int i = 1; i <= n; i++ )
+  {
+      bindingWts.push_back( par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio );
+  }
+  bindingWts.push_back(1.0);
+
+    // initialization
+    vector< double > Z( n + 2 );
+    Z[0] = 1.0;
+    vector< double > Zt( n + 2 );
+    Zt[0] = 1.0;
+
+    vector< double > backward_Z(n+2,0.0);
+    backward_Z[backward_Z.size()-1] = 1.0;
+    vector< double > backward_Z_sum(n+1,0.0);
+    vector< double > backward_Zt(n+2,0.0);
+    backward_Zt[backward_Zt.size()-1] = 1.0;
+
+    // recurrence forward
+    for ( int i = 1; i <= n; i++ )
+    {
+        double sum = Zt[boundaries[i]];
+        for ( int j = boundaries[i] + 1; j < i; j++ )
+        {
+            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+            sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
+        }
+        Z[ i ] = bindingWts[ i ] * sum;
+        Zt[i] = Z[i] + Zt[i - 1];
+    }
+
+    // recurrence backward
+    for ( int i = n; i >= 1; i-- )
+    {
+        double sum = backward_Zt[rev_bounds[i]];
+        for ( int j = rev_bounds[i] - 1; j > i; j-- )
+        {
+            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+            sum += compFactorInt( sites[ i ], sites[ j ] ) * backward_Z[ j ];
+        }
+        backward_Z_sum[i] = sum;
+        backward_Z[ i ] =  sum*bindingWts[i];
+        backward_Zt[i] = backward_Z[i] + backward_Zt[i + 1] ;
+    }
+
+
+
+    vector< double > final_Z(Zt.size()-2,0.0);
+    #ifdef DEBUG
+    vector< double > final_Zt(Zt.size()-2,0.0);//not used, for debug only.
+    bool problem = false;
+    #endif
+
+    vector< double > bindprobs(Zt.size()-2,0.0);
+
+    for(int i = 0;i<n;i++){
+      //Notice the i+1, we are skipping the pseudosite.
+      final_Z[i] = Z[i+1] * backward_Z_sum[i+1];
+      #ifdef DEBUG
+      final_Zt[i] = Zt[i+1] * backward_Zt[i+1];
+      #endif
+      //bindprobs[i] = final_Z[i] / final_Zt[i];
+      bindprobs[i] = final_Z[i] / backward_Zt[1];
+      #ifdef DEBUG
+      if( bindprobs[i] <= 0.0 || bindprobs[i] >= 1.0){
+        problem = true;
+      }
+      #else
+      assert(bindprobs[i] >= 0.0);
+      assert(bindprobs[i] <= 1.0);
+      #endif
+    }
+
+    #ifdef DEBUG
+    if(problem){
+    cout << endl;
+    cerr << "=====DEBUG=====" << endl;
+    cerr << "Forward_Zt " << endl << Zt << endl;
+    cerr << "====" << endl;
+    cerr << "Backward_Zt " << endl << backward_Zt << endl;
+    cerr << "====" << endl;
+    cerr << "final_Zt " << endl << final_Zt << endl;
+    cerr << "====" << endl;
+    cerr << "final_Z " << endl << final_Z << endl;
+    cerr << "====" << endl;
+    cerr << "=====END=======" << endl;
+    }
+    #endif
+    return this->expr_from_config(_sites, length, seq_num, bindprobs);
+}
+
+double Markov_ExprFunc::expr_from_config(const SiteVec& _sites, int length, int seq_num, const vector< double >& marginals){
+  double sum_total = 0.0;
+  int n = _sites.size();
+
+  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
+
+  assert(_sites.size() == marginals.size());
+
+  for(int i = 0; i < n; i++){
+
+    double log_effect = 0.0;
+
+    if( actIndicators[ _sites[ i ].factorIdx ] )
+    {
+        log_effect = log(par.txpEffects[ _sites[ i ].factorIdx ]);
+    }
+    if( repIndicators[ _sites[ i ].factorIdx ] )
+    {
+        log_effect = log(par.repEffects[ _sites[ i ].factorIdx ]);
+    }
+
+    sum_total += log_effect*marginals[i];
+  }
+
+  //TODO: do I need to make it negative?....
+  //TODO: check one_qbtm_per_crm only once, higher up.
+  double Z_on = exp(sum_total)*my_promoter.basal_trans;
+  return Z_on / (1.0 + Z_on);
+
 }
 
 ModelType ExprFunc::modelOption = QUENCHING;

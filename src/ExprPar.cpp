@@ -244,7 +244,7 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
         scaled_default = infty_transform(log(ExprPar::default_repression), log( ExprPar::min_repression ), log( ExprPar::max_repression ));
 
       tmp_par.repEffects.assign(_nFactors, scaled_default);//TODO: Which space are we creating in?
-      if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT )
+      if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT || expr_model.modelOption == MARKOV )
       {
           for ( int i = 0; i < _nFactors; i++ )
           {
@@ -470,7 +470,7 @@ ExprPar ParFactory::load(const string& file){
   for ( int i = 0; i < expr_model.getNFactors(); i++ )
   {
       fin >> motifNames[i] >> tmp_par.maxBindingWts[i] >> tmp_par.txpEffects[i];
-      if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT ) fin >> tmp_par.repEffects[i];
+      if ( expr_model.modelOption == CHRMOD_UNLIMITED || expr_model.modelOption == CHRMOD_LIMITED || expr_model.modelOption == DIRECT || expr_model.modelOption == MARKOV) fin >> tmp_par.repEffects[i];
   }
 
   // factor name to index mapping
@@ -638,7 +638,7 @@ ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const 
     }
 
     // set the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
+    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT || modelOption == MARKOV )
     {
         for ( int i = 0; i < _nFactors; i++ )
         {
@@ -767,7 +767,7 @@ void ExprPar::getRawPars( vector< double >& pars) const
     }
 
     // write the repression effects
-    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT )
+    if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT || modelOption == MARKOV)
     {
         for ( int i = 0; i < nFactors(); i++ )
         {
@@ -827,7 +827,7 @@ void ExprPar::print( ostream& os, const vector< string >& motifNames, const IntM
     for ( int i = 0; i < nFactors(); i++ )
     {
         os << motifNames[i] << "\t" << maxBindingWts[i] << "\t" << txpEffects[i];
-        if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT ) os << "\t" << repEffects[i];
+        if ( modelOption == CHRMOD_UNLIMITED || modelOption == CHRMOD_LIMITED || modelOption == DIRECT || modelOption == MARKOV ) os << "\t" << repEffects[i];
         os << endl;
     }
 
