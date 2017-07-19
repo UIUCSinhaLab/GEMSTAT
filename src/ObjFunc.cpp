@@ -161,3 +161,26 @@ double RegularizedObjFunc::eval(const vector<vector<double> >& ground_truth, con
 
   return objective_value;
 }
+
+double PeakWeightedObjFunc::eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction,
+  const ExprPar* par){
+    double on_threshold = 0.5;
+    assert(ground_truth.size() == prediction.size());
+    int nSeqs = ground_truth.size();
+    int nConds = ground_truth[0].size();
+    double squaredErr = 0.0;
+
+    for(int i = 0;i<ground_truth.size();i++){
+      double beta = 1.0;
+      #ifdef BETAOPTTOGETHER
+        if(NULL != par)
+          beta = par->getBetaForSeq(i);
+        squaredErr += wted_least_square( prediction[i], ground_truth[i], beta, on_threshold, true );
+      #else
+        squaredErr += wted_least_square( prediction[i], ground_truth[i], beta, on_threshold );
+      #endif
+  }
+
+    double rmse = sqrt( squaredErr / ( nSeqs * nConds ) );
+    return rmse;
+}

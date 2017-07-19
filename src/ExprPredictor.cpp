@@ -56,6 +56,9 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
       case LOGISTIC_REGRESSION:
         trainingObjective = new LogisticRegressionObjFunc();
         break;
+			case PEAK_WEIGHTED:
+				trainingObjective = new PeakWeightedObjFunc();
+				break;
       case SSE:
       default:
         trainingObjective = new RMSEObjFunc();

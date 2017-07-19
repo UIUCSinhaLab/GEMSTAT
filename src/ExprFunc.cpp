@@ -59,7 +59,14 @@ void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
 }
 
 double ExprFunc::predictExpr( const SiteVec& _sites, int length, const Condition& in_condition, int seq_num ){
-  return this->predictExpr(_sites,length, in_condition.concs, seq_num);
+  double to_return = this->predictExpr(_sites,length, in_condition.concs, seq_num);
+  if(to_return < 0.0 || to_return != to_return){
+	cerr << "returning a nonsense expression prediction " << to_return << endl;
+	exit(1);
+  }
+  assert(to_return >= 0.0); //Positive expression
+  assert(!(to_return != to_return)); //not NaN
+  return to_return;
 }
 
 double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
@@ -81,7 +88,22 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
     double efficiency = Z_on / Z_off;
     //cout << "efficiency = " << efficiency << endl;
     //cout << "basalTxp = " << par.basalTxps[ seq_num ] << endl;
-    double promoterOcc = efficiency * par.basalTxps[ seq_num ] / ( 1.0 + efficiency * par.basalTxps[ seq_num ] /** ( 1 + par.pis[ seq_num ] )*/ );
+    
+    GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
+    
+    double promoterOcc = efficiency * my_promoter.basal_trans / ( 1.0 + efficiency * my_promoter.basal_trans /** ( 1 + my_promoter.pi )*/ );
+    #ifdef DEBUG
+    if(promoterOcc < 0.0 || promoterOcc != promoterOcc){
+	cerr << "Ridiculous in Direct!" << endl;
+	cerr << "efficiency " << efficiency << endl;
+	cerr << "Z_on" << Z_on << endl;
+	cerr << "Z_off" << Z_off << endl;
+	cerr << "basal " << my_promoter.basal_trans << endl; //TODO: I think I just found the bug.
+	cerr << "=====" << endl;
+	}
+    #else
+    assert(promoterOcc >= 0.0 && promoterOcc == promoterOcc);
+    #endif
     return promoterOcc;
 }
 
@@ -92,6 +114,7 @@ double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const 
   // compute the Boltzman weights of binding for all sites
   setupBindingWeights(factorConcs);
 
+  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
 
   // total occupancy of each factor
   vector< double > factorOcc( motifs.size(), 0 );
@@ -110,8 +133,8 @@ double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const 
       // length correction
       //             totalEffect = totalEffect / (double)length;
   }
-  //         return par.expRatio * logistic( log( par.basalTxp ) + totalEffect );
-  return logistic( par.basalTxps[ seq_num ] + totalEffect );
+  //         return par.expRatio * logistic( log( my_promoter.basal_trans ) + totalEffect );
+  return logistic( my_promoter.basal_trans + totalEffect );
 }
 
 double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
