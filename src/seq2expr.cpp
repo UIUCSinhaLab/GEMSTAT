@@ -54,6 +54,8 @@ int main( int argc, char* argv[] )
     bool cmdline_one_qbtm_per_crm = false;
     bool cmdline_one_beta = false;
 
+    bool cmdline_write_gt = true;
+
     string lower_bound_file; ExprPar lower_bound_par; bool lower_bound_par_read = false;
     string upper_bound_file; ExprPar upper_bound_par; bool upper_bound_par_read = false;
     string free_fix_indicator_filename;
@@ -132,6 +134,8 @@ int main( int argc, char* argv[] )
 	    lower_bound_file = argv[ ++i ];
   else if ( !strcmp("-upper_bound", argv[ i ]))
 	    upper_bound_file = argv[ ++i ];
+        else if( !strcmp("-no_gt_out", argv[ i ]))
+            cmdline_write_gt = false;
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -590,7 +594,7 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, training_dataset.exprData, expr_condNames, true);
+    writePredictions(outFile, *predictor, training_dataset.exprData, expr_condNames, cmdline_write_gt, true);
 
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*
