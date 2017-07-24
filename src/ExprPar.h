@@ -161,6 +161,10 @@ class ParFactory
       const ExprPar& getDefaults(){return defaults;}
 
       ExprPar load(const string& file);//Use this.
+      //TODO:make these private or protected. (Except for unit testing?)
+      ExprPar load_old(istream& fin);//Don't use this directly
+      ExprPar load_1_6a(istream& fin);//Don't use this directly TODO:Add exceptions
+
 
       const ExprModel& expr_model;
     private:
