@@ -17,6 +17,6 @@ int readFactorRoleFile(const string& filename, const map<string, int>& factorIdx
 //TODO: Shouldn't this function check that it is reading the correct number of sites?
 int readAxisWeights(const string& filename, vector< int >& axis_start, vector< int >& axis_end, vector< double >& axis_wts);
 
-int writePredictions(const string& filename, ExprPredictor& predictor, const Matrix& exprData, vector< string >& expr_condNames, bool fix_beta = false);
+int writePredictions(const string& filename, ExprPredictor& predictor, const Matrix& exprData, vector< string >& expr_condNames, bool write_gt, bool fix_beta = false);
 
 #endif
