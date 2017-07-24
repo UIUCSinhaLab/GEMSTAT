@@ -374,6 +374,7 @@ int main( int argc, char* argv[] )
     FactorIntFunc* intFunc;
     if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
     else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
+    else if ( intOption == HELICAL ) intFunc = new FactorIntFuncHelical( coopDistThr );
     else
     {
         cerr << "Interaction Function is invalid " << endl; exit( 1 );

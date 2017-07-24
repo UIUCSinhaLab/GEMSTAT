@@ -11,7 +11,8 @@ using namespace std;
 enum FactorIntType
 {
     BINARY,                                       // Binary model of interaction
-    GAUSSIAN                                      // Gaussian model of interaction
+    GAUSSIAN,                                      // Gaussian model of interaction
+    HELICAL                                       //Helical phasing model of interaction
 };
 
 string getIntOptionStr( FactorIntType intOption );
@@ -95,5 +96,24 @@ class FactorIntFuncGeometric : public FactorIntFunc
         double orientationEffect;                 // the effect of orientation: if at different strands, the effect should be multiplied this value
 };
 
+/* FactorIntFuncHelical class: binary distance function */
+class FactorIntFuncHelical : public FactorIntFunc
+{
+    public:
+        // constructors
+        FactorIntFuncHelical( double _distThr, double _orientationEffect = 1.0 ) : distThr( _distThr ), orientationEffect( _orientationEffect ) { assert( distThr > 0 ); }
+
+        // compute the factor interaction
+        double compFactorInt( double normalInt, double dist, bool orientation ) const;
+
+        // the maximum distance beyond which there is no interaction
+        double getMaxDist() const
+        {
+            return distThr;
+        }
+    private:
+        double distThr;                           // if distance < thr, the "normal" value; otherwise 1 (no interaction)
+        double orientationEffect;                 // the effect of orientation: if at different strands, the effect should be multiplied this value
+};
 
 #endif
