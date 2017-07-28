@@ -41,7 +41,7 @@ double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool 
 {
     assert( dist >= 0 );
 		if(dist >= distThr) return 0.0;
-		double coeff = M_PI*32.7/180.0
+		double coeff = M_PI*32.7/180.0;
 		if(dist <= 5.0) return 0.0;
 
 		double phasing = 0.5*(cos(coeff * dist) + 1.0);
