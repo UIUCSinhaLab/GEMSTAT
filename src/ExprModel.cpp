@@ -46,14 +46,15 @@ int ExprModel::getNumCoop() const {
   return num_of_coop_pairs;
 }
 
-ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
+ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par, const SiteVec& sites_, const int seq_length, const int seq_num ) const
 {
   ExprPar parToPass;
   ExprFunc* return_exprfunc = NULL;
   switch(this->modelOption) {
     case LOGISTIC :
       parToPass = par.my_factory->changeSpace(par, ENERGY_SPACE);
-      return_exprfunc = new Logistic_ExprFunc(this->motifs,
+      return_exprfunc = new Logistic_ExprFunc(sites_,seq_length,seq_num,
+                          this->motifs,
                           this->intFunc,
                           this->actIndicators,
                           this->maxContact,
@@ -64,7 +65,8 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
       break;
     case DIRECT :
       parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-      return_exprfunc = new Direct_ExprFunc( this->motifs,
+      return_exprfunc = new Direct_ExprFunc(sites_,seq_length,seq_num,
+                        this->motifs,
                         this->intFunc,
                         this->actIndicators,
                         this->maxContact,
@@ -75,7 +77,8 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
       break;
     case QUENCHING :
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new Quenching_ExprFunc( this->motifs,
+        return_exprfunc = new Quenching_ExprFunc(sites_,seq_length,seq_num,
+                          this->motifs,
                           this->intFunc,
                           this->actIndicators,
                           this->maxContact,
@@ -86,7 +89,8 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
         break;
     case CHRMOD_LIMITED :
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new ChrModLimited_ExprFunc( this->motifs,
+        return_exprfunc = new ChrModLimited_ExprFunc(sites_,seq_length,seq_num,
+                          this->motifs,
                           this->intFunc,
                           this->actIndicators,
                           this->maxContact,
@@ -97,7 +101,8 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
         break;
     case CHRMOD_UNLIMITED :
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new ChrModUnlimited_ExprFunc( this->motifs,
+        return_exprfunc = new ChrModUnlimited_ExprFunc(sites_,seq_length,seq_num,
+                          this->motifs,
                           this->intFunc,
                           this->actIndicators,
                           this->maxContact,
@@ -108,7 +113,8 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par ) const
         break;
     case MARKOV:
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new Markov_ExprFunc( this->motifs,
+        return_exprfunc = new Markov_ExprFunc(sites_,seq_length,seq_num,
+                          this->motifs,
                           this->intFunc,
                           this->actIndicators,
                           this->maxContact,

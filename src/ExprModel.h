@@ -55,7 +55,7 @@ public: //TODO: Implement good accessors / mutators instead.
   int getNFactors() const {return motifs.size();}
   int getNumCoop() const;
 
-  ExprFunc* createNewExprFunc( const ExprPar& par ) const;
+  ExprFunc* createNewExprFunc( const ExprPar& par, const SiteVec& sites_, const int seq_length, const int seq_num ) const;
 };
 
 

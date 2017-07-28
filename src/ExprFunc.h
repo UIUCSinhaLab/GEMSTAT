@@ -16,7 +16,7 @@ class ExprFunc
 {
     public:
         // constructors
-        ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par );
+        ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par );
 
         // access methods
         const vector< Motif >& getMotifs() const
@@ -25,15 +25,15 @@ class ExprFunc
         }
 
         // predict the expression value of a given sequence (its site representation, sorted by the start positions) under given TF concentrations
-        virtual double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
-        virtual double predictExpr( const SiteVec& _sites, int length, const Condition& in_condition, int seq_num );
+        virtual double predictExpr( const vector< double >& factorConcs );
+        virtual double predictExpr( const Condition& in_condition );
         const ExprPar& getPar() const { return par; }
 
         static ModelType modelOption;             // model option
         static bool one_qbtm_per_crm;
     protected:
         //setup functions that may be useful to subclasses
-        void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
+        virtual void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
         void setupBindingWeights(const vector< double >& factorConcs);
         // TF binding motifs
         const vector< Motif >& motifs;
@@ -45,6 +45,8 @@ class ExprFunc
         const vector< bool >& repIndicators;      // 1 if the TF is in the repressor set
         const IntMatrix& repressionMat;           // repression matrix: R(f,f') = 1 if f can repress f'
         double repressionDistThr;                 // distance threshold for repression: d_R
+        int seq_number;
+        int seq_length;
 
         // model parameters
         ExprPar par;//NOTE: Removing "const" here caused the copy constructor to be called. Thus the ExprFunc gets its own copy that will not have problems when the original par is changed.
@@ -80,23 +82,26 @@ class ExprFunc
 class Logistic_ExprFunc : public ExprFunc {
   public:
       // constructors
-      Logistic_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      Logistic_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
 
-      double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
+      double predictExpr( const vector< double >& factorConcs );
 };
 
 class Markov_ExprFunc : public ExprFunc {
   public:
-      Markov_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
-      double predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num );
+      Markov_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){};
+      double predictExpr( const vector< double >& factorConcs );
   protected:
-      virtual double expr_from_config(const SiteVec& _sites, int length, int seq_num, const vector< double >& marginals);
+      void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
+
+      virtual double expr_from_config( const vector< double >& marginals);
+      vector<int> rev_bounds;
 };
 
 class Direct_ExprFunc : public ExprFunc {
   public:
       // constructors
-      Direct_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      Direct_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;
@@ -106,7 +111,7 @@ class Direct_ExprFunc : public ExprFunc {
 class Quenching_ExprFunc : public ExprFunc {
   public:
       // constructors
-      Quenching_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      Quenching_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;
@@ -116,7 +121,7 @@ class Quenching_ExprFunc : public ExprFunc {
 class ChrMod_ExprFunc : public ExprFunc {
   public:
       // constructors
-      ChrMod_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      ChrMod_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
   protected:
     // compute the partition function when the BTM is bound
     virtual double compPartFuncOn() const = 0;
@@ -128,7 +133,7 @@ class ChrMod_ExprFunc : public ExprFunc {
 class ChrModUnlimited_ExprFunc : public ChrMod_ExprFunc {
   public:
       // constructors
-      ChrModUnlimited_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      ChrModUnlimited_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;
@@ -137,7 +142,7 @@ class ChrModUnlimited_ExprFunc : public ChrMod_ExprFunc {
 class ChrModLimited_ExprFunc : public ChrMod_ExprFunc {
   public:
       // constructors
-      ChrModLimited_ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      ChrModLimited_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;

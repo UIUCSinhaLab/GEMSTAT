@@ -127,7 +127,7 @@ class ExprPredictor
         void printPar( const ExprPar& par ) const;
 
         // create the expression function
-        ExprFunc* createExprFunc( const ExprPar& par ) const;
+        ExprFunc* createExprFunc( const ExprPar& par, const SiteVec& sites_, const int seq_length, const int seq_num ) const;
 
         // objective functions
         double evalObjective( const ExprPar& par );
