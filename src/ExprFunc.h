@@ -54,6 +54,7 @@ class ExprFunc
 
         // the sequence whose expression is to be predicted
         SiteVec sites;
+        int n_sites;  //Useful because the sitevec with pseudosites etc. might change, this should be the number of true sites.
         vector< int > boundaries;                 // left boundary of each site beyond which there is no interaction
 
         // intermediate computational results

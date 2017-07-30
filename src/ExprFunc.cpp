@@ -15,6 +15,7 @@ ExprFunc::ExprFunc( const SiteVec& sites_, const int seq_len, const int seq_num,
     assert( repressionMat.isSquare() && repressionMat.nRows() == nFactors );
     assert( maxContact >= 0 );
 
+    n_sites = sites_.size();//number of non-psudo sites.
     seq_number = seq_num;
     seq_length = seq_len;
 
@@ -23,14 +24,16 @@ ExprFunc::ExprFunc( const SiteVec& sites_, const int seq_len, const int seq_num,
 }
 
 void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
-  boundaries.clear();
 
   if( !one_qbtm_per_crm )
       seq_num = 0;
   // store the sequence
   int n = _sites.size();
   sites = SiteVec(_sites);
-  sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
+  sites.insert( sites.begin(), Site(_sites[0].start-1000,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
+
+  boundaries.reserve(n+2);
+  boundaries.clear();
   boundaries.push_back( 0 );
   double range = max( intFunc->getMaxDist(), repressionDistThr );
   for ( int i = 1; i <= n; i++ )
@@ -119,7 +122,7 @@ double Logistic_ExprFunc::predictExpr( const vector< double >& factorConcs ){
 
   // total occupancy of each factor
   vector< double > factorOcc( motifs.size(), 0 );
-  for ( int i = 1; i < sites.size(); i++ )
+  for ( int i = 1; i <= n_sites; i++ )
   {
       factorOcc[ sites[i].factorIdx ] += bindingWts[i] / ( 1.0 + bindingWts[i] );
   }
@@ -144,17 +147,17 @@ void Markov_ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length,
     if( !one_qbtm_per_crm )
         seq_num = 0;
 
-    boundaries.clear();
+
 
 
     // store the sequence
     int n = _sites.size();
     sites = SiteVec(_sites);
-    sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
-    sites.push_back(Site());//and another at the end
-    sites[sites.size()-1].start = length + 1000;//psudosite off the end.
+    sites.insert( sites.begin(), Site(_sites[0].start-1000,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
+    sites.push_back(Site(_sites[_sites.size()-1].start+1000,true,-1,0.0,1.0) );       //and another pseudo-site at the end
 
-    boundaries.push_back( 0 );
+    boundaries.resize(n_sites+2);
+    boundaries[0] = 0;//value for starting pseudosite
     double range = max( intFunc->getMaxDist(), repressionDistThr );
     for ( int i = 1; i <= n; i++ )
     {
@@ -162,26 +165,25 @@ void Markov_ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length,
         for ( j = i - 1; j >= 1; j-- )
         {
             if ( ( sites[i].start - sites[j].start ) > range ) break;
-        }
+        }//If the loop never broke, j will leak with value 0.
         int boundary = j;
-        boundaries.push_back( boundary );
+        boundaries[i] = ( boundary );
     }
-    boundaries.push_back(n);//self-boundary for ending pseudosite?
+    boundaries[n_sites+1] = n_sites;//last-non-psudoe-site position boundary for ending pseudosite?
 
-    rev_bounds = vector<int>(boundaries.size(), n+1);
-    rev_bounds[rev_bounds.size()-1] = n+1;
-    rev_bounds[0] = 1;
+    rev_bounds.resize(n_sites+2);
+    rev_bounds[n_sites] = n_sites+1; //last true site points to pseudosite
+    rev_bounds[0] = 1; // first pseudosite has reverse boundary pointing to first true site
     for ( int i = n; i > 0; i-- )
     {
         int j;
         for ( j = i+1; j <= n; j++ )
         {
             if ( ( sites[j].start - sites[i].start) > range ) break;
-        }
+        }//If the loop never broke, j will leak with value n+1
         int boundary = j;
         rev_bounds[i] = ( boundary );
     }
-    rev_bounds.push_back(n+1);
     assert(rev_bounds[n] == n+1);
 }
 
@@ -191,7 +193,7 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
   if( !one_qbtm_per_crm )
       seq_num = 0;
 
-  int n = sites.size() - 2;
+  int n = n_sites;
 
   /*
   cerr << "BOUNDARIES " << n << endl;
@@ -201,12 +203,12 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
   */
 
   bindingWts.resize(sites.size());
-  bindingWts[0] = 1.0 ;
+  bindingWts[0] = 1.0 ; // first pseudosite
   for ( int i = 1; i <= n; i++ )
   {
       bindingWts[i] = par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio ;
   }
-  bindingWts[bindingWts.size()-1] = 1.0;
+  bindingWts[bindingWts.size()-1] = 1.0; //ending pseudosite
 
     // initialization
     vector< double > Z( n + 2 );
@@ -249,22 +251,24 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
 
 
 
-    vector< double > final_Z(Zt.size()-2,0.0);
+
     #ifdef DEBUG
-    vector< double > final_Zt(Zt.size()-2,0.0);//not used, for debug only.
+    vector< double > final_Z(n_sites+2,0.0);
+    vector< double > final_Zt(n_sites+2,0.0);//not used, for debug only.
     bool problem = false;
     #endif
 
-    vector< double > bindprobs(Zt.size()-2,0.0);
+    vector< double > bindprobs(n_sites+2,0.0);
 
-    for(int i = 0;i<n;i++){
+    for(int i = 1;i<=n_sites;i++){
       //Notice the i+1, we are skipping the pseudosite.
-      final_Z[i] = Z[i+1] * backward_Z_sum[i+1];
+      double one_final_Z = Z[i] * backward_Z_sum[i];
       #ifdef DEBUG
-      final_Zt[i] = Zt[i+1] * backward_Zt[i+1];
+      final_Z[i] = one_final_Z;
+      final_Zt[i] = Zt[i] * backward_Zt[i];
       #endif
       //bindprobs[i] = final_Z[i] / final_Zt[i];
-      bindprobs[i] = final_Z[i] / backward_Zt[1];
+      bindprobs[i] = one_final_Z / backward_Zt[1];
       #ifdef DEBUG
       if( bindprobs[i] <= 0.0 || bindprobs[i] >= 1.0){
         problem = true;
@@ -295,13 +299,14 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
 
 double Markov_ExprFunc::expr_from_config(const vector< double >& marginals){
   double sum_total = 0.0;
-  int n = sites.size()-2;
+  int n = n_sites;
 
   GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_number );
 
-  assert(n == marginals.size());
+  assert(n_sites + 2 == marginals.size());
 
-  for(int i = 1; i <= n; i++){
+  for(int i = 1; i <= n_sites; i++){
+    //Iterating over the sites, not counting beginning or ending pseudosites
 
     double log_effect = 0.0;
 
