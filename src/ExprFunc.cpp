@@ -3,10 +3,11 @@
 #include "ExprPredictor.h"
 #include "ExprPar.h"
 
+//#define DEBUG
 
-ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
+ExprFunc::ExprFunc( const SiteVec& sites_, const int seq_len, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : par(_par), motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
 {
-    par = _par;
+    //par = _par;//NOTE: made this const, and that solved a memory leak.
 
     int nFactors = par.nFactors();
     assert( motifs.size() == nFactors );
@@ -15,18 +16,27 @@ ExprFunc::ExprFunc( const vector< Motif >& _motifs, const FactorIntFunc* _intFun
     assert( repressionMat.isSquare() && repressionMat.nRows() == nFactors );
     assert( maxContact >= 0 );
 
+    n_sites = sites_.size();//number of non-psudo sites.
+    seq_number = seq_num;
+    seq_length = seq_len;
+
+    this->setupSitesAndBoundaries(sites_,seq_length, seq_num);
+
 }
 
 void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
-  boundaries.clear();
+  #ifdef DEBUG
+  cerr << "running ExprFunc::setupSitesAndBoundaries(...)" << endl;
+  #endif
 
-  if( !one_qbtm_per_crm )
-      seq_num = 0;
   // store the sequence
   int n = _sites.size();
   sites = SiteVec(_sites);
-  sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
-  boundaries.push_back( 0 );
+  sites.insert( sites.begin(), Site(_sites[0].start-1000,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
+  sites.push_back( Site(_sites[_sites.size()-1].start+1000,true,-1,0.0,1.0) );       //and another pseudo-site at the end
+
+  boundaries.resize(n_sites+2);
+  boundaries[0] = 0;//value for starting pseudosite
   double range = max( intFunc->getMaxDist(), repressionDistThr );
   for ( int i = 1; i <= n; i++ )
   {
@@ -34,19 +44,22 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
       for ( j = i - 1; j >= 1; j-- )
       {
           if ( ( sites[i].start - sites[j].start ) > range ) break;
-      }
+      }//If the loop never broke, j will leak with value 0.
       int boundary = j;
-      boundaries.push_back( boundary );
+      boundaries[i] = ( boundary );
   }
+  boundaries[n_sites+1] = n_sites;//last-non-psudoe-site position boundary for ending pseudosite?
+
 }
 
 void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
-  bindingWts.clear();
-  bindingWts.push_back( 1.0 );
-  int n = sites.size();
-  for ( int i = 1; i < n; i++ )
+  bindingWts.resize(sites.size());
+  bindingWts[0] = 1.0;  //for first pseudosite
+  bindingWts[bindingWts.size()-1] = 1.0; //might or might not be a pseudosite, gets overwritten if not
+  int n = n_sites;
+  for ( int i = 1; i <= n; i++ )
   {
-      bindingWts.push_back( par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio );
+      bindingWts[i] = par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio ;
       /*
       double samee = par.maxBindingWts[sites[i].factorIdx]*factorConcs[sites[i].factorIdx]*sites[i].prior_probability*sites[i].wtRatio;
       if(samee != samee)
@@ -58,8 +71,8 @@ void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
   }
 }
 
-double ExprFunc::predictExpr( const SiteVec& _sites, int length, const Condition& in_condition, int seq_num ){
-  double to_return = this->predictExpr(_sites,length, in_condition.concs, seq_num);
+double ExprFunc::predictExpr(const Condition& in_condition){
+  double to_return = this->predictExpr( in_condition.concs );
   if(to_return < 0.0 || to_return != to_return){
 	cerr << "returning a nonsense expression prediction " << to_return << endl;
 	exit(1);
@@ -69,10 +82,8 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const Condition
   return to_return;
 }
 
-double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
+double ExprFunc::predictExpr( const vector< double >& factorConcs )
 {
-    //initialize the sites and boundaries and whatnot.
-    setupSitesAndBoundaries(_sites,length,seq_num);
 
     // compute the Boltzman weights of binding for all sites
     setupBindingWeights(factorConcs);
@@ -88,9 +99,9 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
     double efficiency = Z_on / Z_off;
     //cout << "efficiency = " << efficiency << endl;
     //cout << "basalTxp = " << par.basalTxps[ seq_num ] << endl;
-    
-    GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
-    
+
+    GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( this->seq_number );
+
     double promoterOcc = efficiency * my_promoter.basal_trans / ( 1.0 + efficiency * my_promoter.basal_trans /** ( 1 + my_promoter.pi )*/ );
     #ifdef DEBUG
     if(promoterOcc < 0.0 || promoterOcc != promoterOcc){
@@ -107,18 +118,16 @@ double ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< d
     return promoterOcc;
 }
 
-double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num ){
-  //initialize the sites and boundaries and whatnot.
-  setupSitesAndBoundaries(_sites,length,seq_num);
+double Logistic_ExprFunc::predictExpr( const vector< double >& factorConcs ){
 
   // compute the Boltzman weights of binding for all sites
   setupBindingWeights(factorConcs);
 
-  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
+  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( this->seq_number );
 
   // total occupancy of each factor
   vector< double > factorOcc( motifs.size(), 0 );
-  for ( int i = 1; i < sites.size(); i++ )
+  for ( int i = 1; i <= n_sites; i++ )
   {
       factorOcc[ sites[i].factorIdx ] += bindingWts[i] / ( 1.0 + bindingWts[i] );
   }
@@ -137,47 +146,41 @@ double Logistic_ExprFunc::predictExpr( const SiteVec& _sites, int length, const 
   return logistic( my_promoter.basal_trans + totalEffect );
 }
 
-double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const vector< double >& factorConcs, int seq_num )
+Markov_ExprFunc::Markov_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){
+
+    //Additional setup for a Markov_ExprFunc
+    //void Markov_ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
+
+    #ifdef DEBUG
+    cerr << "running Markov_ExprFunc::setupSitesAndBoundaries(...)" << endl;
+    #endif
+
+    double range = max( intFunc->getMaxDist(), repressionDistThr );
+    rev_bounds.resize(n_sites+2);
+    rev_bounds[n_sites] = n_sites+1; //last true site points to pseudosite
+    rev_bounds[0] = 1; // first pseudosite has reverse boundary pointing to first true site
+    for ( int i = n_sites; i > 0; i-- )
+    {
+        int j;
+        for ( j = i+1; j <= n_sites; j++ )
+        {
+            if ( ( sites[j].start - sites[i].start) > range ) break;
+        }//If the loop never broke, j will leak with value n+1
+        int boundary = j;
+        rev_bounds[i] = ( boundary );
+    }
+    assert(rev_bounds[n_sites] == n_sites+1);
+}
+
+double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
 {
-  boundaries.clear();
+  int seq_num = this->seq_number;
 
-  if( !one_qbtm_per_crm )
-      seq_num = 0;
-  // store the sequence
-  int n = _sites.size();
-  sites = SiteVec(_sites);
-  sites.insert( sites.begin(), Site() );        // start with a pseudo-site at position 0
-  sites.push_back(Site());//and another at the end
-  sites[sites.size()-1].start = length + 1000;
-  boundaries.push_back( 0 );
-  double range = max( intFunc->getMaxDist(), repressionDistThr );
-  for ( int i = 1; i <= n; i++ )
-  {
-      int j;
-      for ( j = i - 1; j >= 1; j-- )
-      {
-          if ( ( sites[i].start - sites[j].start ) > range ) break;
-      }
-      int boundary = j;
-      boundaries.push_back( boundary );
-  }
-  boundaries.push_back(n);//self-boundary for ending pseudosite?
-
-  vector<int> rev_bounds(boundaries.size(), n+1);
-  rev_bounds[rev_bounds.size()-1] = n+1;
-  rev_bounds[0] = 1;
-  for ( int i = n; i > 0; i-- )
-  {
-      int j;
-      for ( j = i+1; j <= n; j++ )
-      {
-          if ( ( sites[j].start - sites[i].start) > range ) break;
-      }
-      int boundary = j;
-      rev_bounds[i] = ( boundary );
-  }
-  rev_bounds.push_back(n+1);
-  assert(rev_bounds[n] == n+1);
+  int n = n_sites;
+  #ifdef DEBUG
+  cout << "SITES size : " << sites.size() << " : n_sites : " << n_sites << endl;
+  assert(sites.size() == n_sites+2);
+  #endif
 
   /*
   cerr << "BOUNDARIES " << n << endl;
@@ -185,15 +188,11 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
   cerr << "rev bounds " << endl;
   cerr << rev_bounds << endl;
   */
+  setupBindingWeights(factorConcs);
 
-  bindingWts.clear();
-  bindingWts.push_back( 1.0 );
-  for ( int i = 1; i <= n; i++ )
-  {
-      bindingWts.push_back( par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio );
-  }
-  bindingWts.push_back(1.0);
-
+    #ifdef DEBUG
+    cerr << "Done setting bindingWts" << endl;
+    #endif
     // initialization
     vector< double > Z( n + 2 );
     Z[0] = 1.0;
@@ -235,22 +234,24 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
 
 
 
-    vector< double > final_Z(Zt.size()-2,0.0);
+
     #ifdef DEBUG
-    vector< double > final_Zt(Zt.size()-2,0.0);//not used, for debug only.
+    vector< double > final_Z(n_sites+2,0.0);
+    vector< double > final_Zt(n_sites+2,0.0);//not used, for debug only.
     bool problem = false;
     #endif
 
-    vector< double > bindprobs(Zt.size()-2,0.0);
+    vector< double > bindprobs(n_sites+2,0.0);
 
-    for(int i = 0;i<n;i++){
+    for(int i = 1;i<=n_sites;i++){
       //Notice the i+1, we are skipping the pseudosite.
-      final_Z[i] = Z[i+1] * backward_Z_sum[i+1];
+      double one_final_Z = Z[i] * backward_Z_sum[i];
       #ifdef DEBUG
-      final_Zt[i] = Zt[i+1] * backward_Zt[i+1];
+      final_Z[i] = one_final_Z;
+      final_Zt[i] = Zt[i] * backward_Zt[i];
       #endif
       //bindprobs[i] = final_Z[i] / final_Zt[i];
-      bindprobs[i] = final_Z[i] / backward_Zt[1];
+      bindprobs[i] = one_final_Z / backward_Zt[1];
       #ifdef DEBUG
       if( bindprobs[i] <= 0.0 || bindprobs[i] >= 1.0){
         problem = true;
@@ -276,28 +277,29 @@ double Markov_ExprFunc::predictExpr( const SiteVec& _sites, int length, const ve
     cerr << "=====END=======" << endl;
     }
     #endif
-    return this->expr_from_config(_sites, length, seq_num, bindprobs);
+    return this->expr_from_config(bindprobs);
 }
 
-double Markov_ExprFunc::expr_from_config(const SiteVec& _sites, int length, int seq_num, const vector< double >& marginals){
+double Markov_ExprFunc::expr_from_config(const vector< double >& marginals){
   double sum_total = 0.0;
-  int n = _sites.size();
+  int n = n_sites;
 
-  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_num );
+  GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( seq_number );
 
-  assert(_sites.size() == marginals.size());
+  assert(n_sites + 2 == marginals.size());
 
-  for(int i = 0; i < n; i++){
+  for(int i = 1; i <= n_sites; i++){
+    //Iterating over the sites, not counting beginning or ending pseudosites
 
     double log_effect = 0.0;
 
-    if( actIndicators[ _sites[ i ].factorIdx ] )
+    if( actIndicators[ sites[ i ].factorIdx ] )
     {
-        log_effect = log(par.txpEffects[ _sites[ i ].factorIdx ]);
+        log_effect = log(par.txpEffects[ sites[ i ].factorIdx ]);
     }
-    if( repIndicators[ _sites[ i ].factorIdx ] )
+    if( repIndicators[ sites[ i ].factorIdx ] )
     {
-        log_effect = log(par.repEffects[ _sites[ i ].factorIdx ]);
+        log_effect = log(par.repEffects[ sites[ i ].factorIdx ]);
     }
 
     sum_total += log_effect*marginals[i];
@@ -318,7 +320,7 @@ double ExprFunc::compPartFuncOff() const
       assert(modelOption != CHRMOD_UNLIMITED && modelOption != CHRMOD_LIMITED );
     #endif
 
-    int n = sites.size() - 1;
+    int n = n_sites;
     // initialization
     vector< double > Z( n + 1 );
     Z[0] = 1.0;
@@ -375,7 +377,7 @@ double ExprFunc::compPartFuncOff() const
 
 double ChrMod_ExprFunc::compPartFuncOff() const
 {
-    int n = sites.size()- 1;
+    int n = n_sites;
 
     // initialization
     vector< double > Z0( n + 1 );
@@ -430,7 +432,7 @@ double ExprFunc::compPartFuncOn() const
 
 double Direct_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size() - 1;
+    int n = n_sites;
 
     // initialization
     vector< double > Z( n + 1 );
@@ -472,7 +474,7 @@ double Direct_ExprFunc::compPartFuncOn() const
 
 double Quenching_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size() - 1;
+    int n = n_sites;
     int N0 = maxContact;
     Matrix Z1(n+1, N0+1);
     Matrix Z0(n+1, N0+1);
@@ -547,7 +549,7 @@ double Quenching_ExprFunc::compPartFuncOn() const
 
 double ChrModUnlimited_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size()- 1;
+    int n = n_sites;
 
     // initialization
     vector< double > Z0( n + 1 );
@@ -591,7 +593,7 @@ double ChrModUnlimited_ExprFunc::compPartFuncOn() const
 
 double ChrModLimited_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size()- 1;
+    int n = n_sites;
 
     // initialization
     int N0 = maxContact;
@@ -652,7 +654,6 @@ double ChrModLimited_ExprFunc::compPartFuncOn() const
     //     cout << "Zt[n] = " << Zt[n] << endl;
     return sum( Zt.getRow(n) );//And we end up with a vector anyway. See about fixing this.
 }
-
 
 double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
 {
