@@ -331,11 +331,12 @@ double ExprPredictor::evalObjective( const ExprPar& par )
             predictedExprs[j] = predicted ;
         }
         predictions.push_back(predictedExprs);
+				delete func;
     }
 
     //Evaluate the objective function on that.
     double ret_val = trainingObjective->eval(ground_truths, predictions, &par);
-    delete func;
+    
     return ret_val;
 
 }
