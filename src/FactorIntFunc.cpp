@@ -40,11 +40,13 @@ double FactorIntFuncGeometric::compFactorInt( double normalInt, double dist, boo
 double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool orientation ) const
 {
     assert( dist >= 0 );
-		if(dist >= distThr) return 0.0;
-		double coeff = M_PI*32.7/180.0;
-		if(dist <= 5.0) return 0.0;
 
-		double phasing = 0.5*(cos(coeff * dist) + 1.0);
+    	double spacingTerm = (dist < distThr ? normalInt : 1.0);	
+	if(dist >= distThr) return 1.0;
+	double coeff = M_PI*32.7/180.0;
+	if(dist <= 5.0) return 1.0;
+	
+	double phasing = 0.5*(cos(coeff * dist) + 1.0)*(spacingTerm - 1.0) + 1.0;
 
 
     //double orientationTerm = orientation ? 1.0 : orientationEffect;
