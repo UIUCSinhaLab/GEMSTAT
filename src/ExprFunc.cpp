@@ -188,14 +188,7 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
   cerr << "rev bounds " << endl;
   cerr << rev_bounds << endl;
   */
-
-  bindingWts.resize(sites.size());
-  bindingWts[0] = 1.0 ; // first pseudosite
-  for ( int i = 1; i <= n_sites; i++ )
-  {
-      bindingWts[i] = par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio ;
-  }
-  bindingWts[bindingWts.size()-1] = 1.0; //ending pseudosite
+  setupBindingWeights(factorConcs);
 
     #ifdef DEBUG
     cerr << "Done setting bindingWts" << endl;

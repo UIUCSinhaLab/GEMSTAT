@@ -75,9 +75,6 @@ class ExprFunc
         // compute the partition function when the basal transcriptional machinery (BTM) is not bound
         virtual double compPartFuncOff() const;
 
-        // compute the partition function when the BTM is not bound: ChrMod model
-        double compPartFuncOffChrMod() const;
-
     private:
 };
 
