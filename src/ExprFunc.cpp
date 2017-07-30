@@ -168,7 +168,7 @@ void Markov_ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length,
     }
     boundaries.push_back(n);//self-boundary for ending pseudosite?
 
-    vector<int> rev_bounds(boundaries.size(), n+1);
+    rev_bounds = vector<int>(boundaries.size(), n+1);
     rev_bounds[rev_bounds.size()-1] = n+1;
     rev_bounds[0] = 1;
     for ( int i = n; i > 0; i-- )
