@@ -3,6 +3,7 @@
 #include "ExprPredictor.h"
 #include "ExprPar.h"
 
+//#define DEBUG
 
 ExprFunc::ExprFunc( const SiteVec& sites_, const int seq_len, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : par(_par), motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
 {
@@ -19,22 +20,23 @@ ExprFunc::ExprFunc( const SiteVec& sites_, const int seq_len, const int seq_num,
     seq_number = seq_num;
     seq_length = seq_len;
 
-    setupSitesAndBoundaries(sites_,seq_length, seq_num);
+    this->setupSitesAndBoundaries(sites_,seq_length, seq_num);
 
 }
 
 void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
+  #ifdef DEBUG
+  cerr << "running ExprFunc::setupSitesAndBoundaries(...)" << endl;
+  #endif
 
-  if( !one_qbtm_per_crm )
-      seq_num = 0;
   // store the sequence
   int n = _sites.size();
   sites = SiteVec(_sites);
   sites.insert( sites.begin(), Site(_sites[0].start-1000,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
+  sites.push_back( Site(_sites[_sites.size()-1].start+1000,true,-1,0.0,1.0) );       //and another pseudo-site at the end
 
-  boundaries.reserve(n+2);
-  boundaries.clear();
-  boundaries.push_back( 0 );
+  boundaries.resize(n_sites+2);
+  boundaries[0] = 0;//value for starting pseudosite
   double range = max( intFunc->getMaxDist(), repressionDistThr );
   for ( int i = 1; i <= n; i++ )
   {
@@ -42,17 +44,20 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
       for ( j = i - 1; j >= 1; j-- )
       {
           if ( ( sites[i].start - sites[j].start ) > range ) break;
-      }
+      }//If the loop never broke, j will leak with value 0.
       int boundary = j;
-      boundaries.push_back( boundary );
+      boundaries[i] = ( boundary );
   }
+  boundaries[n_sites+1] = n_sites;//last-non-psudoe-site position boundary for ending pseudosite?
+
 }
 
 void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
   bindingWts.resize(sites.size());
-  bindingWts[0] = 1.0;
-  int n = sites.size();
-  for ( int i = 1; i < n; i++ )
+  bindingWts[0] = 1.0;  //for first pseudosite
+  bindingWts[bindingWts.size()-1] = 1.0; //might or might not be a pseudosite, gets overwritten if not
+  int n = n_sites;
+  for ( int i = 1; i <= n; i++ )
   {
       bindingWts[i] = par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio ;
       /*
@@ -141,59 +146,41 @@ double Logistic_ExprFunc::predictExpr( const vector< double >& factorConcs ){
   return logistic( my_promoter.basal_trans + totalEffect );
 }
 
+Markov_ExprFunc::Markov_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){
 
-void Markov_ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
+    //Additional setup for a Markov_ExprFunc
+    //void Markov_ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
 
-    if( !one_qbtm_per_crm )
-        seq_num = 0;
+    #ifdef DEBUG
+    cerr << "running Markov_ExprFunc::setupSitesAndBoundaries(...)" << endl;
+    #endif
 
-
-
-
-    // store the sequence
-    int n = _sites.size();
-    sites = SiteVec(_sites);
-    sites.insert( sites.begin(), Site(_sites[0].start-1000,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
-    sites.push_back(Site(_sites[_sites.size()-1].start+1000,true,-1,0.0,1.0) );       //and another pseudo-site at the end
-
-    boundaries.resize(n_sites+2);
-    boundaries[0] = 0;//value for starting pseudosite
     double range = max( intFunc->getMaxDist(), repressionDistThr );
-    for ( int i = 1; i <= n; i++ )
-    {
-        int j;
-        for ( j = i - 1; j >= 1; j-- )
-        {
-            if ( ( sites[i].start - sites[j].start ) > range ) break;
-        }//If the loop never broke, j will leak with value 0.
-        int boundary = j;
-        boundaries[i] = ( boundary );
-    }
-    boundaries[n_sites+1] = n_sites;//last-non-psudoe-site position boundary for ending pseudosite?
-
     rev_bounds.resize(n_sites+2);
     rev_bounds[n_sites] = n_sites+1; //last true site points to pseudosite
     rev_bounds[0] = 1; // first pseudosite has reverse boundary pointing to first true site
-    for ( int i = n; i > 0; i-- )
+    for ( int i = n_sites; i > 0; i-- )
     {
         int j;
-        for ( j = i+1; j <= n; j++ )
+        for ( j = i+1; j <= n_sites; j++ )
         {
             if ( ( sites[j].start - sites[i].start) > range ) break;
         }//If the loop never broke, j will leak with value n+1
         int boundary = j;
         rev_bounds[i] = ( boundary );
     }
-    assert(rev_bounds[n] == n+1);
+    assert(rev_bounds[n_sites] == n_sites+1);
 }
 
 double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
 {
   int seq_num = this->seq_number;
-  if( !one_qbtm_per_crm )
-      seq_num = 0;
 
   int n = n_sites;
+  #ifdef DEBUG
+  cout << "SITES size : " << sites.size() << " : n_sites : " << n_sites << endl;
+  assert(sites.size() == n_sites+2);
+  #endif
 
   /*
   cerr << "BOUNDARIES " << n << endl;
@@ -204,12 +191,15 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
 
   bindingWts.resize(sites.size());
   bindingWts[0] = 1.0 ; // first pseudosite
-  for ( int i = 1; i <= n; i++ )
+  for ( int i = 1; i <= n_sites; i++ )
   {
       bindingWts[i] = par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio ;
   }
   bindingWts[bindingWts.size()-1] = 1.0; //ending pseudosite
 
+    #ifdef DEBUG
+    cerr << "Done setting bindingWts" << endl;
+    #endif
     // initialization
     vector< double > Z( n + 2 );
     Z[0] = 1.0;
@@ -337,7 +327,7 @@ double ExprFunc::compPartFuncOff() const
       assert(modelOption != CHRMOD_UNLIMITED && modelOption != CHRMOD_LIMITED );
     #endif
 
-    int n = sites.size() - 1;
+    int n = n_sites;
     // initialization
     vector< double > Z( n + 1 );
     Z[0] = 1.0;
@@ -394,7 +384,7 @@ double ExprFunc::compPartFuncOff() const
 
 double ChrMod_ExprFunc::compPartFuncOff() const
 {
-    int n = sites.size()- 1;
+    int n = n_sites;
 
     // initialization
     vector< double > Z0( n + 1 );
@@ -449,7 +439,7 @@ double ExprFunc::compPartFuncOn() const
 
 double Direct_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size() - 1;
+    int n = n_sites;
 
     // initialization
     vector< double > Z( n + 1 );
@@ -491,7 +481,7 @@ double Direct_ExprFunc::compPartFuncOn() const
 
 double Quenching_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size() - 1;
+    int n = n_sites;
     int N0 = maxContact;
     Matrix Z1(n+1, N0+1);
     Matrix Z0(n+1, N0+1);
@@ -566,7 +556,7 @@ double Quenching_ExprFunc::compPartFuncOn() const
 
 double ChrModUnlimited_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size()- 1;
+    int n = n_sites;
 
     // initialization
     vector< double > Z0( n + 1 );
@@ -610,7 +600,7 @@ double ChrModUnlimited_ExprFunc::compPartFuncOn() const
 
 double ChrModLimited_ExprFunc::compPartFuncOn() const
 {
-    int n = sites.size()- 1;
+    int n = n_sites;
 
     // initialization
     int N0 = maxContact;

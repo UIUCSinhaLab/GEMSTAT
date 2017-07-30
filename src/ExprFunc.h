@@ -91,10 +91,10 @@ class Logistic_ExprFunc : public ExprFunc {
 
 class Markov_ExprFunc : public ExprFunc {
   public:
-      Markov_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){};
+      Markov_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par );// : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par);
       double predictExpr( const vector< double >& factorConcs );
   protected:
-      void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
+      //void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
 
       virtual double expr_from_config( const vector< double >& marginals);
       vector<int> rev_bounds;
