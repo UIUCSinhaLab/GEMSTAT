@@ -44,9 +44,12 @@ int main( int argc, char* argv[] )
     double factorIntSigma = 50.0;                 // sigma parameter for the Gaussian interaction function
     double repressionDistThr = 0;
     int maxContact = 1;
-    bool read_factor_thresh = false;
+    bool read_factor_thresh_file = false;
+    bool read_factor_thresh_eTF = false;
     double eTF = 0.60;
     unsigned long initialSeed = time(0);
+
+    bool read_par_init_file = false;
 
     double l1 = 0.0;
     double l2 = 0.0;
@@ -107,15 +110,15 @@ int main( int argc, char* argv[] )
             free_fix_indicator_filename = argv[++i];
         else if ( !strcmp( "-oq", argv[i] ) )
         {
-	    cmdline_one_qbtm_per_crm = true;
+            cmdline_one_qbtm_per_crm = true;
 
             ExprPar::one_qbtm_per_crm = true;
             ExprFunc::one_qbtm_per_crm = true;
         }
         else if ( !strcmp( "-et", argv[i] ) ){
             eTF = atof( argv[ ++i ] );
-	    read_factor_thresh = true;
-	}
+	           read_factor_thresh_eTF = true;
+        }
         else if ( !strcmp( "-df", argv[ i ]))
             dnase_file = argv[ ++i ];
         else if ( !strcmp( "-ft", argv[ i ]))
@@ -225,17 +228,199 @@ int main( int argc, char* argv[] )
     //Initialize the dataset that is actually provided
     DataSet training_dataset(factorExprData,exprData);
 
+    // read the cooperativity matrix
+    int num_of_coop_pairs = 0;
+    IntMatrix coopMat( nFactors, nFactors, false );
+    if ( !coopFile.empty() )
+    {
+	int readRet = readEdgelistGraph(coopFile, factorIdxMap, coopMat, false);
+	ASSERT_MESSAGE(0 == readRet, "Error reading the cooperativity file");
 
+	//Calculate the number of cooperative pairs.
+	for(int i = 0;i < nFactors;i++)
+		for(int j=i;j<nFactors;j++)
+			num_of_coop_pairs += coopMat.getElement(i,j);
+    }
+
+    // read the roles of factors
+    vector< bool > actIndicators( nFactors, true );
+    vector< bool > repIndicators( nFactors, false );
+    if ( !factorInfoFile.empty() )
+    {
+	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators);
+        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");
+    }
+
+    // read the repression matrix
+    IntMatrix repressionMat( nFactors, nFactors, false );
+    if ( !repressionFile.empty() )
+    {
+	int readRet = readEdgelistGraph(repressionFile, factorIdxMap, repressionMat, true);
+	ASSERT_MESSAGE(0 == readRet, "Error reading the repression file.");
+    }
+
+
+    FactorIntFunc* intFunc;
+    if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
+    else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
+    else if ( intOption == HELICAL ) intFunc = new FactorIntFuncHelical( coopDistThr );
+    else
+    {
+        cerr << "Interaction Function is invalid " << endl; exit( 1 );
+    }
+
+    //Create a new ExprModel with all of the selected options.
+    //TODO: Continue here
+    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
+    expr_model.shared_scaling = cmdline_one_beta;
+
+    // read the axis wt file
+    vector < int > axis_start;
+    vector < int > axis_end;
+    vector < double > axis_wts;
+
+    axis_start.clear();
+    axis_end.clear();
+    axis_wts.clear();
+
+    if( !axis_wtFile.empty() )
+    {
+	    int readRet = readAxisWeights(axis_wtFile, axis_start, axis_end, axis_wts);
+	    ASSERT_MESSAGE(0 == readRet, "Error reading the axis weights (-aw) file.");
+    }
+    else
+    {//Alternative intialization.
+        axis_start.push_back( 0 );
+        axis_end.push_back( condNames.size() - 1 );
+        axis_wts.push_back( 100 );
+    }
+
+
+    //Setup a parameter factory
+    ParFactory *param_factory = new ParFactory(expr_model, nSeqs);
+
+    // read the initial parameter values
+    ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
+    par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
+                                                                //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
+    if ( !parFile.empty() ){
+        try{
+          par_init = param_factory->load( parFile );
+          read_par_init_file = true;
+        }catch (int& e){
+            cerr << "Cannot read parameters from " << parFile << endl;
+            exit( 1 );
+        }
+    }
+
+    //Load free_fix from the same format as parameter vectors!
+    vector< double > tmp_vector;
+    par_init.getRawPars(tmp_vector);
+    int num_indicators = tmp_vector.size();
+    vector <bool> indicator_bool(num_indicators, true);
+    #ifndef REANNOTATE_EACH_PREDICTION
+    //prevent optimization of annotation thresholds if that will be useless.
+    for(int i = 0;i<motifs.size();i++){indicator_bool[indicator_bool.size()-(1+i)] = false;}
+    #endif
+    if( !free_fix_indicator_filename.empty() )
+    {
+        ExprPar param_ff;
+        try{
+          param_ff = param_factory->load( free_fix_indicator_filename );
+        }catch (int& e){
+          cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
+          exit(1);
+        }
+        #ifndef REANNOTATE_EACH_PREDICTION
+        //prevent optimization of annotation thresholds if that will be useless.
+        param_ff.energyThrFactors.assign(param_ff.energyThrFactors.size(),0.0);
+        #endif
+        vector < double > tmp_ff;
+        param_ff.getRawPars(tmp_ff);
+        indicator_bool.clear();
+        for(vector<double>::iterator iter = tmp_ff.begin();iter != tmp_ff.end();++iter){
+          double one_val = *iter;
+          if( -0.00000001 < one_val && 0.0000001 > one_val){ indicator_bool.push_back(false); }
+          else if (0.9999999 < one_val && 1.0000001 > one_val){ indicator_bool.push_back(true);}
+          else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
+        }
+    }
+
+
+    /*
+    //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
+    if( read_factor_thresh ){
+        par_init = param_factory->changeSpace(par_init, PROB_SPACE);
+        ASSERT_MESSAGE(par_init.my_space == PROB_SPACE,"This should never happen: Preconditions not met for -et option. This is a programming error, and not the fault of the user. For now, you can try avoiding the -et commandline option, and contact the software maintainer.");
+        par_init.energyThrFactors = energyThrFactors;
+    }
+    */
+
+    if ( !upper_bound_file.empty() ){
+	try{
+		upper_bound_par = param_factory->load( upper_bound_file );
+		upper_bound_par = param_factory->changeSpace(upper_bound_par, ENERGY_SPACE);
+		upper_bound_par_read = true;
+	}catch (int& e){
+		cerr << "Cannot read upper bounds from " << upper_bound_file << endl;
+		exit( 1 );
+	}
+    }
+
+    if ( !lower_bound_file.empty() ){
+	try{
+		lower_bound_par = param_factory->load( lower_bound_file );
+		lower_bound_par = param_factory->changeSpace(lower_bound_par, ENERGY_SPACE);
+		lower_bound_par_read = true;
+	}catch (int& e){
+		cerr << "Cannot read lower bounds from " << lower_bound_file << endl;
+		exit( 1 );
+	}
+    }
+
+    //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
+    vector < double > all_pars_for_test;
+    par_init.getRawPars(all_pars_for_test );
+    ASSERT_MESSAGE(all_pars_for_test.size() == indicator_bool.size(), "For some reason, the number of entries in free_fix did not match the number of free parameters.\n"
+		  "Remember that whatever model, there are 3 parameters for every transcription factor\n");
+    all_pars_for_test.clear();//Won't be used again.
+    //It is possible that the user wants to write out to the same par file, doing this after reading the par file means we won't have overridden it before reading
+
+    //Check that we can access and write to the par outfile now, so that we can warn the user before a lot of time was spent on the optimization
+    if( !par_out_file.empty() ){
+        par_out_stream.open( par_out_file.c_str() );
+        if( ! par_out_stream ){
+                cerr << "Cannot open the parameter output file " << par_out_file << " for writing." << endl;
+                exit(1);
+        }
+    }
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
-
-    if( ! factor_thr_file.empty() )
-    {
-	int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
-	ASSERT_MESSAGE( 0==readFactorRet , "Difficulty opening the factor_thr_input file.");
-	read_factor_thresh = true;
+    if(read_par_init_file){
+      assert(par_init.my_space == PROB_SPACE);
+      assert(energyThrFactors.size() == par_init.energyThrFactors.size());
+      energyThrFactors = par_init.energyThrFactors;
     }
+
+    //TODO: move this to after the reading of the factor_thr_file? Meh. We should never use factor_thr_file anyway.
+    if(read_factor_thresh_eTF){
+      energyThrFactors.assign(energyThrFactors.size(),eTF);
+    }
+
+    if( ! factor_thr_file.empty() )//TODO: Totally eliminate the factor_thr_file.
+    {
+      int readFactorRet = readFactorThresholdFile(factor_thr_file, energyThrFactors, nFactors);
+      ASSERT_MESSAGE( 0==readFactorRet , "Difficulty opening the factor_thr_input file.");
+      read_factor_thresh_file = true;
+    }
+
+
+
+    //assign that back to the initial par file so that it receives any changes made.
+    assert(par_init.my_space == PROB_SPACE);
+    assert(energyThrFactors.size() == par_init.energyThrFactors.size());
+    par_init.energyThrFactors = energyThrFactors;
 
     // site representation of the sequences
     // TODO: Should this code be removed? If we are using this code, and no command-line option was provided for energyThrFactors, but a .par file was provided, shouldn't it use the thresholds learned there? (So, shouldn't it happen after reading the par file?)
@@ -339,170 +524,7 @@ int main( int argc, char* argv[] )
     */
     }
 
-    // read the cooperativity matrix
-    int num_of_coop_pairs = 0;
-    IntMatrix coopMat( nFactors, nFactors, false );
-    if ( !coopFile.empty() )
-    {
-	int readRet = readEdgelistGraph(coopFile, factorIdxMap, coopMat, false);
-	ASSERT_MESSAGE(0 == readRet, "Error reading the cooperativity file");
 
-	//Calculate the number of cooperative pairs.
-	for(int i = 0;i < nFactors;i++)
-		for(int j=i;j<nFactors;j++)
-			num_of_coop_pairs += coopMat.getElement(i,j);
-    }
-
-    // read the roles of factors
-    vector< bool > actIndicators( nFactors, true );
-    vector< bool > repIndicators( nFactors, false );
-    if ( !factorInfoFile.empty() )
-    {
-	int readRet = readFactorRoleFile(factorInfoFile, factorIdxMap, actIndicators, repIndicators);
-        ASSERT_MESSAGE(0 == readRet, "Could not parse the factor information file.");
-    }
-
-    // read the repression matrix
-    IntMatrix repressionMat( nFactors, nFactors, false );
-    if ( !repressionFile.empty() )
-    {
-	int readRet = readEdgelistGraph(repressionFile, factorIdxMap, repressionMat, true);
-	ASSERT_MESSAGE(0 == readRet, "Error reading the repression file.");
-    }
-
-
-    FactorIntFunc* intFunc;
-    if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
-    else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
-    else if ( intOption == HELICAL ) intFunc = new FactorIntFuncHelical( coopDistThr );
-    else
-    {
-        cerr << "Interaction Function is invalid " << endl; exit( 1 );
-    }
-
-    //Create a new ExprModel with all of the selected options.
-    //TODO: Continue here
-    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
-    expr_model.shared_scaling = cmdline_one_beta;
-
-    // read the axis wt file
-    vector < int > axis_start;
-    vector < int > axis_end;
-    vector < double > axis_wts;
-
-    axis_start.clear();
-    axis_end.clear();
-    axis_wts.clear();
-
-    if( !axis_wtFile.empty() )
-    {
-	    int readRet = readAxisWeights(axis_wtFile, axis_start, axis_end, axis_wts);
-	    ASSERT_MESSAGE(0 == readRet, "Error reading the axis weights (-aw) file.");
-    }
-    else
-    {//Alternative intialization.
-        axis_start.push_back( 0 );
-        axis_end.push_back( condNames.size() - 1 );
-        axis_wts.push_back( 100 );
-    }
-
-
-    //Setup a parameter factory
-    ParFactory *param_factory = new ParFactory(expr_model, nSeqs);
-
-    // read the initial parameter values
-    ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
-    par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
-                                                                //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
-    if ( !parFile.empty() ){
-        try{
-          par_init = param_factory->load( parFile );
-        }catch (int& e){
-            cerr << "Cannot read parameters from " << parFile << endl;
-            exit( 1 );
-        }
-    }
-
-    //Load free_fix from the same format as parameter vectors!
-    vector< double > tmp_vector;
-    par_init.getRawPars(tmp_vector);
-    int num_indicators = tmp_vector.size();
-    vector <bool> indicator_bool(num_indicators, true);
-    #ifndef REANNOTATE_EACH_PREDICTION
-    //prevent optimization of annotation thresholds if that will be useless.
-    for(int i = 0;i<motifs.size();i++){indicator_bool[indicator_bool.size()-(1+i)] = false;}
-    #endif
-    if( !free_fix_indicator_filename.empty() )
-    {
-        ExprPar param_ff;
-        try{
-          param_ff = param_factory->load( free_fix_indicator_filename );
-        }catch (int& e){
-          cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
-          exit(1);
-        }
-        #ifndef REANNOTATE_EACH_PREDICTION
-        //prevent optimization of annotation thresholds if that will be useless.
-        param_ff.energyThrFactors.assign(param_ff.energyThrFactors.size(),0.0);
-        #endif
-        vector < double > tmp_ff;
-        param_ff.getRawPars(tmp_ff);
-        indicator_bool.clear();
-        for(vector<double>::iterator iter = tmp_ff.begin();iter != tmp_ff.end();++iter){
-          double one_val = *iter;
-          if( -0.00000001 < one_val && 0.0000001 > one_val){ indicator_bool.push_back(false); }
-          else if (0.9999999 < one_val && 1.0000001 > one_val){ indicator_bool.push_back(true);}
-          else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
-        }
-    }
-
-
-
-    //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
-    if( read_factor_thresh ){
-        par_init = param_factory->changeSpace(par_init, PROB_SPACE);
-        ASSERT_MESSAGE(par_init.my_space == PROB_SPACE,"This should never happen: Preconditions not met for -et option. This is a programming error, and not the fault of the user. For now, you can try avoiding the -et commandline option, and contact the software maintainer.");
-        par_init.energyThrFactors = energyThrFactors;
-    }
-
-    if ( !upper_bound_file.empty() ){
-	try{
-		upper_bound_par = param_factory->load( upper_bound_file );
-		upper_bound_par = param_factory->changeSpace(upper_bound_par, ENERGY_SPACE);
-		upper_bound_par_read = true;
-	}catch (int& e){
-		cerr << "Cannot read upper bounds from " << upper_bound_file << endl;
-		exit( 1 );
-	}
-    }
-
-    if ( !lower_bound_file.empty() ){
-	try{
-		lower_bound_par = param_factory->load( lower_bound_file );
-		lower_bound_par = param_factory->changeSpace(lower_bound_par, ENERGY_SPACE);
-		lower_bound_par_read = true;
-	}catch (int& e){
-		cerr << "Cannot read lower bounds from " << lower_bound_file << endl;
-		exit( 1 );
-	}
-    }
-
-    //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
-    vector < double > all_pars_for_test;
-    par_init.getRawPars(all_pars_for_test );
-    ASSERT_MESSAGE(all_pars_for_test.size() == indicator_bool.size(), "For some reason, the number of entries in free_fix did not match the number of free parameters.\n"
-		  "Remember that whatever model, there are 3 parameters for every transcription factor\n");
-    all_pars_for_test.clear();//Won't be used again.
-    //It is possible that the user wants to write out to the same par file, doing this after reading the par file means we won't have overridden it before reading
-
-    //Check that we can access and write to the par outfile now, so that we can warn the user before a lot of time was spent on the optimization
-    if( !par_out_file.empty() ){
-        par_out_stream.open( par_out_file.c_str() );
-        if( ! par_out_stream ){
-                cerr << "Cannot open the parameter output file " << par_out_file << " for writing." << endl;
-                exit(1);
-        }
-    }
     // CHECK POINT
     //     cout << "Sequences:" << endl;
     //     for ( int i = 0; i < seqs.size(); i++ ) cout << seqNames[i] << endl << seqs[i] << endl;
