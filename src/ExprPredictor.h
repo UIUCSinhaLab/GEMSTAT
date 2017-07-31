@@ -66,8 +66,11 @@ class ExprPredictor
         int train( const ExprPar& par_init, const gsl_rng* rng );
         int train();                              // automatic training: first estimate the initial values, then train
 
-        // predict expression values of a sequence (across the same conditions)
-        int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const;
+        // predict expression values of a sequence (across all conditions)
+        int predict( const ExprPar& par, const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num) const;
+        int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num) const;
+        //TODO: Implement this such that the previous calls it, it is not slow, and it is DRY and KISS
+        //int predict( const SiteVec& targetSites, int targetSeqLength, vector<int> condition_index_list, vector< double >& targetExprs, int seq_num ) const;
 
         // test the model, perfOption = 0: RMSE
         // 	double test( const vector< Sequence  >& testSeqs, const Matrix& testExprData, Matrix& predictions ) const;
@@ -114,7 +117,7 @@ class ExprPredictor
         const vector < double >& axis_wts;
 
         // control parameters
-	      const ExprModel& expr_model;
+	    const ExprModel& expr_model;
 
         // model parameters and the value of the objective function
         ExprPar par_model;

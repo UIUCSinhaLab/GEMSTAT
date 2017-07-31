@@ -197,33 +197,28 @@ int ExprPredictor::train()
     return 0;
 }
 
-
-int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const
+//Called fairly rarely, don't worry about optimality.
+int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num) const
 {
+	return this->predict(par_model,targetSites_,targetSeqLength,targetExprs,seq_num);
+}
 
-
-    // create site representation of the target sequence
-    SiteVec targetSites;
-    #ifdef REANNOTATE_EACH_PREDICTION
-    SeqAnnotator ann( expr_model.motifs, par_model.energyThrFactors );
-    ann.annot( seqs[ seq_num ], targetSites );
-    #else
-    targetSites = targetSites_;
-    #endif
-
-    // predict the expression
-    ExprFunc* func = createExprFunc( par_model , targetSites, targetSeqLength, seq_num);
-		targetExprs.clear();
+int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const
+{
+	// predict the expression
+    ExprFunc* func = createExprFunc( par , targetSites_, targetSeqLength, seq_num);
+	targetExprs.resize(nConds());
     for ( int j = 0; j < nConds(); j++ )
     {
-				Condition concs = training_data.getCondition( j );
+		Condition concs = training_data.getCondition( j );
         double predicted = func->predictExpr( concs );
-        targetExprs.push_back( predicted );
+        targetExprs[j] = ( predicted );
     }
 
     delete func;
     return 0;
 }
+
 
 ObjType ExprPredictor::objOption = SSE;
 
@@ -313,30 +308,19 @@ double ExprPredictor::evalObjective( const ExprPar& par )
     vector<vector<double> > ground_truths;
     vector<vector<double> > predictions;
 
-		ExprFunc* func = NULL;
-
-
     //Create predictions for every sequence and condition
     for ( int i = 0; i < nSeqs(); i++ ) {
         ground_truths.push_back(training_data.exprData.getRow(i));
+		vector<double> one_seq_predictions(nConds());
 
-				func = createExprFunc( par , seqSites[i], seqLengths[i], i);
+		this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
 
-        vector< double > predictedExprs(nConds());
-        for ( int j = 0; j < nConds(); j++ ) {
-        		double predicted = -1;
-							Condition concs = training_data.getCondition( j );
-            	predicted = func->predictExpr( concs );
-            // predicted expression for the i-th sequence at the j-th condition
-            predictedExprs[j] = predicted ;
-        }
-        predictions.push_back(predictedExprs);
-				delete func;
+		predictions.push_back(one_seq_predictions);
     }
 
     //Evaluate the objective function on that.
     double ret_val = trainingObjective->eval(ground_truths, predictions, &par);
-    
+
     return ret_val;
 
 }
