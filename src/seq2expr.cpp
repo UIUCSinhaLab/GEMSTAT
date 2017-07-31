@@ -42,7 +42,7 @@ int main( int argc, char* argv[] )
     ModelType cmdline_modelOption = LOGISTIC;
     double coopDistThr = 50;
     double factorIntSigma = 50.0;                 // sigma parameter for the Gaussian interaction function
-    double repressionDistThr = 250;
+    double repressionDistThr = 0;
     int maxContact = 1;
     bool read_factor_thresh = false;
     double eTF = 0.60;
@@ -428,6 +428,10 @@ int main( int argc, char* argv[] )
     par_init.getRawPars(tmp_vector);
     int num_indicators = tmp_vector.size();
     vector <bool> indicator_bool(num_indicators, true);
+    #ifndef REANNOTATE_EACH_PREDICTION
+    //prevent optimization of annotation thresholds if that will be useless.
+    for(int i = 0;i<motifs.size();i++){indicator_bool[indicator_bool.size()-(1+i)] = false;}
+    #endif
     if( !free_fix_indicator_filename.empty() )
     {
         ExprPar param_ff;
@@ -437,6 +441,10 @@ int main( int argc, char* argv[] )
           cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
           exit(1);
         }
+        #ifndef REANNOTATE_EACH_PREDICTION
+        //prevent optimization of annotation thresholds if that will be useless.
+        param_ff.energyThrFactors.assign(param_ff.energyThrFactors.size(),0.0);
+        #endif
         vector < double > tmp_ff;
         param_ff.getRawPars(tmp_ff);
         indicator_bool.clear();
