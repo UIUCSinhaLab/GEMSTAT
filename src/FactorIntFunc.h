@@ -15,6 +15,7 @@ enum FactorIntType
     HELICAL                                       //Helical phasing model of interaction
 };
 
+FactorIntType getIntOption( const string& int_option_str );
 string getIntOptionStr( FactorIntType intOption );
 
 /*****************************************************

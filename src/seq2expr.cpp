@@ -40,6 +40,7 @@ int main( int argc, char* argv[] )
     ofstream par_out_stream; // Uninitialized at first.
 
     ModelType cmdline_modelOption = LOGISTIC;
+    string cmdline_interaction_option_str = "BINARY";
     double coopDistThr = 50;
     double factorIntSigma = 50.0;                 // sigma parameter for the Gaussian interaction function
     double repressionDistThr = 0;
@@ -139,6 +140,8 @@ int main( int argc, char* argv[] )
 	    upper_bound_file = argv[ ++i ];
         else if( !strcmp("-no_gt_out", argv[ i ]))
             cmdline_write_gt = false;
+        else if( !strcmp("-int", argv[ i ]))
+            cmdline_interaction_option_str = argv[ ++i ];
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -261,6 +264,7 @@ int main( int argc, char* argv[] )
 
 
     FactorIntFunc* intFunc;
+    intOption = getIntOption(cmdline_interaction_option_str);
     if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
     else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
     else if ( intOption == HELICAL ) intFunc = new FactorIntFuncHelical( coopDistThr );
@@ -271,6 +275,10 @@ int main( int argc, char* argv[] )
 
     //Create a new ExprModel with all of the selected options.
     //TODO: Continue here
+    if( cmdline_modelOption == DIRECT || cmdline_modelOption == LOGISTIC || cmdline_modelOption == MARKOV || cmdline_modelOption == RATES){
+        //TODO: Kind of a hacky workaround, the models/DP implementations should know that they need to ignore this during their setup.
+        repressionDistThr = 0;
+    }
     ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
     expr_model.shared_scaling = cmdline_one_beta;
 
