@@ -40,7 +40,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 
     // set the model option for ExprPar and ExprFunc
     ExprPar::modelOption = expr_model.modelOption;//TODO: Remove both of these.
-    ExprFunc::modelOption = expr_model.modelOption;
+    //ExprFunc::modelOption = expr_model.modelOption;
 
     // set the values of the parameter range according to the model option
     if ( expr_model.modelOption != LOGISTIC && expr_model.modelOption != DIRECT )

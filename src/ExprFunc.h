@@ -29,7 +29,7 @@ class ExprFunc
         virtual double predictExpr( const Condition& in_condition );
         const ExprPar& getPar() const { return par; }
 
-        static ModelType modelOption;             // model option
+        //static ModelType modelOption;             // model option
         static bool one_qbtm_per_crm;
     protected:
         //setup functions that may be useful to subclasses
