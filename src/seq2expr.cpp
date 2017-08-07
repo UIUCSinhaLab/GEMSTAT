@@ -52,12 +52,12 @@ int main( int argc, char* argv[] )
 
     bool read_par_init_file = false;
 
+    ObjType cmdline_obj_option = SSE;
     double l1 = 0.0;
     double l2 = 0.0;
 
     bool cmdline_one_qbtm_per_crm = false;
     bool cmdline_one_beta = false;
-
     bool cmdline_write_gt = true;
 
     string lower_bound_file; ExprPar lower_bound_par; bool lower_bound_par_read = false;
@@ -66,7 +66,18 @@ int main( int argc, char* argv[] )
     ExprPar::one_qbtm_per_crm = false;
     ExprFunc::one_qbtm_per_crm = false;
 
-    ExprPredictor::nAlternations = 5;
+    // additional control parameters
+    double gcContent = 0.5;
+    FactorIntType intOption = BINARY;             // type of interaction function
+    ExprPar::searchOption = CONSTRAINED;          // search option: unconstrained; constrained.
+
+    int cmdline_n_alternations = 5;
+    int cmdline_n_random_starts = 0;
+    ExprPredictor::min_delta_f_SSE = 1.0E-10;
+    ExprPredictor::min_delta_f_Corr = 1.0E-10;
+    ExprPredictor::min_delta_f_CrossCorr = 1.0E-10;
+    int cmdline_max_simplex_iterations = 400;
+    int cmdline_max_gradient_iterations = 50;
     for ( int i = 1; i < argc; i++ )
     {
         if ( !strcmp( "-s", argv[ i ] ) )
@@ -90,7 +101,7 @@ int main( int argc, char* argv[] )
         else if ( !strcmp( "-r", argv[ i ] ) )
             repressionFile = argv[ ++i ];
         else if ( !strcmp( "-oo", argv[ i ] ) )
-            ExprPredictor::objOption = getObjOption( argv[++i] );
+            cmdline_obj_option = getObjOption( argv[++i] );
         else if ( !strcmp( "-mc", argv[i] ) )
             maxContact = atoi( argv[++i] );
         else if ( !strcmp( "-fo", argv[i] ) )
@@ -106,7 +117,7 @@ int main( int argc, char* argv[] )
         else if ( !strcmp( "-rt", argv[i] ) )
             repressionDistThr = atof( argv[++i] );
         else if ( !strcmp( "-na", argv[i] ) )
-            ExprPredictor::nAlternations = atoi( argv[++i] );
+            cmdline_n_alternations = atoi( argv[++i] );
         else if ( !strcmp( "-ff", argv[i] ) )
             free_fix_indicator_filename = argv[++i];
         else if ( !strcmp( "-oq", argv[i] ) )
@@ -153,18 +164,6 @@ int main( int argc, char* argv[] )
 
     //     bool readSites = false;     // whether read sites (if true) or read sequences
 
-    // additional control parameters
-    double gcContent = 0.5;
-    FactorIntType intOption = BINARY;             // type of interaction function
-    ExprPar::searchOption = CONSTRAINED;          // search option: unconstrained; constrained.
-
-    ExprPredictor::nRandStarts = 0;
-    ExprPredictor::min_delta_f_SSE = 1.0E-10;
-    ExprPredictor::min_delta_f_Corr = 1.0E-10;
-    ExprPredictor::min_delta_f_CrossCorr = 1.0E-10;
-    ExprPredictor::nSimplexIters = 400;
-    ExprPredictor::nGradientIters = 50;
-
     int rval;
     vector< vector< double > > data;              // buffer for reading matrix data
     vector< string > labels;                      // buffer for reading the labels of matrix data
@@ -177,6 +176,7 @@ int main( int argc, char* argv[] )
     ASSERT_MESSAGE(rval != RET_ERROR, "Could not read the sequence file.");
     int nSeqs = seqs.size();
 
+    /*
     //read the random sequences
     vector< Sequence > r_seqs;
     vector< string > r_seqNames;
@@ -185,6 +185,7 @@ int main( int argc, char* argv[] )
     	ASSERT_MESSAGE( rval != RET_ERROR , "Coule not read the random sequences file.");
     }
     int r_nSeqs = r_seqs.size();
+    */
 
     // read the expression data
     vector< string > condNames;
@@ -282,27 +283,7 @@ int main( int argc, char* argv[] )
     ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
     expr_model.shared_scaling = cmdline_one_beta;
 
-    // read the axis wt file
-    vector < int > axis_start;
-    vector < int > axis_end;
-    vector < double > axis_wts;
-
-    axis_start.clear();
-    axis_end.clear();
-    axis_wts.clear();
-
-    if( !axis_wtFile.empty() )
-    {
-	    int readRet = readAxisWeights(axis_wtFile, axis_start, axis_end, axis_wts);
-	    ASSERT_MESSAGE(0 == readRet, "Error reading the axis weights (-aw) file.");
-    }
-    else
-    {//Alternative intialization.
-        axis_start.push_back( 0 );
-        axis_end.push_back( condNames.size() - 1 );
-        axis_wts.push_back( 100 );
-    }
-
+    //Deleted AXIS_WEIGHTS from here
 
     //Setup a parameter factory
     ParFactory *param_factory = new ParFactory(expr_model, nSeqs);
@@ -518,19 +499,21 @@ int main( int argc, char* argv[] )
     }
 
     //TODO: R_SEQ Either remove this feature or un-comment it.
+    /*
     //site representation of the random sequences
     vector< SiteVec > r_seqSites( r_nSeqs );
     vector< int > r_seqLengths( r_nSeqs );
 
     if( r_seqs.size() > 0){
-    /*SeqAnnotator r_ann( motifs, energyThrFactors );
+    SeqAnnotator r_ann( motifs, energyThrFactors );
         for ( int i = 0; i < r_nSeqs; i++ ) {
         //cout << "Annotated sites for CRM: " << seqNames[i] << endl;
                 r_ann.annot( r_seqs[ i ], r_seqSites[ i ] );
                 r_seqLengths[i] = r_seqs[i].size();
         }
-    */
+
     }
+    */
 
 
     // CHECK POINT
@@ -561,7 +544,7 @@ int main( int argc, char* argv[] )
     {
         cout << "Repression_Distance_Threshold = " << repressionDistThr << endl;
     }
-    cout << "Objective_Function = " << getObjOptionStr( ExprPredictor::objOption ) << endl;
+    cout << "Objective_Function = " << getObjOptionStr( cmdline_obj_option ) << endl;
     if ( !coopFile.empty() )
     {
         cout << "Interaction_Model = " << getIntOptionStr( intOption ) << endl;
@@ -574,7 +557,13 @@ int main( int argc, char* argv[] )
 
 
     // create the expression predictor
-    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
+    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames );
+    //And setup parameters from the commandline
+    predictor->set_objective_option(cmdline_obj_option);
+    predictor->n_random_starts = cmdline_n_random_starts;
+    predictor->max_simplex_iterations = cmdline_max_simplex_iterations;
+    predictor->max_gradient_iterations = cmdline_max_gradient_iterations;
+
 
     //Setup regularization
     if(0.0 != l1 || 0.0 != l2){
@@ -630,7 +619,7 @@ int main( int argc, char* argv[] )
     }
     cout << "Estimated values of parameters:" << endl;
     par.print( cout, motifNames, coopMat );
-    cout << "Performance = " << setprecision( 5 ) << ( ( ExprPredictor::objOption == SSE || ExprPredictor::objOption == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
+    cout << "Performance = " << setprecision( 5 ) << ( ( cmdline_obj_option == SSE || cmdline_obj_option == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
     writePredictions(outFile, *predictor, training_dataset.exprData, expr_condNames, cmdline_write_gt, true);
