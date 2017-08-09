@@ -498,17 +498,19 @@ ExprPar ParFactory::load_1_6a(istream& fin){
     //https://stackoverflow.com/questions/7868936/read-file-line-by-line
     //https://stackoverflow.com/questions/236129/split-a-string-in-c
     std:string line;
-    //std::istringstream line_ss;
+    std::istringstream line_ss;
     vector<string> tokens;
+    #define LOCAL_TOKENIZE(M_TOK_VECT,M_LINE_STR,M_SS) M_TOK_VECT.clear();\
+                            M_SS.clear();\
+                            M_SS.str(M_LINE_STR);\
+                            copy(istream_iterator<string>(M_SS),\
+                            istream_iterator<string>(),\
+                            back_inserter(M_TOK_VECT))
 
     //Read the TF lines.
     int tf_i = 0;
     for(tf_i = 0; tf_i < expr_model.getNFactors() && std::getline(fin,line);tf_i++){
-        tokens.clear();
-        std::istringstream line_ss(line);
-        copy(istream_iterator<string>(line_ss),
-            istream_iterator<string>(),
-            back_inserter(tokens));
+        LOCAL_TOKENIZE(tokens,line,line_ss);
 
         //Read a TF line.
         assert(tokens.size() == 3 || tokens.size() == 4);
@@ -522,13 +524,9 @@ ExprPar ParFactory::load_1_6a(istream& fin){
     }
 
     //Expect the basal transcription line
-    tokens.clear();
     std::getline(fin,line);
-    {
-    std::istringstream line_ss(line);
-    copy(istream_iterator<string>(line_ss),
-        istream_iterator<string>(),
-        back_inserter(tokens));
+    LOCAL_TOKENIZE(tokens,line,line_ss);
+
     vector<double> reading_basal;
     reading_basal.clear();
     for(tf_i=2;tf_i<tokens.size();tf_i++){
@@ -550,7 +548,6 @@ ExprPar ParFactory::load_1_6a(istream& fin){
       avg /= (reading_basal.size());
       tmp_par.basalTxps.assign(tmp_par.basalTxps.size(),avg);
     }
-  }
 
     //Done reading the basal transcription
     // factor name to index mapping
@@ -561,13 +558,8 @@ ExprPar ParFactory::load_1_6a(istream& fin){
     }
 
     //PIS
-    {
-    tokens.clear();
     std::getline(fin,line);
-    std::istringstream line_ss(line);
-    copy(istream_iterator<string>(line_ss),
-        istream_iterator<string>(),
-        back_inserter(tokens));
+    LOCAL_TOKENIZE(tokens,line,line_ss);
     vector< double > the_pis;
     the_pis.clear();
     for(tf_i=0;tf_i<tokens.size();tf_i++){
@@ -583,16 +575,10 @@ ExprPar ParFactory::load_1_6a(istream& fin){
       avg /= (the_pis.size());
       tmp_par.pis.assign(tmp_par.pis.size(),avg);
     }
-  }
 
     //BETA
-    {
-    tokens.clear();
     std::getline(fin,line);
-    std::istringstream line_ss(line);
-    copy(istream_iterator<string>(line_ss),
-        istream_iterator<string>(),
-        back_inserter(tokens));
+    LOCAL_TOKENIZE(tokens,line,line_ss);
     vector< double > the_betas;
     the_betas.clear();
     for(tf_i=0;tf_i<tokens.size();tf_i++){
@@ -608,14 +594,21 @@ ExprPar ParFactory::load_1_6a(istream& fin){
       avg /= (the_betas.size());
       tmp_par.betas.assign(tmp_par.betas.size(),avg);
     }
-  }
+
   //TODO: load Cooperativities
   // read the cooperative interactions
-  string factor1, factor2;
-  double coopVal;
   for( int i = 0; i < expr_model.getNumCoop(); i++ )
   {
-      fin >> factor1 >> factor2 >> coopVal;
+      double coopVal;
+      string factor1, factor2;
+
+      std::getline(fin,line);
+      LOCAL_TOKENIZE(tokens,line,line_ss);
+
+      factor1 = tokens[0];
+      factor2 = tokens[1];
+      coopVal = atof(tokens[2].c_str());
+
       if( !factorIdxMap.count( factor1 ) || !factorIdxMap.count( factor2 ) ) throw RET_ERROR;
       int idx1 = factorIdxMap[factor1];
       int idx2 = factorIdxMap[factor2];
@@ -627,11 +620,11 @@ ExprPar ParFactory::load_1_6a(istream& fin){
   //TODO: load annotation thresholds
   double factor_thr_val;
   tmp_par.energyThrFactors.clear();
-  while( fin >> factor_thr_val )
-  {
-      tmp_par.energyThrFactors.push_back( factor_thr_val );
+  std::getline(fin,line);
+  LOCAL_TOKENIZE(tokens,line,line_ss);
+  for(int i = 0; i < tokens.size();i++){
+      tmp_par.energyThrFactors.push_back( atof(tokens[i].c_str()) );
   }
-
     //TODO: write output for this format.
 
 
@@ -639,7 +632,7 @@ ExprPar ParFactory::load_1_6a(istream& fin){
     //cerr << "This feature is not yet fully implemented. Sorry." << endl;
     //exit(1);
 
-
+    #undef LOCAL_TOKENIZE
 
     return tmp_par;
 }
