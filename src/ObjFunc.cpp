@@ -184,3 +184,42 @@ double PeakWeightedObjFunc::eval(const vector<vector<double> >& ground_truth, co
     double rmse = sqrt( squaredErr / ( nSeqs * nConds ) );
     return rmse;
 }
+
+double Weighted_RMSEObjFunc::eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction,
+  const ExprPar* par){
+    #ifndef BETAOPTTOGETHER
+        assert(false);
+    #endif
+
+    assert(ground_truth.size() == prediction.size());
+    int nSeqs = ground_truth.size();
+    int nConds = ground_truth[0].size();
+    double squaredErr = 0.0;
+
+    for(int i = 0;i<ground_truth.size();i++){
+      double beta = 1.0;
+      if(NULL != par){ beta = par->getBetaForSeq(i); }
+
+      for(int j = 0;j<nConds;j++){
+          double single_sqr_error = (beta*prediction[i][j] - ground_truth[i][j]);
+          single_sqr_error = weights->getElement(i,j)*pow(single_sqr_error,2);
+          squaredErr += single_sqr_error;
+      }
+    }
+
+    double rmse = sqrt( squaredErr / total_weight );
+    return rmse;
+}
+
+void Weighted_RMSEObjFunc::set_weights(Matrix *in_weights){
+    if(NULL != weights){delete weights;}
+    weights = in_weights;
+
+    //Caculate the total weight.
+    total_weight = 0.0;
+    for(int i = 0;i<weights->nRows();i++){
+        for(int j = 0;j<weights->nCols();j++){
+            total_weight+=weights->getElement(i,j);
+        }
+    }
+}

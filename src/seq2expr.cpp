@@ -39,6 +39,9 @@ int main( int argc, char* argv[] )
     string par_out_file; // the learned parameters will get stored here
     ofstream par_out_stream; // Uninitialized at first.
 
+    string train_weights_filename;
+    bool train_weights_loaded = false;
+
     ModelType cmdline_modelOption = LOGISTIC;
     string cmdline_interaction_option_str = "BINARY";
     double coopDistThr = 50;
@@ -142,6 +145,8 @@ int main( int argc, char* argv[] )
             cmdline_write_gt = false;
         else if( !strcmp("-int", argv[ i ]))
             cmdline_interaction_option_str = argv[ ++i ];
+    else if( !strcmp("-train_weights", argv[ i ]))
+        train_weights_filename = argv[ ++i ];
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -198,8 +203,26 @@ int main( int argc, char* argv[] )
     }
     Matrix exprData( data );
     int nConds = exprData.nCols();
-
     vector < string > expr_condNames = condNames;
+
+    //read the weights if provided
+    Matrix *training_weights = NULL;
+    if( ! train_weights_filename.empty() ){
+        vector<vector< double> > weights_data(0);
+        vector<string> weights_labels(0);
+        vector<string> weights_condNames(0);
+        rval = readMatrix( train_weights_filename, weights_labels, weights_condNames, weights_data );
+        ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the weights data file.");
+        ASSERT_MESSAGE( labels.size() == nSeqs , "Mismatch between number of labels and number of sequences");
+        for ( int i = 0; i < nSeqs; i++ )
+        {
+            if( weights_labels[ i ] != seqNames[ i ] ) cout << weights_labels[i] << seqNames[i] << endl;
+            ASSERT_MESSAGE( weights_labels[i] == seqNames[i] , "A label and a sequence name did not agree.");
+        }
+        training_weights = new Matrix( weights_data );
+        train_weights_loaded = true;
+    }
+
 
     // read the motifs
     vector< Motif > motifs;
@@ -576,7 +599,18 @@ int main( int argc, char* argv[] )
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, r_seqSites, seqLengths, r_seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames, axis_start, axis_end, axis_wts );
 
-    //Setup regularization
+    //Setup a weighted objective if that is appropriate
+    if( ExprPredictor::objOption == WEIGHTED_SSE) {
+        ASSERT_MESSAGE( train_weights_loaded , "User requested WEIGHTED_SSE objective, but provided no weights.");
+        delete predictor->trainingObjective;
+        Weighted_RMSEObjFunc *tmp_ptr = new Weighted_RMSEObjFunc();
+        tmp_ptr->set_weights(training_weights);
+        predictor->trainingObjective = tmp_ptr;
+        //TODO: log a message about this.
+    }
+
+
+    //Setup regularization objective function
     if(0.0 != l1 || 0.0 != l2){
       cerr << "INFO: Regularization was turned on and will be used. l1 = " << l1 << " l2 = " << l2 << " ."<< endl;
 
