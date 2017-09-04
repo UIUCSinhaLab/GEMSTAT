@@ -560,6 +560,7 @@ int main( int argc, char* argv[] )
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames );
     //And setup parameters from the commandline
     predictor->set_objective_option(cmdline_obj_option);
+    predictor->n_alternations = cmdline_n_alternations;
     predictor->n_random_starts = cmdline_n_random_starts;
     predictor->max_simplex_iterations = cmdline_max_simplex_iterations;
     predictor->max_gradient_iterations = cmdline_max_gradient_iterations;
