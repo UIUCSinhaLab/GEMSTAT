@@ -76,4 +76,16 @@ public:
   double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
 };
 
+class Weighted_RMSEObjFunc: public RMSEObjFunc {
+public:
+    Weighted_RMSEObjFunc() : RMSEObjFunc(), weights(NULL) {}
+  ~Weighted_RMSEObjFunc(){if(NULL != weights){delete weights;}}
+  double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
+
+  void set_weights(Matrix *in_weights);
+private:
+    Matrix *weights;
+    double total_weight;
+};
+
 #endif
