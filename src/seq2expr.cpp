@@ -589,7 +589,7 @@ int main( int argc, char* argv[] )
 
 
     //Setup a weighted objective if that is appropriate
-    if( ExprPredictor::objOption == WEIGHTED_SSE) {
+    if( predictor->objOption == WEIGHTED_SSE) {
         ASSERT_MESSAGE( train_weights_loaded , "User requested WEIGHTED_SSE objective, but provided no weights.");
         delete predictor->trainingObjective;
         Weighted_RMSEObjFunc *tmp_ptr = new Weighted_RMSEObjFunc();
