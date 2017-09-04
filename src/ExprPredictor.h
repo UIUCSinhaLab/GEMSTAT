@@ -19,43 +19,21 @@ class ExprPredictor
 {
     public:
         // constructors
-        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites, const vector< SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts  );
+        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites,  const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames);
         ~ExprPredictor();
         // access methods
-        int nSeqs() const
-        {
-            return seqs.size();
-        }
-        int nFactors() const
-        {
-            return expr_model.motifs.size();
-        }
-        int nConds() const
-        {
-            return training_data.nConds();
-        }
-        const IntMatrix& getCoopMat() const
-        {
-            return expr_model.coopMat;
-        }
-        const vector< bool >& getActIndicators() const
-        {
-            return expr_model.actIndicators;
-        }
-        const vector< bool >& getRepIndicators() const
-        {
-            return expr_model.repIndicators;
-        }
-        const IntMatrix& getRepressionMat() const
-        {
-            return expr_model.repressionMat;
-        }
-
-        const vector< SiteVec >& getSeqSites(){
-          return seqSites;
-        }
+        int nSeqs() const { return seqs.size(); }
+        int nFactors() const { return expr_model.motifs.size(); }
+        int nConds() const { return training_data.nConds(); }
+        const IntMatrix& getCoopMat() const { return expr_model.coopMat; }
+        const vector< bool >& getActIndicators() const { return expr_model.actIndicators; }
+        const vector< bool >& getRepIndicators() const { return expr_model.repIndicators; }
+        const IntMatrix& getRepressionMat() const { return expr_model.repressionMat; }
+        const vector< SiteVec >& getSeqSites(){ return seqSites; }
         const ExprPar& getPar() const { return par_model; }
         double getObj() const { return obj_model; }
+
+        void set_objective_option( ObjType in_obj_option );
 
         // the objective function to be minimized
         double objFunc( const ExprPar& par ) ;
@@ -77,7 +55,7 @@ class ExprPredictor
 
         //std::ofstream gene_crm_fout;
 
-        static ObjType objOption;                 // option of the objective function
+        ObjType objOption;                 // option of the objective function
 
         // the similarity between two expression patterns, using cross-correlation
         static double exprSimCrossCorr( const vector< double >& x, const vector< double >& y );
@@ -85,14 +63,14 @@ class ExprPredictor
         static double shiftPenalty;               // the penalty for shift (when weighting different positions)
 
         // the parameters for the optimizer
-        static int nAlternations;                 // number of alternations (between two optimization methods)
-        static int nRandStarts;                   // number of random starts
+        int n_alternations;                 // number of alternations (between two optimization methods)
+        int n_random_starts;                   // number of random starts
         static double min_delta_f_SSE;            // the minimum change of the objective function under SSE
         static double min_delta_f_Corr;           // the minimum change of the objective function under correlation
         static double min_delta_f_CrossCorr;      // the minimum change of the objective function under cross correlation
         static double min_delta_f_PGP;            // the minimum change of the objective function under PGP
-        static int nSimplexIters;                 // maximum number of iterations for Simplex optimizer
-        static int nGradientIters;                // maximum number of iterations for Gradient optimizer
+        int max_simplex_iterations;               // maximum number of iterations for Simplex optimizer (default = 200)
+        int max_gradient_iterations;              // maximum number of iterations for Gradient optimizer (default = 50)
         vector < bool > indicator_bool;
         vector <string> motifNames;
         vector < double > fix_pars;
@@ -104,27 +82,26 @@ class ExprPredictor
         ParFactory *param_factory;
         ObjFunc *trainingObjective;
     private:
-        // training data
+        //***** training data ******
+        const DataSet& training_data;               //input and output curves
+        //
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
         const vector< int >& seqLengths;          // lengths of all sequences
         //TODO: R_SEQ Either remove this dead feature or revive it and make it conditional.
-        const vector <SiteVec>& r_seqSites;
-        const vector< int >& r_seqLengths;        // lengths of all sequences
+        //const vector <SiteVec>& r_seqSites;
+        //const vector< int >& r_seqLengths;        // lengths of all sequences
 
-        const DataSet& training_data;
-        const vector < int >& axis_start;
-        const vector < int >& axis_end;
-        const vector < double >& axis_wts;
 
-        // control parameters
-	    const ExprModel& expr_model;
+        //***** MODEL *******
+        //The model, controls what kinds of interactions, who can interact, what kind of BTM, etc.
+    	const ExprModel& expr_model;
 
         // model parameters and the value of the objective function
         ExprPar par_model;
         double obj_model;
 
         // randomly sample parameter values (only those free parameters), the parameters should be initialized
-        int randSamplePar( const gsl_rng* rng, ExprPar& par ) const;
+        //int randSamplePar( const gsl_rng* rng, ExprPar& par ) const;
 
         // print the parameter values (the ones that are estimated) in a single line
         void printPar( const ExprPar& par ) const;

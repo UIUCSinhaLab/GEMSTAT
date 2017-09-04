@@ -9,13 +9,13 @@
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data);
 
-ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector < SiteVec >& _r_seqSites, const vector< int >& _seqLengths, const vector <int>& _r_seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
-		const vector < bool >& _indicator_bool, const vector <string>& _motifNames, const vector < int >& _axis_start, const vector < int >& _axis_end, const vector < double >& _axis_wts ) : seqs(_seqs), seqSites( _seqSites ), r_seqSites( _r_seqSites ), seqLengths( _seqLengths ), r_seqLengths( _r_seqLengths ), training_data( _training_data ),
+ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
+		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
 	expr_model( _expr_model),
-	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), axis_start ( _axis_start ), axis_end( _axis_end ), axis_wts( _axis_wts )
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames )
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
-		cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
+	cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
     assert( training_data.exprData.nRows() == nSeqs() );
     assert( training_data.factorExprData.nRows() == nFactors() && training_data.factorExprData.nCols() == nConds() );
     assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
@@ -25,11 +25,22 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     assert( expr_model.repressionMat.isSquare() && expr_model.repressionMat.nRows() == nFactors() );
     assert( expr_model.repressionDistThr >= 0 );
 
+	//****** DEFAULT VALUES *********
+	objOption = SSE;
+
+	n_alternations = 4;
+	n_random_starts = 5;
+
+
+	max_simplex_iterations = 200;
+	max_gradient_iterations = 50;
+
+
     //gene_crm_fout.open( "gene_crm_fout.txt" );
 
     // set the model option for ExprPar and ExprFunc
     ExprPar::modelOption = expr_model.modelOption;//TODO: Remove both of these.
-    ExprFunc::modelOption = expr_model.modelOption;
+    //ExprFunc::modelOption = expr_model.modelOption;
 
     // set the values of the parameter range according to the model option
     if ( expr_model.modelOption != LOGISTIC && expr_model.modelOption != DIRECT )
@@ -41,29 +52,8 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     //expr_model was already initialized. Setup the parameter factory.
     param_factory = new ParFactory(expr_model, nSeqs());
 
-    //TODO: Move this to the front-end or something?
-    //Maybe make it have a default SSE score objective, but anything else gets specified in the front-end.
-    switch(objOption){
-      case CORR:
-        trainingObjective = new AvgCorrObjFunc();
-        break;
-      case PGP:
-        trainingObjective = new PGPObjFunc();
-        break;
-      case CROSS_CORR:
-        trainingObjective = new AvgCrossCorrObjFunc(ExprPredictor::maxShift, ExprPredictor::shiftPenalty);
-        break;
-      case LOGISTIC_REGRESSION:
-        trainingObjective = new LogisticRegressionObjFunc();
-        break;
-			case PEAK_WEIGHTED:
-				trainingObjective = new PeakWeightedObjFunc();
-				break;
-      case SSE:
-      default:
-        trainingObjective = new RMSEObjFunc();
-        break;
-    }
+	trainingObjective = NULL;
+	set_objective_option(objOption);
 
     /* DEBUG
     cout << setprecision(10);
@@ -80,6 +70,37 @@ ExprPredictor::~ExprPredictor()
 {
   delete param_factory;
   delete trainingObjective;
+}
+
+void ExprPredictor::set_objective_option( ObjType in_obj_option ){
+	//TODO: Move this to the front-end or something?
+    //Maybe make it have a default SSE score objective, but anything else gets specified in the front-end.
+	if(NULL != trainingObjective){
+		delete trainingObjective;
+		trainingObjective = NULL;
+	}
+
+    switch(in_obj_option){
+      case CORR:
+        trainingObjective = new AvgCorrObjFunc();
+        break;
+      case PGP:
+        trainingObjective = new PGPObjFunc();
+        break;
+      case CROSS_CORR:
+        trainingObjective = new AvgCrossCorrObjFunc(ExprPredictor::maxShift, ExprPredictor::shiftPenalty);
+        break;
+      case LOGISTIC_REGRESSION:
+        trainingObjective = new LogisticRegressionObjFunc();
+        break;
+	case PEAK_WEIGHTED:
+		trainingObjective = new PeakWeightedObjFunc();
+		break;
+      case SSE:
+      default:
+        trainingObjective = new RMSEObjFunc();
+        break;
+    }
 }
 
 double ExprPredictor::objFunc( const ExprPar& par )
@@ -101,7 +122,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     cout << "Objective function value: " << objFunc( par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
-    if ( nAlternations > 0 && ExprPar::searchOption == CONSTRAINED ){
+    if ( n_alternations > 0 && ExprPar::searchOption == CONSTRAINED ){
       par_model = param_factory->truncateToBounds(par_model, indicator_bool);
 
     }
@@ -114,12 +135,12 @@ int ExprPredictor::train( const ExprPar& par_init )
     cout << "Objective function value: " << objFunc( par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
-    if ( nAlternations == 0 ) return 0;
+    if ( n_alternations == 0 ) return 0;
 
     // alternate between two different methods
     ExprPar par_result;
     double obj_result;
-    for ( int i = 0; i < nAlternations; i++ )
+    for ( int i = 0; i < n_alternations; i++ )
     {
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
@@ -156,7 +177,7 @@ int ExprPredictor::train( const ExprPar& par_init, const gsl_rng* rng )
     // training with random starts
     ExprPar par_best = par_model;
     double obj_best = obj_model;
-    for ( int i = 0; i < nRandStarts; i++ )
+    for ( int i = 0; i < n_random_starts; i++ )
     {
         ExprPar par_curr = par_init;
         par_curr = param_factory->randSamplePar( rng );
@@ -171,7 +192,7 @@ int ExprPredictor::train( const ExprPar& par_init, const gsl_rng* rng )
     }
 
     // training using the best parameters so far
-    if ( nRandStarts ) train( par_best );
+    if ( n_random_starts ) train( par_best );
     cout << "Final training:\tParameters = "; printPar( par_model );
     cout << "\tObjective = " << setprecision( 5 ) << obj_model << endl;
 
@@ -219,20 +240,13 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
     return 0;
 }
 
-
-ObjType ExprPredictor::objOption = SSE;
-
 int ExprPredictor::maxShift = 5;
 double ExprPredictor::shiftPenalty = 0.8;
 
-int ExprPredictor::nAlternations = 4;
-int ExprPredictor::nRandStarts = 5;
 double ExprPredictor::min_delta_f_SSE = 1.0E-8;
 double ExprPredictor::min_delta_f_Corr = 1.0E-8;
 double ExprPredictor::min_delta_f_CrossCorr = 1.0E-8;
 double ExprPredictor::min_delta_f_PGP = 1.0E-8;
-int ExprPredictor::nSimplexIters = 200;
-int ExprPredictor::nGradientIters = 50;
 
 
 
@@ -341,9 +355,8 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     //SIMPLEX MINIMIZATION with NLOPT
     nlopt::opt optimizer(nlopt::LN_NELDERMEAD, pars.size());
     optimizer.set_min_objective(nlopt_obj_func, this);
-    //optimizer.set_maxmaxeval(nSimplexIters);
-    optimizer.set_initial_step(1.0);//TODO: enforce simplex staring size.
-    optimizer.set_maxeval(nSimplexIters);//TODO: enforce nSimplexIters
+    optimizer.set_initial_step(1.0);//TODO: enforce simplex starting size.
+	if(max_simplex_iterations > -1){ optimizer.set_maxeval(max_simplex_iterations); }
 
     if(ExprPar::searchOption == CONSTRAINED){
       vector<double> free_mins;
@@ -426,7 +439,8 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
 
 
     //TODO: enforce nGradientIters
-    optimizer.set_maxeval(nGradientIters);
+	if(max_gradient_iterations > -1){ optimizer.set_maxeval(max_gradient_iterations); }
+
     try{
       nlopt::result result = optimizer.optimize(free_pars, obj_result);
       obj_result = optimizer.last_optimum_value();
@@ -493,7 +507,7 @@ double gsl_obj_f( const gsl_vector* v, void* params )
 
 void gsl_obj_df( const gsl_vector* v, void* params, gsl_vector* grad )
 {
-    double step = 1.0E-4;
+    double step = 1.0E-6;
     numeric_deriv( grad, gsl_obj_f, v, params, step );
 }
 
