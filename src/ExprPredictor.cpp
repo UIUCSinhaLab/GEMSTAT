@@ -75,6 +75,8 @@ ExprPredictor::~ExprPredictor()
 void ExprPredictor::set_objective_option( ObjType in_obj_option ){
 	//TODO: Move this to the front-end or something?
     //Maybe make it have a default SSE score objective, but anything else gets specified in the front-end.
+	objOption = in_obj_option;
+
 	if(NULL != trainingObjective){
 		delete trainingObjective;
 		trainingObjective = NULL;
