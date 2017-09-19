@@ -5,6 +5,13 @@
 ExprModel::ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, FactorIntFunc* _intFunc, int _maxContact, IntMatrix& _coopMat, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr ) : modelOption( _modelOption), one_qbtm_per_crm( _one_qbtm_per_crm), motifs( _motifs), intFunc( _intFunc), maxContact( _maxContact), coopMat( _coopMat ), actIndicators( _actIndicators), repIndicators( _repIndicators), repressionMat( _repressionMat), repressionDistThr( _repressionDistThr)
 {
   shared_scaling = false;
+  //A QUENCHING model shall have repIndicators all false.
+  if(_modelOption == QUENCHING){
+      for(int i = 0;i<repIndicators.size();i++){
+          if(repIndicators[i])
+            throw std::invalid_argument("A quenching model should not have repIndicators that are not all false.");
+      }
+  }
 }
 
 
