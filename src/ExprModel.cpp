@@ -11,7 +11,7 @@ ExprModel::ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Mo
   if(_modelOption == QUENCHING){
       for(int i = 0;i<repIndicators.size();i++){
           if(repIndicators[i])
-            throw std::invalid_argument("A quenching model should not have repIndicators that are not all false.");
+            throw std::invalid_argument("A quenching model should not have repIndicators that are all false.");
       }
   }
 }
