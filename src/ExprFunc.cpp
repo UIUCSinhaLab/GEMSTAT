@@ -662,10 +662,10 @@ double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
     // 	assert( !siteOverlap( a, b, motifs ) );
     double maxInt = par.factorIntMat( a.factorIdx, b.factorIdx );
     double dist = abs( b.start - a.start );
-    bool orientation = ( a.strand == b.strand );
+    //bool orientation = ( a.strand == b.strand );
 
     FactorIntFunc* an_int_func = expr_model->coop_setup->coop_func_for(a.factorIdx, b.factorIdx);
-    return an_int_func->compFactorInt( maxInt, dist, orientation );
+    return an_int_func->compFactorInt( maxInt, dist, a.strand, b.strand );
 
     //TODO: we need to get this information from the expr_model.
     //This is going to be very slow, we should have cached it.

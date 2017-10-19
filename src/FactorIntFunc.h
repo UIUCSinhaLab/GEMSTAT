@@ -29,7 +29,7 @@ class FactorIntFunc
         FactorIntFunc( double _distThr, double _orientationEffect = 1.0 ) : distThr( _distThr), orientationEffect( _orientationEffect) { assert( distThr >= 0 ); }
         virtual ~FactorIntFunc(){};
         // compute the factor interaction, given the normal interaction (when they are close enough)
-        virtual double compFactorInt( double normalInt, double dist, bool orientation ) const = 0;
+        virtual double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const = 0;
 
         double getMaxDist() const
         {
@@ -44,7 +44,7 @@ class Null_FactorIntFunc : public FactorIntFunc
 {
     public:
         Null_FactorIntFunc ( ) : FactorIntFunc( 0, 1.0){};
-        double compFactorInt( double normalInt, double dist, bool orientation ) const { return 1.0;}
+        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const { return 1.0;}
 };
 
 /* FactorIntFuncBinary class: binary distance function */
@@ -55,7 +55,7 @@ class FactorIntFuncBinary : public FactorIntFunc
         FactorIntFuncBinary( double _distThr, double _orientationEffect = 1.0 ) : FactorIntFunc( _distThr, _orientationEffect){};
 
         // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool orientation ) const;
+        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
 
 
 };
@@ -71,7 +71,7 @@ class FactorIntFuncGaussian : public FactorIntFunc
         }
 
         // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool orientation ) const;
+        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
     private:
         double sigma;                             // standard deviation of
 };
@@ -85,7 +85,7 @@ class FactorIntFuncGeometric : public FactorIntFunc
         {}
 
         // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool orientation ) const;
+        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
 
     private:
         double spacingEffect;                     // the effect of spacing
@@ -100,7 +100,24 @@ class FactorIntFuncHelical : public FactorIntFunc
         {}
 
         // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool orientation ) const;
+        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
+};
+
+/* Dimer interaction class: binary distance function */
+class Dimer_FactorIntFunc : public FactorIntFunc
+{
+    public:
+        // constructors
+        Dimer_FactorIntFunc( double _distThr, bool _a_strand, bool _b_strand ) : FactorIntFunc(_distThr, 1.0)
+        {
+            expected_a_strand = _a_strand;
+            expected_b_strand = _b_strand;
+        }
+        // compute the factor interaction
+        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
+
+        bool expected_a_strand;
+        bool expected_b_strand;
 };
 
 #endif

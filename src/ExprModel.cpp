@@ -132,8 +132,43 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                 int tf_i = factorIdxMap[tokens[0]];
                 int tf_j = factorIdxMap[tokens[1]];
 
-                coop_matrix.setElement(tf_i,tf_j,true);
-                coop_matrix.setElement(tf_j,tf_i,true);
+                //Using default interaction func in both directions
+                int forward_func = 1;
+                int backward_func = 1;
+
+                //TODO: Finish this.
+                if(tokens.size() > 2){
+                    bool interaction_setup_done = false;
+                    //A different interaction function was specified, create it, its complement if necessary, and put it in the list.
+                    if(tokens.size() == 3){
+                        //shorthand for the default interaction with a different distance.
+                        assert(false); //Sorry, not implemented
+                    }
+
+                    if(0 == tokens[2].compare("DIMER")){
+                        assert(tokens.size() >= 6);
+                        //setup a dimer interaction
+
+                        int dist_thr = atoi(tokens[3].c_str());
+                        bool first_orientation = (0 == tokens[4].compare("1") || 0 == tokens[4].compare("+"));
+                        bool second_orientation = (0 == tokens[5].compare("1") || 0 == tokens[5].compare("+"));
+
+                        int_funcs.push_back(new Dimer_FactorIntFunc(dist_thr, first_orientation, second_orientation));
+                        forward_func = int_funcs.size()-1;
+                        int_funcs.push_back(new Dimer_FactorIntFunc(dist_thr, !second_orientation,!first_orientation));
+                        backward_func = int_funcs.size()-1;
+
+
+
+                        interaction_setup_done = true;
+                    }
+
+                    assert(interaction_setup_done);
+                }
+
+
+                coop_matrix.setElement(tf_i,tf_j,forward_func);
+                coop_matrix.setElement(tf_j,tf_i,backward_func);
 
                 //cerr << "DEBUG read" << tokens[0] << tf_i << " " << tokens[1] << tf_i << endl;
         }
@@ -142,4 +177,5 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
 
         //exit(1);
         fin.close();
+        //cerr << "finished reading file" << endl;
 }

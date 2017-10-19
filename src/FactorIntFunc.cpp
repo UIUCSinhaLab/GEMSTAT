@@ -23,9 +23,10 @@ string getIntOptionStr( FactorIntType intOption )
 		return "Invalid";
 }
 
-double FactorIntFuncBinary::compFactorInt( double normalInt, double dist, bool orientation ) const
+double FactorIntFuncBinary::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
 {
     assert( dist >= 0 );
+	bool orientation = ( a_strand == b_strand );
 
     double spacingTerm = ( dist < distThr ? normalInt : 1.0 );
     double orientationTerm = orientation ? 1.0 : orientationEffect;
@@ -33,27 +34,30 @@ double FactorIntFuncBinary::compFactorInt( double normalInt, double dist, bool o
 }
 
 
-double FactorIntFuncGaussian::compFactorInt( double normalInt, double dist, bool orientation ) const
+double FactorIntFuncGaussian::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
 {
     assert( dist >= 0 );
+	//bool orientation = ( a_strand == b_strand );
 
     double GaussianInt = dist < distThr ? normalInt * exp( - ( dist * dist ) / ( 2.0 * sigma * sigma ) ) : 1.0;
     return max( 1.0, GaussianInt );
 }
 
 
-double FactorIntFuncGeometric::compFactorInt( double normalInt, double dist, bool orientation ) const
+double FactorIntFuncGeometric::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
 {
     assert( dist >= 0 );
+	bool orientation = ( a_strand == b_strand );
 
     double spacingTerm = max( 1.0, dist <= distThr ? normalInt : normalInt * pow( spacingEffect, dist - distThr ) );
     double orientationTerm = orientation ? 1.0 : orientationEffect;
     return spacingTerm * orientationTerm;
 }
 
-double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool orientation ) const
+double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
 {
     assert( dist >= 0 );
+	//bool orientation = ( a_strand == b_strand );
 
     	double spacingTerm = (dist < distThr ? normalInt : 1.0);
 	if(dist >= distThr) return 1.0;
@@ -65,4 +69,13 @@ double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool 
 
     //double orientationTerm = orientation ? 1.0 : orientationEffect;
     return phasing;
+}
+
+
+
+double Dimer_FactorIntFunc::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
+{
+    assert( dist >= 0 );
+	if( a_strand != expected_a_strand || b_strand != expected_b_strand || dist > distThr){ return 1.0; }
+	return normalInt;
 }
