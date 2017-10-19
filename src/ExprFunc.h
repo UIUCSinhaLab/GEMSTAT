@@ -16,7 +16,7 @@ class ExprFunc
 {
     public:
         // constructors
-        ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par );
+        ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num);
 
         // access methods
         const vector< Motif >& getMotifs() const
@@ -36,10 +36,12 @@ class ExprFunc
         virtual void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
         void setupBindingWeights(const vector< double >& factorConcs);
         // TF binding motifs
+
+        const ExprModel* expr_model;
         const vector< Motif >& motifs;
 
         // control parameters
-        const FactorIntFunc* intFunc;             // function to compute distance-dependent TF-TF interactions
+//        const FactorIntFunc* intFunc;             // function to compute distance-dependent TF-TF interactions
         const vector< bool >& actIndicators;      // 1 if the TF is in the activator set
         int maxContact;                           // the maximum contact
         const vector< bool >& repIndicators;      // 1 if the TF is in the repressor set
@@ -81,14 +83,14 @@ class ExprFunc
 class Logistic_ExprFunc : public ExprFunc {
   public:
       // constructors
-      Logistic_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      Logistic_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
 
       double predictExpr( const vector< double >& factorConcs );
 };
 
 class Markov_ExprFunc : public ExprFunc {
   public:
-      Markov_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par );// : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par);
+      Markov_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num);// : ExprFunc( _model, _par , sites_, seq_len, seq_num);
       double predictExpr( const vector< double >& factorConcs );
   protected:
       //void setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num);
@@ -100,7 +102,7 @@ class Markov_ExprFunc : public ExprFunc {
 class Direct_ExprFunc : public ExprFunc {
   public:
       // constructors
-      Direct_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      Direct_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;
@@ -110,7 +112,7 @@ class Direct_ExprFunc : public ExprFunc {
 class Quenching_ExprFunc : public ExprFunc {
   public:
       // constructors
-      Quenching_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      Quenching_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;
@@ -120,7 +122,7 @@ class Quenching_ExprFunc : public ExprFunc {
 class ChrMod_ExprFunc : public ExprFunc {
   public:
       // constructors
-      ChrMod_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      ChrMod_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
     virtual double compPartFuncOn() const = 0;
@@ -132,7 +134,7 @@ class ChrMod_ExprFunc : public ExprFunc {
 class ChrModUnlimited_ExprFunc : public ChrMod_ExprFunc {
   public:
       // constructors
-      ChrModUnlimited_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      ChrModUnlimited_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ChrMod_ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;
@@ -141,7 +143,7 @@ class ChrModUnlimited_ExprFunc : public ChrMod_ExprFunc {
 class ChrModLimited_ExprFunc : public ChrMod_ExprFunc {
   public:
       // constructors
-      ChrModLimited_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ChrMod_ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){} ;
+      ChrModLimited_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ChrMod_ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
     double compPartFuncOn() const;

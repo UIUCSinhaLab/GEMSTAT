@@ -25,7 +25,7 @@ class ExprPredictor
         int nSeqs() const { return seqs.size(); }
         int nFactors() const { return expr_model.motifs.size(); }
         int nConds() const { return training_data.nConds(); }
-        const IntMatrix& getCoopMat() const { return expr_model.coopMat; }
+        const IntMatrix& getCoopMat() const { return expr_model.get_coop_mat_immutable(); }
         const vector< bool >& getActIndicators() const { return expr_model.actIndicators; }
         const vector< bool >& getRepIndicators() const { return expr_model.repIndicators; }
         const IntMatrix& getRepressionMat() const { return expr_model.repressionMat; }

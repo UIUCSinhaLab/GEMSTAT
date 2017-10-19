@@ -25,23 +25,46 @@ ModelType getModelOption( const string& modelOptionStr );
 string getModelOptionStr( ModelType modelOption );
 
 
+class CoopInfo {
+    public:
+        CoopInfo(int n_motifs);
+
+        //READ Cooperativities
+        void read_coop_file(string filename, map<string, int> factorIdxMap);
+
+        //STORE COOPS
+        IntMatrix coop_matrix;
+        vector< FactorIntFunc* > int_funcs;
+
+        FactorIntFunc* coop_func_for(int i, int j){ return int_funcs[coop_matrix(i,j)]; }
+
+
+        void set_default_interaction( FactorIntFunc* new_default);
+        int get_num_coops() const {return num_coops;}
+
+        int get_longest_coop_thr() const;
+
+        const IntMatrix& get_coop_mat_immutable() const { return coop_matrix;}
+        bool has_coop(int i, int j) { return coop_matrix(i,j) > 0;}
+private:
+        int num_coops;//cached
+};
+
 class ExprModel {
 
 public: //TODO: Implement good accessors / mutators instead.
-	ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, FactorIntFunc* _intFunc, int _maxContact, IntMatrix& _coopMat, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr );
+	ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, int _maxContact, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr );
 
 
 	ModelType modelOption;			//model option TODO: remove this later and use inheritance for that.
 	bool one_qbtm_per_crm;		//Each crm has its own different binding weight for the polymerase
-  bool shared_scaling;
+    bool shared_scaling;
 
 	vector< Motif >& motifs;		//The motifs
 
-	FactorIntFunc* intFunc;			// function to compute distance-dependent TF-TF interactions
+    CoopInfo* coop_setup;
 
-	int maxContact;
-
-	IntMatrix& coopMat;		// Cooperativities
+	int maxContact;        //maximum number of TFs that can interact with the BTM at any one time.
 
 	//The roles of TFs. Consider creating a "TF Role" object.
 	//Then there would be one vector of roles, and that TFRole object could be sub-classed for different models.
@@ -53,10 +76,17 @@ public: //TODO: Implement good accessors / mutators instead.
 	double repressionDistThr;		// distance threshold for repression: d_R
 
   int getNFactors() const {return motifs.size();}
-  int getNumCoop() const;
+  int getNumCoop() const { return (coop_setup == NULL ? 0 : coop_setup->get_num_coops());}
+
+  const IntMatrix& get_coop_mat_immutable() const { return coop_setup->get_coop_mat_immutable();}
+  int get_longest_coop_thr() const {return coop_setup->get_longest_coop_thr();}
+
+  void set_coop_setup(CoopInfo* in_pointer){if(coop_setup != NULL){delete coop_setup;} coop_setup = in_pointer;}
 
   ExprFunc* createNewExprFunc( const ExprPar& par, const SiteVec& sites_, const int seq_length, const int seq_num ) const;
 };
+
+
 
 
 

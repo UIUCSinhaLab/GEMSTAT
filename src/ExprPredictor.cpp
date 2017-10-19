@@ -18,7 +18,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
 	cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
     assert( training_data.exprData.nRows() == nSeqs() );
     assert( training_data.factorExprData.nRows() == nFactors() && training_data.factorExprData.nCols() == nConds() );
-    assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
+    //assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
     assert( expr_model.actIndicators.size() == nFactors() );
     assert( expr_model.maxContact > 0 );
     assert( expr_model.repIndicators.size() == nFactors() );

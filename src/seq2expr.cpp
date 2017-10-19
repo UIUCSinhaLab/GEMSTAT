@@ -255,19 +255,7 @@ int main( int argc, char* argv[] )
     //Initialize the dataset that is actually provided
     DataSet training_dataset(factorExprData,exprData);
 
-    // read the cooperativity matrix
-    int num_of_coop_pairs = 0;
-    IntMatrix coopMat( nFactors, nFactors, false );
-    if ( !coopFile.empty() )
-    {
-	int readRet = readEdgelistGraph(coopFile, factorIdxMap, coopMat, false);
-	ASSERT_MESSAGE(0 == readRet, "Error reading the cooperativity file");
-
-	//Calculate the number of cooperative pairs.
-	for(int i = 0;i < nFactors;i++)
-		for(int j=i;j<nFactors;j++)
-			num_of_coop_pairs += coopMat.getElement(i,j);
-    }
+    //****** MODEL ********
 
     // read the roles of factors
     vector< bool > actIndicators( nFactors, true );
@@ -287,24 +275,37 @@ int main( int argc, char* argv[] )
     }
 
 
-    FactorIntFunc* intFunc;
-    intOption = getIntOption(cmdline_interaction_option_str);
-    if ( intOption == BINARY ) intFunc = new FactorIntFuncBinary( coopDistThr );
-    else if ( intOption == GAUSSIAN ) intFunc = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
-    else if ( intOption == HELICAL ) intFunc = new FactorIntFuncHelical( coopDistThr );
-    else
-    {
-        cerr << "Interaction Function is invalid " << endl; exit( 1 );
-    }
-
     //Create a new ExprModel with all of the selected options.
     //TODO: Continue here
     if( cmdline_modelOption == DIRECT || cmdline_modelOption == LOGISTIC || cmdline_modelOption == MARKOV || cmdline_modelOption == RATES){
         //TODO: Kind of a hacky workaround, the models/DP implementations should know that they need to ignore this during their setup.
         repressionDistThr = 0;
     }
-    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, intFunc, maxContact, coopMat, actIndicators, repIndicators, repressionMat, repressionDistThr);
+    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, maxContact, actIndicators, repIndicators, repressionMat, repressionDistThr);
     expr_model.shared_scaling = cmdline_one_beta;
+
+    //********* SETUP COOPERTIVITIES ********
+
+    //TODO: break this block into a separate function
+    {
+        FactorIntFunc* default_int_func;
+        intOption = getIntOption(cmdline_interaction_option_str);
+        if ( intOption == BINARY ) default_int_func = new FactorIntFuncBinary( coopDistThr );
+        else if ( intOption == GAUSSIAN ) default_int_func = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
+        else if ( intOption == HELICAL ) default_int_func = new FactorIntFuncHelical( coopDistThr );
+        else
+        {
+            cerr << "Interaction Function is invalid " << endl; exit( 1 );
+        }
+        expr_model.coop_setup->set_default_interaction(default_int_func);
+    }
+
+    // read the cooperativity matrix
+    if ( !coopFile.empty() )
+    {
+        expr_model.coop_setup->read_coop_file(coopFile, factorIdxMap);
+    }
+    //***** END COOPS *****
 
     //Deleted AXIS_WEIGHTS from here
 
@@ -546,7 +547,7 @@ int main( int argc, char* argv[] )
     //     cout << "Factor motifs:" << endl;
     //     for ( int i = 0; i < motifs.size(); i++ ) cout << motifNames[i] << endl << motifs[i] << endl;
     //     cout << "Factor expression:" << endl << factorExprData << endl;
-    //     cout << "Cooperativity matrix:" << endl << coopMat << endl;
+    //     cout << "Cooperativity matrix:" << endl << expr_model.coop_setup->coop_matrix << endl;
     //     cout << "Activators:" << endl << actIndicators << endl;
     //     cout << "Repressors:" << endl << repIndicators << endl;
     //     cout << "Repression matrix:" << endl << repressionMat << endl;
@@ -649,11 +650,11 @@ int main( int argc, char* argv[] )
     // print the training results
     ExprPar par = predictor->getPar();
     if( par_out_stream){
-        par.print( par_out_stream, motifNames, coopMat );
+        par.print( par_out_stream, motifNames, expr_model.coop_setup->coop_matrix );
         par_out_stream.close();
     }
     cout << "Estimated values of parameters:" << endl;
-    par.print( cout, motifNames, coopMat );
+    par.print( cout, motifNames, expr_model.coop_setup->coop_matrix );
     cout << "Performance = " << setprecision( 5 ) << ( ( cmdline_obj_option == SSE || cmdline_obj_option == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions

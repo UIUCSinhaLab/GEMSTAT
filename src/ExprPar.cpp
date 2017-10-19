@@ -208,11 +208,13 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
       if(in_space == CONSTRAINED_SPACE)
         scaled_default = infty_transform(log(ExprPar::default_interaction), log( ExprPar::min_interaction ), log( ExprPar::max_interaction ));
       tmp_par.factorIntMat.setAll(scaled_default);
+
+
       for ( int i = 0; i < _nFactors; i++ )
       {
           for ( int j = 0; j <= i; j++ )
           {
-              if ( expr_model.coopMat( i, j ) )
+              if ( expr_model.coop_setup->has_coop( i, j ) )
               {
                   double interaction = pars[counter++] ;
                   tmp_par.factorIntMat( i, j ) = interaction;
@@ -417,12 +419,11 @@ ExprPar ParFactory::randSamplePar( const gsl_rng* rng) const
 
 
     // sample the interaction matrix
-
     for ( int i = 0; i < nFactors(); i++ )
     {
         for ( int j = 0; j <= i; j++ )
         {
-            if ( expr_model.coopMat( i, j ) ){
+            if ( expr_model.coop_setup->has_coop( i, j ) ){
               double rand_interaction = gsl_ran_flat( rng, minimums.factorIntMat(i, j), maximums.factorIntMat(i,j) );
               tmp_par.factorIntMat( i, j ) = rand_interaction;
               tmp_par.factorIntMat( j, i ) = rand_interaction;
@@ -896,7 +897,7 @@ ExprPar::ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const 
 
 void ExprPar::getRawPars( vector< double >& pars) const
 {
-    IntMatrix& coopMat = this->my_factory->expr_model.coopMat;
+    IntMatrix& coopMat = this->my_factory->expr_model.coop_setup->coop_matrix;//TODO: I bet this results in a bug.
     vector< bool >& actIndicators = this->my_factory->expr_model.actIndicators;
     vector< bool >& repIndicators = this->my_factory->expr_model.repIndicators;
 

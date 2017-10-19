@@ -4,8 +4,12 @@
 #include "ExprPredictor.h"
 #include "ExprModel.h"
 
-ExprModel::ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, FactorIntFunc* _intFunc, int _maxContact, IntMatrix& _coopMat, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr ) : modelOption( _modelOption), one_qbtm_per_crm( _one_qbtm_per_crm), motifs( _motifs), intFunc( _intFunc), maxContact( _maxContact), coopMat( _coopMat ), actIndicators( _actIndicators), repIndicators( _repIndicators), repressionMat( _repressionMat), repressionDistThr( _repressionDistThr)
+ExprModel::ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs,int _maxContact, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr ) : modelOption( _modelOption), one_qbtm_per_crm( _one_qbtm_per_crm), motifs( _motifs), maxContact( _maxContact), actIndicators( _actIndicators), repIndicators( _repIndicators), repressionMat( _repressionMat), repressionDistThr( _repressionDistThr)
 {
+    int n_tfs = _motifs.size();//might change later? (multi-motif)
+
+    coop_setup = new CoopInfo(n_tfs);
+
   shared_scaling = false;
   //A QUENCHING model shall have repIndicators all false.
   if(_modelOption == QUENCHING){
@@ -45,16 +49,6 @@ string getModelOptionStr( ModelType modelOption )
     return "Invalid";
 }
 
-int ExprModel::getNumCoop() const {
-  int num_of_coop_pairs = 0;
-  //Calculate the number of cooperative pairs.
-  for(int i = 0;i < getNFactors();i++)
-    for(int j=i;j< getNFactors();j++)
-      num_of_coop_pairs += coopMat.getElement(i,j);
-
-  return num_of_coop_pairs;
-}
-
 ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par, const SiteVec& sites_, const int seq_length, const int seq_num ) const
 {
   ExprPar parToPass;
@@ -62,75 +56,27 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par, const SiteVec& sites
   switch(this->modelOption) {
     case LOGISTIC :
       parToPass = par.my_factory->changeSpace(par, ENERGY_SPACE);
-      return_exprfunc = new Logistic_ExprFunc(sites_,seq_length,seq_num,
-                          this->motifs,
-                          this->intFunc,
-                          this->actIndicators,
-                          this->maxContact,
-                          this->repIndicators,
-                          this->repressionMat,
-                          this->repressionDistThr,
-                          parToPass );
+      return_exprfunc = new Logistic_ExprFunc(this, parToPass, sites_,seq_length,seq_num);
       break;
     case DIRECT :
       parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-      return_exprfunc = new Direct_ExprFunc(sites_,seq_length,seq_num,
-                        this->motifs,
-                        this->intFunc,
-                        this->actIndicators,
-                        this->maxContact,
-                        this->repIndicators,
-                        this->repressionMat,
-                        this->repressionDistThr,
-                        parToPass );
+      return_exprfunc = new Direct_ExprFunc(this, parToPass, sites_,seq_length,seq_num);
       break;
     case QUENCHING :
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new Quenching_ExprFunc(sites_,seq_length,seq_num,
-                          this->motifs,
-                          this->intFunc,
-                          this->actIndicators,
-                          this->maxContact,
-                          this->repIndicators,
-                          this->repressionMat,
-                          this->repressionDistThr,
-                          parToPass );
+        return_exprfunc = new Quenching_ExprFunc(this, parToPass, sites_,seq_length,seq_num);
         break;
     case CHRMOD_LIMITED :
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new ChrModLimited_ExprFunc(sites_,seq_length,seq_num,
-                          this->motifs,
-                          this->intFunc,
-                          this->actIndicators,
-                          this->maxContact,
-                          this->repIndicators,
-                          this->repressionMat,
-                          this->repressionDistThr,
-                          parToPass );
+        return_exprfunc = new ChrModLimited_ExprFunc(this, parToPass, sites_,seq_length,seq_num);
         break;
     case CHRMOD_UNLIMITED :
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new ChrModUnlimited_ExprFunc(sites_,seq_length,seq_num,
-                          this->motifs,
-                          this->intFunc,
-                          this->actIndicators,
-                          this->maxContact,
-                          this->repIndicators,
-                          this->repressionMat,
-                          this->repressionDistThr,
-                          parToPass );
+        return_exprfunc = new ChrModUnlimited_ExprFunc(this, parToPass, sites_,seq_length,seq_num);
         break;
     case MARKOV:
         parToPass = par.my_factory->changeSpace(par, PROB_SPACE );
-        return_exprfunc = new Markov_ExprFunc(sites_,seq_length,seq_num,
-                          this->motifs,
-                          this->intFunc,
-                          this->actIndicators,
-                          this->maxContact,
-                          this->repIndicators,
-                          this->repressionMat,
-                          this->repressionDistThr,
-                          parToPass );
+        return_exprfunc = new Markov_ExprFunc(this, parToPass, sites_,seq_length,seq_num);
         break;
     default :
         cerr << "Somehow, an invalid model argument was passed. " << endl;
@@ -138,4 +84,62 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par, const SiteVec& sites
   }
 
   return return_exprfunc;
+}
+
+
+CoopInfo::CoopInfo(int n_motifs) : coop_matrix( n_motifs, n_motifs, false)
+{
+    int_funcs.clear();
+    int_funcs.push_back(new Null_FactorIntFunc()); //Interaction between sites not otherwise listed.
+    int_funcs.push_back(new FactorIntFuncBinary( 20 ));
+
+
+}
+
+void CoopInfo::set_default_interaction( FactorIntFunc* new_default){
+    assert(NULL != new_default);
+    FactorIntFunc* tmp = int_funcs[1];
+    delete tmp;
+    int_funcs[1] = new_default;
+
+}
+
+int CoopInfo::get_longest_coop_thr() const {
+    int longest = 0;
+    for(int i = 1;i<int_funcs.size();i++){
+        int m_dist = int_funcs[i]->getMaxDist();
+        if(m_dist > longest){ longest = m_dist; }
+    }
+    return longest;
+}
+
+void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
+
+        ifstream fin( filename.c_str() );
+
+        std:string line;
+        std::istringstream line_ss;
+        vector<string> tokens;
+        #define LOCAL_TOKENIZE(M_TOK_VECT,M_LINE_STR,M_SS) M_TOK_VECT.clear();\
+                                M_SS.clear();\
+                                M_SS.str(M_LINE_STR);\
+                                copy(istream_iterator<string>(M_SS),\
+                                istream_iterator<string>(),\
+                                back_inserter(M_TOK_VECT))
+
+        while(std::getline(fin,line)){
+                LOCAL_TOKENIZE(tokens,line,line_ss);
+                int tf_i = factorIdxMap[tokens[0]];
+                int tf_j = factorIdxMap[tokens[1]];
+
+                coop_matrix.setElement(tf_i,tf_j,true);
+                coop_matrix.setElement(tf_j,tf_i,true);
+
+                //cerr << "DEBUG read" << tokens[0] << tf_i << " " << tokens[1] << tf_i << endl;
+        }
+
+        //cerr << coop_matrix << endl;
+
+        //exit(1);
+        fin.close();
 }

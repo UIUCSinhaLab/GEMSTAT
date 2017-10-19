@@ -4,8 +4,7 @@
 #include "ExprPar.h"
 
 //#define DEBUG
-
-ExprFunc::ExprFunc( const SiteVec& sites_, const int seq_len, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : par(_par), motifs( _motifs ), intFunc( _intFunc ), actIndicators( _actIndicators ), maxContact( _maxContact ), repIndicators( _repIndicators ), repressionMat( _repressionMat ), repressionDistThr( _repressionDistThr )
+ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num): expr_model(_model), par(_par), motifs( _model->motifs ), actIndicators( _model->actIndicators ), maxContact( _model->maxContact ), repIndicators( _model->repIndicators ), repressionMat( _model->repressionMat ), repressionDistThr( _model->repressionDistThr )
 {
     //par = _par;//NOTE: made this const, and that solved a memory leak.
 
@@ -37,7 +36,7 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
 
   boundaries.resize(n_sites+2);
   boundaries[0] = 0;//value for starting pseudosite
-  double range = max( intFunc->getMaxDist(), repressionDistThr );
+  double range = max( (double)expr_model->get_longest_coop_thr(), (double)repressionDistThr );
   for ( int i = 1; i <= n; i++ )
   {
       int j;
@@ -146,7 +145,7 @@ double Logistic_ExprFunc::predictExpr( const vector< double >& factorConcs ){
   return logistic( my_promoter.basal_trans + totalEffect );
 }
 
-Markov_ExprFunc::Markov_ExprFunc( const SiteVec& sites_, const int seq_length, const int seq_num, const vector< Motif >& _motifs, const FactorIntFunc* _intFunc, const vector< bool >& _actIndicators, int _maxContact, const vector< bool >& _repIndicators, const IntMatrix& _repressionMat, double _repressionDistThr, const ExprPar& _par ) : ExprFunc( sites_, seq_length, seq_num, _motifs,  _intFunc, _actIndicators, _maxContact, _repIndicators, _repressionMat, _repressionDistThr, _par){
+Markov_ExprFunc::Markov_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){
 
     //Additional setup for a Markov_ExprFunc
     //void Markov_ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int seq_num){
@@ -155,7 +154,7 @@ Markov_ExprFunc::Markov_ExprFunc( const SiteVec& sites_, const int seq_length, c
     cerr << "running Markov_ExprFunc::setupSitesAndBoundaries(...)" << endl;
     #endif
 
-    double range = max( intFunc->getMaxDist(), repressionDistThr );
+    double range = max( (double)expr_model->get_longest_coop_thr(), (double)repressionDistThr );
     rev_bounds.resize(n_sites+2);
     rev_bounds[n_sites] = n_sites+1; //last true site points to pseudosite
     rev_bounds[0] = 1; // first pseudosite has reverse boundary pointing to first true site
@@ -662,9 +661,14 @@ double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
 {
     // 	assert( !siteOverlap( a, b, motifs ) );
     double maxInt = par.factorIntMat( a.factorIdx, b.factorIdx );
-    double dist = abs( a.start - b.start );
+    double dist = abs( b.start - a.start );
     bool orientation = ( a.strand == b.strand );
-    return intFunc->compFactorInt( maxInt, dist, orientation );
+
+    FactorIntFunc* an_int_func = expr_model->coop_setup->coop_func_for(a.factorIdx, b.factorIdx);
+    return an_int_func->compFactorInt( maxInt, dist, orientation );
+
+    //TODO: we need to get this information from the expr_model.
+    //This is going to be very slow, we should have cached it.
 }
 
 
@@ -672,6 +676,6 @@ bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 {
     // 	assert( !siteOverlap( a, b, motifs ) );
 
-    double dist = abs( a.start - b.start );
+    double dist = abs( b.start - a.start  );
     return repressionMat( a.factorIdx, b.factorIdx ) && ( dist <= repressionDistThr );
 }
