@@ -156,9 +156,21 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
 
                         int_funcs.push_back(new Dimer_FactorIntFunc(dist_thr, first_orientation, second_orientation));
                         forward_func = int_funcs.size()-1;
-                        int_funcs.push_back(new Dimer_FactorIntFunc(dist_thr, !second_orientation,!first_orientation));
-                        backward_func = int_funcs.size()-1;
 
+                        if(tf_i == tf_j){
+                            //HOMODIMER
+                            backward_func = forward_func;
+                            if(first_orientation == second_orientation){
+                                //TODO: Better error handling
+                                cerr << "NOTE: You have asked for a homodimer with both units facing the same direction." << endl;
+                                cerr << "\tCurrently, the dynamic programming will end up treating that as an unending chain." << endl;
+                                //assert(false);
+                            }
+                        }else{
+                            //NON-Homodimers need an additional function.
+                            int_funcs.push_back(new Dimer_FactorIntFunc(dist_thr, !second_orientation,!first_orientation));
+                            backward_func = int_funcs.size()-1;
+                        }
 
 
                         interaction_setup_done = true;

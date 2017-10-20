@@ -76,6 +76,6 @@ double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool 
 double Dimer_FactorIntFunc::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
 {
     assert( dist >= 0 );
-	if( a_strand != expected_a_strand || b_strand != expected_b_strand || dist > distThr){ return 1.0; }
+	if( (a_strand != expected_a_strand) || (b_strand != expected_b_strand) || (dist > distThr) ){ return 1.0; }
 	return normalInt;
 }
