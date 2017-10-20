@@ -89,6 +89,7 @@ ExprFunc* ExprModel::createNewExprFunc( const ExprPar& par, const SiteVec& sites
 
 CoopInfo::CoopInfo(int n_motifs) : coop_matrix( n_motifs, n_motifs, false)
 {
+    num_coops = 0;
     int_funcs.clear();
     int_funcs.push_back(new Null_FactorIntFunc()); //Interaction between sites not otherwise listed.
     int_funcs.push_back(new FactorIntFuncBinary( 20 ));
@@ -171,6 +172,7 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                 coop_matrix.setElement(tf_j,tf_i,backward_func);
 
                 //cerr << "DEBUG read" << tokens[0] << tf_i << " " << tokens[1] << tf_i << endl;
+                num_coops++;
         }
 
         //cerr << coop_matrix << endl;
