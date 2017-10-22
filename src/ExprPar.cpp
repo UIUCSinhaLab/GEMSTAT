@@ -497,6 +497,7 @@ ExprPar ParFactory::load_1_6a(istream& fin){
     cerr << "LOADING 1.6a parfile" << endl;
     //https://stackoverflow.com/questions/7868936/read-file-line-by-line
     //https://stackoverflow.com/questions/236129/split-a-string-in-c
+    //https://stackoverflow.com/questions/236129/the-most-elegant-way-to-iterate-the-words-of-a-string
     std:string line;
     std::istringstream line_ss;
     vector<string> tokens;
