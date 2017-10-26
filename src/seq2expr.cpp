@@ -29,6 +29,8 @@
 
 #include "ObjFunc.h"
 
+#include <stdexcept>
+
 int main( int argc, char* argv[] )
 {
     // command line processing
