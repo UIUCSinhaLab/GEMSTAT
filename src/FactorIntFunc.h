@@ -113,11 +113,31 @@ class Dimer_FactorIntFunc : public FactorIntFunc
             expected_a_strand = _a_strand;
             expected_b_strand = _b_strand;
         }
+
         // compute the factor interaction
-        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
+        virtual double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
 
         bool expected_a_strand;
         bool expected_b_strand;
+};
+
+class HalfDirectional_FactorIntFunc : public Dimer_FactorIntFunc
+{
+    public:
+        HalfDirectional_FactorIntFunc( double _distThr, bool _a_strand, bool _b_strand , bool _enforce_a_dir, bool _enforce_b_dir ) : Dimer_FactorIntFunc(_distThr, _a_strand, _b_strand)
+        {
+            assert(_enforce_a_dir || _enforce_b_dir);
+            if(!_enforce_a_dir && !_enforce_b_dir){
+                throw std::runtime_error("Could not construct a HalfDirectional interaction function with both proteins as 'don't care' direction.");
+            }
+            enforce_a = _enforce_a_dir;
+            enforce_b = _enforce_b_dir;
+        }
+    // compute the factor interaction
+    double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
+    protected:
+        bool enforce_a;
+        bool enforce_b;
 };
 
 #endif

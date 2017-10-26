@@ -182,7 +182,64 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
 
 
                         interaction_setup_done = true;
-                    }
+                    }//END DIMER PARSING
+
+                    //HALF DIRECTION, should really be handled by changing the line for dimer, but, blah.
+                    if(0 == tokens[2].compare("HALF_DIRECTIONAL")){
+                        assert(tokens.size() >= 6);
+                        //setup a dimer interaction
+
+                        if(tf_i == tf_j){
+                            throw std::runtime_error("You can't currently use HALF_DIRECTIONAL with the same protein.");
+                        }
+
+                        int dist_thr = atoi(tokens[3].c_str());
+                        bool first_orientation = 0;
+                        bool first_cares = false;
+                        bool second_orientation = 0;
+                        bool second_cares = false;
+
+                        //direction for first subunit
+                        if((0 == tokens[4].compare("1") )|| (0 == tokens[4].compare("+")) ){
+                            first_orientation = true;
+                            first_cares = true;
+                        }else if( (0 == tokens[4].compare("?")) || (0 == tokens[4].compare("*")) ){
+                            first_cares = false;
+                        }else if( (0 == tokens[4].compare("0")) || (0 == tokens[4].compare("-")) ){
+                            first_orientation = false;
+                            first_cares = true;
+                        }else{
+                            throw std::runtime_error("There was invalid input when reading the coop file. (HALF_DIR)");
+                        }
+
+                        //direction for second subunit
+                        if((0 == tokens[5].compare("1") )|| (0 == tokens[5].compare("+")) ){
+                            second_orientation = true;
+                            second_cares = true;
+                        }else if( (0 == tokens[5].compare("?")) || (0 == tokens[5].compare("*")) ){
+                            first_cares = false;
+                        }else if( (0 == tokens[5].compare("0")) || (0 == tokens[5].compare("-")) ){
+                            second_orientation = false;
+                            second_cares = true;
+                        }else{
+                            throw std::runtime_error("There was invalid input when reading the coop file. (HALF_DIR)");
+                        }
+
+                        if( !first_cares && !second_cares){
+                            throw std::runtime_error("At least one subunit should care about its direction. (HALF_DIR)");
+                        }
+
+                        int_funcs.push_back(new HalfDirectional_FactorIntFunc(dist_thr, first_orientation, second_orientation, first_cares, second_cares));
+                        forward_func = int_funcs.size()-1;
+
+                        //excluding self interactions was already handled at the beginning of the block.
+                        //NON-Homodimers need an additional function.
+                        int_funcs.push_back(new HalfDirectional_FactorIntFunc(dist_thr, !second_orientation,!first_orientation, second_cares, first_cares));
+                        backward_func = int_funcs.size()-1;
+
+
+                        interaction_setup_done = true;
+                    }//END DIMER PARSING
 
                     assert(interaction_setup_done);
                 }
