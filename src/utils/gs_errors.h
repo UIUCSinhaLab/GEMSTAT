@@ -1,7 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
-
-#include <assert.h>
+#ifndef GS_ERRORS_H
+#define GS_ERRORS_H
 
 /**
  * Inspired by : http://stackoverflow.com/a/3767904
@@ -16,5 +14,5 @@
 #define ASSERT_MESSAGE(condition, message)\
 		((void)0)
 #endif
-	
+
 #endif

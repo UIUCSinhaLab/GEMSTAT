@@ -1,5 +1,8 @@
 #include <sstream>
+
 #include "SeqAnnotator.h"
+
+#include "utils/gs_parsing.h"
 
 bool isNt( int a )
 {
@@ -465,38 +468,50 @@ int readMotifs( const string& file, const vector< double >& background, vector< 
     names.clear();
 
     string line;
+    SimpleStringTokenizer my_tok;
 
     // read the motifs
     do
     {
         getline( fin, line );
+        int comment_starts_at = line.find("#");
+        if( 0 == comment_starts_at ) continue;//whole line is a comment line
+        if( 1 <= comment_starts_at){
+            line = line.substr(0,comment_starts_at);//Truncate line to remove comment
+        }
 
-        if ( line[ 0 ] != '>' ) continue;
+        if(fin.eof()){//TODO: maybe this is not good?
+            break;
+        }
+
+        if ( line[ 0 ] != '>' ) throw std::runtime_error("Bad format for PWM (Expected start of PWM)");
 
         // read the names, length and pseudocount
-        int MAX_SIZE = 100;
-        char lineStr[ MAX_SIZE ];
-        strcpy( lineStr, ( line.substr( 1 ) ).c_str() );
-        char *name, *lengthStr, *pseudoCountStr;
-        name = strtok( lineStr, " \t" );
-        lengthStr = strtok( NULL, " \t" );
-        pseudoCountStr = strtok( NULL, " \t" );
-        int length;
-        double pseudoCount;
-        if ( lengthStr ) length = atoi( lengthStr );
-        else { return RET_ERROR; }
-        if ( pseudoCountStr ) pseudoCount = atof( pseudoCountStr );
-        else pseudoCount = PSEUDO_COUNT;
+
+        my_tok.tokenize(line);
+        string name = my_tok[0].substr(1);//Remember to throw away the ">".
+        int length = atoi( my_tok[1].c_str() );
+        double pseudoCount = my_tok.size() >= 3 ? atof(my_tok[2].c_str()) : PSEUDO_COUNT;
 
         // read the count matrix
         Matrix countMat( length, NBASES );
         for ( int i = 0; i < length; ++i )
         {
+            getline( fin, line );//No comment handling...
+            my_tok.tokenize(line);
+
+            if(my_tok.size() != NBASES ) throw std::runtime_error("Encountered a line with the wrong number of bases while reading PWM.");
+
+            //read one line out of the count matrix.
             for ( int j = 0; j < NBASES; ++j )
             {
-                fin >> countMat( i, j );
+                countMat( i, j ) = atof(my_tok[j].c_str());
             }
         }
+
+        //END OF MOTIF
+        getline( fin, line );
+        if (0 != line.compare("<")) throw std::runtime_error("Bad format for PWM (unclosed PWM)");
 
         // create the motif
         names.push_back( string( name ) );

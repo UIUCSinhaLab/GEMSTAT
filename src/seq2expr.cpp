@@ -21,7 +21,7 @@
  *     where repression is optional, and the coop. lines are optional.
  * Note that (5), (6), (7) and (8) may be empty
  ******************************************************/
-#include "Utils.h"
+#include "utils/gs_errors.h"
 #include "IO.h"
 
 #include "ExprModel.h"
@@ -229,8 +229,13 @@ int main( int argc, char* argv[] )
     vector< Motif > motifs;
     vector< string > motifNames;
     vector< double > background = createNtDistr( gcContent );
-    rval = readMotifs( motifFile, background, motifs, motifNames );
-    ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the motifs.");
+    try{
+        rval = readMotifs( motifFile, background, motifs, motifNames );
+        ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the motifs.");
+    }catch( std::runtime_error e){
+        cerr << "Unable to read the PWM file because of error: " << e.what() << endl;
+        exit(1);
+    }
     int nFactors = motifs.size();
 
     // factor name to index mapping
