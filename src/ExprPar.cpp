@@ -25,6 +25,61 @@ string parameterSpaceStr(ThermodynamicParameterSpace in){
 
 ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs, SearchType s_in) : expr_model(in_model), nSeqs(in_nSeqs), searchOption(s_in)
 {
+
+  //setup prototype
+
+  int _nFactors = expr_model.motifs.size();
+  assert( _nFactors > 0 );
+  gsparams::DictList the_params;
+  the_params["tfs"] = gsparams::DictList();
+
+  double defaultEffect = expr_model.modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : log(ExprPar::default_effect_Thermo);
+  for(int i = 0;i<expr_model.motifs.size();i++){
+      gsparams::DictList tmp;
+      tmp["annot_thresh"] = log( ExprPar::default_energyThrFactors );
+      tmp["maxbind"] = log( ExprPar::default_weight );
+      tmp["alpha_a"] = defaultEffect;
+      tmp["alpha_r"] = log( ExprPar::default_repression );
+      the_params["tfs"][expr_model.motifnames.at(i)] = tmp;
+  }
+
+  //setup the interaction matrix
+  gsparams::DictList int_matr;
+
+  for(int i = 0;i<_nFactors;i++){
+    std::string row_tf_name = expr_model.motifnames[i];
+    for(int j = i;j<_nFactors;j++){
+        std::string col_tf_name = expr_model.motifnames[j];
+        int_matr.set(row_tf_name + ":" + col_tf_name, log( ExprPar::default_interaction ));
+    }
+    }
+  the_params["inter"] = int_matr;
+
+
+  //QBTM
+  int numBTMS = expr_model.one_qbtm_per_crm ? nSeqs : 1;
+
+  the_params["qbtm"] = gsparams::DictList();
+
+  double basalTxp_val = expr_model.modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : log( ExprPar::default_basal_Thermo );
+
+  for(int i = 0;i<numBTMS;i++){
+
+      the_params["qbtm"].push_back(basalTxp_val);
+  }
+
+  the_params["enh"] = gsparams::DictList();
+  int numEnhancers = expr_model.shared_scaling ? 1 : nSeqs;
+  for(int i = 0;i<numEnhancers;i++){
+      gsparams::DictList one_scale;
+      one_scale["pi"] = log( ExprPar::default_pi );
+      one_scale["beta"] = log( ExprPar::default_beta );
+
+      the_params["enh"].push_back(one_scale);
+  }
+  this->prototype = the_params;
+  //Done with prototype
+
   //maximums = ExprPar( expr_model.motifs.size(), nSeqs );
   maximums = createDefaultMinMax(true);
   //minimums = ExprPar( expr_model.motifs.size(), nSeqs );
@@ -142,16 +197,83 @@ ExprPar ParFactory::createDefaultMinMax(bool min_or_max) const
   ExprPar tmp_par = create_expr_par();
 
   /*
+  tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? log(ExprPar::max_energyThrFactors) : log(ExprPar::min_energyThrFactors));
   tmp_par.maxBindingWts.assign(tmp_par.maxBindingWts.size(), min_or_max ? log(ExprPar::max_weight) : log(ExprPar::min_weight)); // ExprPar::min_weight
-  //set the interaction maximums
-  tmp_par.factorIntMat.setAll(min_or_max ? log(ExprPar::max_interaction) : log(ExprPar::min_interaction));
   tmp_par.txpEffects.assign(tmp_par.txpEffects.size(), min_or_max ? log(ExprPar::max_effect_Thermo) : log(ExprPar::min_effect_Thermo));//TODO: Doesn't handle Logistic model
   tmp_par.repEffects.assign(tmp_par.repEffects.size(), min_or_max ? log(ExprPar::max_repression) : log(ExprPar::min_repression));
-  tmp_par.basalTxps.assign(tmp_par.basalTxps.size(), min_or_max ? log(ExprPar::max_basal_Thermo) : log(ExprPar::min_basal_Thermo));//TODO: Doesn't handle Logistic model
+  */
+  for(int i = 0; i<tmp_par.my_pars["tfs"].size();i++){
+      tmp_par.my_pars["tfs"][i]["annot_thresh"] = min_or_max ? log(ExprPar::max_energyThrFactors) : log(ExprPar::min_energyThrFactors);
+      tmp_par.my_pars["tfs"][i]["maxbind"] = min_or_max ? log(ExprPar::max_weight) : log(ExprPar::min_weight);
+      tmp_par.my_pars["tfs"][i]["alpha_a"] = min_or_max ? log(ExprPar::max_effect_Thermo) : log(ExprPar::min_effect_Thermo);
+      tmp_par.my_pars["tfs"][i]["alpha_r"] = min_or_max ? log(ExprPar::max_repression) : log(ExprPar::min_repression);
+  }
+  //set the interaction maximums
+  //tmp_par.factorIntMat.setAll(min_or_max ? log(ExprPar::max_interaction) : log(ExprPar::min_interaction));
+  std::vector<double> intervals;
+  tmp_par.my_pars["inter"].traverse(&intervals);
+  intervals.assign(intervals.size(), min_or_max ? log(ExprPar::max_interaction) : log(ExprPar::min_interaction));
+  tmp_par.my_pars["inter"].populate(intervals);
+
+  //tmp_par.basalTxps.assign(tmp_par.basalTxps.size(), min_or_max ? log(ExprPar::max_basal_Thermo) : log(ExprPar::min_basal_Thermo));//TODO: Doesn't handle Logistic model
+  for(int i = 0;i<tmp_par.my_pars["qbtm"].size();i++){
+      tmp_par.my_pars["qbtm"][i] = min_or_max ? log(ExprPar::max_basal_Thermo) : log(ExprPar::min_basal_Thermo);
+  }
+
+  /*
   tmp_par.pis.assign(tmp_par.pis.size(), min_or_max ? log(ExprPar::max_pi) : log(ExprPar::min_pi));
   tmp_par.betas.assign(tmp_par.betas.size(), min_or_max ? log(ExprPar::max_beta) : log(ExprPar::min_beta));
-  tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? log(ExprPar::max_energyThrFactors) : log(ExprPar::min_energyThrFactors));
   */
+  for(int i = 0;i<tmp_par.my_pars["enh"].size();i++){
+      tmp_par.my_pars["enh"][i]["pi"] = min_or_max ? log(ExprPar::max_pi) : log(ExprPar::min_pi);
+      tmp_par.my_pars["enh"][i]["beta"] = min_or_max ? log(ExprPar::max_beta) : log(ExprPar::min_beta);
+  }
+
+  tmp_par.my_space = ENERGY_SPACE;
+  return tmp_par;
+}
+
+ExprPar ParFactory::createDefaultFreeFix() const
+{
+  //TODO: the model really should know about the number of factors in the model.
+  int _nFactors = expr_model.motifs.size();
+  assert( _nFactors > 0 );
+
+  ExprPar tmp_par = create_expr_par();
+
+  /*
+  tmp_par.energyThrFactors.assign(tmp_par.energyThrFactors.size(), min_or_max ? log(ExprPar::max_energyThrFactors) : log(ExprPar::min_energyThrFactors));
+  tmp_par.maxBindingWts.assign(tmp_par.maxBindingWts.size(), min_or_max ? log(ExprPar::max_weight) : log(ExprPar::min_weight)); // ExprPar::min_weight
+  tmp_par.txpEffects.assign(tmp_par.txpEffects.size(), min_or_max ? log(ExprPar::max_effect_Thermo) : log(ExprPar::min_effect_Thermo));//TODO: Doesn't handle Logistic model
+  tmp_par.repEffects.assign(tmp_par.repEffects.size(), min_or_max ? log(ExprPar::max_repression) : log(ExprPar::min_repression));
+  */
+  for(int i = 0; i<tmp_par.my_pars["tfs"].size();i++){
+      tmp_par.my_pars["tfs"][i]["annot_thresh"] = 0.0;
+      tmp_par.my_pars["tfs"][i]["maxbind"] = 1.0;
+      tmp_par.my_pars["tfs"][i]["alpha_a"] = 1.0;//TODO: better handling of factor roles?
+      tmp_par.my_pars["tfs"][i]["alpha_r"] = 0.0;
+  }
+  //set the interaction maximums
+  //tmp_par.factorIntMat.setAll(min_or_max ? log(ExprPar::max_interaction) : log(ExprPar::min_interaction));
+  std::vector<double> intervals;
+  tmp_par.my_pars["inter"].traverse(&intervals);
+  intervals.assign(intervals.size(), 1.0);
+  tmp_par.my_pars["inter"].populate(intervals);
+
+  //tmp_par.basalTxps.assign(tmp_par.basalTxps.size(), min_or_max ? log(ExprPar::max_basal_Thermo) : log(ExprPar::min_basal_Thermo));//TODO: Doesn't handle Logistic model
+  for(int i = 0;i<tmp_par.my_pars["qbtm"].size();i++){
+      tmp_par.my_pars["qbtm"][i] = 1.0;
+  }
+
+  /*
+  tmp_par.pis.assign(tmp_par.pis.size(), min_or_max ? log(ExprPar::max_pi) : log(ExprPar::min_pi));
+  tmp_par.betas.assign(tmp_par.betas.size(), min_or_max ? log(ExprPar::max_beta) : log(ExprPar::min_beta));
+  */
+  for(int i = 0;i<tmp_par.my_pars["enh"].size();i++){
+      tmp_par.my_pars["enh"][i]["pi"] = 0.0;
+      tmp_par.my_pars["enh"][i]["beta"] = 1.0;
+  }
+
   tmp_par.my_space = ENERGY_SPACE;
   return tmp_par;
 }
@@ -160,58 +282,9 @@ ExprPar ParFactory::create_expr_par() const
 {
   ExprPar tmp_par = ExprPar(expr_model.getNFactors(), this->nSeqs);
 
-  int _nFactors = expr_model.motifs.size();
-  assert( _nFactors > 0 );
-
-  gsparams::DictList the_params;
-  the_params["tfs"] = gsparams::DictList();
-
-
-  double defaultEffect = expr_model.modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : log(ExprPar::default_effect_Thermo);
-  for(int i = 0;i<expr_model.motifs.size();i++){
-      gsparams::DictList tmp;
-      tmp["annot_thresh"] = log( ExprPar::default_energyThrFactors );
-      tmp["maxbind"] = log( ExprPar::default_weight );
-      tmp["alpha_a"] = defaultEffect;
-      tmp["alpha_r"] = log( ExprPar::default_repression );
-      the_params["tfs"][expr_model.motifnames.at(i)] = tmp;
-  }
-
-  gsparams::DictList int_matr;
-
-  for(int i = 0;i<_nFactors;i++){
-    gsparams::DictList int_matr_row;
-    for(int j = 0;j<_nFactors;j++){
-        int_matr_row.push_back(log( ExprPar::default_interaction ));
-    }
-    int_matr.push_back(int_matr_row);
-    }
-  the_params["inter"] = int_matr;
-
-  int numBTMS = expr_model.one_qbtm_per_crm ? nSeqs : 1;
-
-  the_params["qbtm"] = gsparams::DictList();
-
-  double basalTxp_val = expr_model.modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : log( ExprPar::default_basal_Thermo );
-
-  for(int i = 0;i<numBTMS;i++){
-
-      the_params["qbtm"].push_back(basalTxp_val);
-  }
-
-  the_params["enh"] = gsparams::DictList();
-  int numEnhancers = expr_model.shared_scaling ? 1 : nSeqs;
-  for(int i = 0;i<numEnhancers;i++){
-      gsparams::DictList one_scale;
-      one_scale["pi"] = log( ExprPar::default_pi );
-      one_scale["beta"] = log( ExprPar::default_beta );
-
-      the_params["enh"].push_back(one_scale);
-  }
-
   tmp_par.my_space = ENERGY_SPACE;
   tmp_par.my_factory = this;
-  tmp_par.my_pars = the_params;
+  tmp_par.my_pars = gsparams::DictList(this->prototype);
   return tmp_par;
 }
 
@@ -221,13 +294,9 @@ ExprPar ParFactory::create_expr_par(const vector<double>& pars, const Thermodyna
 
       ExprPar tmp_par = this->create_expr_par();
 
-      int _nFactors = expr_model.getNFactors();
-
-      int counter = 0;
-
+      tmp_par.my_space = in_space;
       tmp_par.my_pars.populate(pars);
 
-      tmp_par.my_space = in_space;
       return tmp_par;
 }
 
@@ -402,8 +471,7 @@ ExprPar ParFactory::load(const string& file){
 
   if(0 < header.size() && '{' == header[0]){
       ret_par = load_SNOT(fin);
-  }
-  if(0 == header.compare("#GSPAR1.6a")) {//TODO: remove any whitespace off the end of header.
+  }else if(0 == header.compare("#GSPAR1.6a")) {//TODO: remove any whitespace off the end of header.
     ret_par = load_1_6a(fin);
   }else{
     ret_par = load_old(fin);
@@ -414,13 +482,18 @@ ExprPar ParFactory::load(const string& file){
 }
 
 ExprPar ParFactory::load_SNOT(istream& fin){
+    ExprPar tmp_par = create_expr_par();
+    tmp_par = changeSpace(tmp_par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );
 
     std::string mystr((std::istreambuf_iterator<char>(fin)),
                  std::istreambuf_iterator<char>());
 
     gsparams::DictList the_dlist = parse_dictlist(mystr);
 
+    tmp_par.my_pars = gsparams::DictList(the_dlist);
+
     //Use that somehow.
+    return tmp_par;
 }
 
 ExprPar ParFactory::load_1_6a(istream& fin){
@@ -713,7 +786,7 @@ void ExprPar::getRawPars( vector< double >& pars) const
 
 GEMSTAT_PAR_FLOAT_T ExprPar::getBetaForSeq(int enhancer_ID) const {
     int use_enhancerID = (this->my_factory->expr_model.shared_scaling ? 0 : enhancer_ID);
-    return ((gsparams::DictList)this->my_pars)["enh"][ use_enhancerID ]["beta"];
+    return ((gsparams::DictList&)this->my_pars)["enh"][ use_enhancerID ]["beta"];
 }
 
 GEMSTAT_PROMOTER_DATA_T ExprPar::getPromoterData(int enhancer_ID) const {
@@ -723,9 +796,10 @@ GEMSTAT_PROMOTER_DATA_T ExprPar::getPromoterData(int enhancer_ID) const {
     int use_enhancerID = (this->my_factory->expr_model.shared_scaling ? 0 : enhancer_ID);
     int use_basal = (this->my_factory->expr_model.one_qbtm_per_crm ? use_enhancerID : 0);
 
-    the_return_value.basal_trans = ((gsparams::DictList)this->my_pars)["qbtm"][ use_basal ];;
-    the_return_value.pi = ((gsparams::DictList)this->my_pars)["enh"][ use_enhancerID ]["pi"];;
-    the_return_value.beta = ((gsparams::DictList)this->my_pars)["enh"][ use_enhancerID ]["beta"];;
+    the_return_value.basal_trans = ((gsparams::DictList&)this->my_pars)["qbtm"][ use_basal ];;
+    the_return_value.pi = ((gsparams::DictList&)this->my_pars)["enh"][ use_enhancerID ]["pi"];;
+    the_return_value.beta = ((gsparams::DictList&)this->my_pars)["enh"][ use_enhancerID ]["beta"];;
+
 
     return the_return_value;
 }

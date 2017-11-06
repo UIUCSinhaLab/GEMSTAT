@@ -326,6 +326,8 @@ int main( int argc, char* argv[] )
     ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
     par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
                                                                 //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
+
+
     if ( !parFile.empty() ){
         try{
           par_init = param_factory->load( parFile );
@@ -336,29 +338,27 @@ int main( int argc, char* argv[] )
         }
     }
 
+    /******** FREE fix
+    */
     //Load free_fix from the same format as parameter vectors!
-    vector< double > tmp_vector;
-    par_init.getRawPars(tmp_vector);
-    int num_indicators = tmp_vector.size();
-    vector <bool> indicator_bool(num_indicators, true);
-    #ifndef REANNOTATE_EACH_PREDICTION
-    //prevent optimization of annotation thresholds if that will be useless.
-    for(int i = 0;i<motifs.size();i++){indicator_bool[indicator_bool.size()-(1+i)] = false;}
-    #endif
-    /*//TODO: Parse free fix
+    ExprPar param_ff = param_factory->createDefaultFreeFix();
+
     if( !free_fix_indicator_filename.empty() )
     {
-        ExprPar param_ff;
+        //ExprPar param_ff;
         try{
           param_ff = param_factory->load( free_fix_indicator_filename );
         }catch (int& e){
           cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
           exit(1);
         }
+    }
         #ifndef REANNOTATE_EACH_PREDICTION
         //prevent optimization of annotation thresholds if that will be useless.
-        param_ff.energyThrFactors.assign(param_ff.energyThrFactors.size(),0.0);
+        //param_ff.energyThrFactors.assign(param_ff.energyThrFactors.size(),0.0);
         #endif
+
+        vector <bool> indicator_bool;
         vector < double > tmp_ff;
         param_ff.getRawPars(tmp_ff);
         indicator_bool.clear();
@@ -368,8 +368,10 @@ int main( int argc, char* argv[] )
           else if (0.9999999 < one_val && 1.0000001 > one_val){ indicator_bool.push_back(true);}
           else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
         }
-    }
+
+    /******* END OF FREE free_fix
     */
+
 
 
     /*
@@ -422,13 +424,13 @@ int main( int argc, char* argv[] )
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
-    /*//TODO: par_init
+    //TODO: par_init
     if(read_par_init_file){
       assert(par_init.my_space == PROB_SPACE);
-      assert(energyThrFactors.size() == par_init.energyThrFactors.size());
-      energyThrFactors = par_init.energyThrFactors;
+      //assert(energyThrFactors.size() == par_init.energyThrFactors.size());
+      //energyThrFactors = par_init.energyThrFactors;
     }
-    */
+
     //TODO: move this to after the reading of the factor_thr_file? Meh. We should never use factor_thr_file anyway.
     if(read_factor_thresh_eTF){
       energyThrFactors.assign(energyThrFactors.size(),eTF);

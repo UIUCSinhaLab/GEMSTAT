@@ -46,14 +46,14 @@ class ExprPar
                                                   // construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
         //ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );
         void copy( const ExprPar& other ) { my_pars=other.my_pars; nSeqs = other.nSeqs; my_space = other.my_space; my_factory = other.my_factory; }
-        //ExprPar( const ExprPar& other ) { copy( other ); }
+        ExprPar( const ExprPar& other ) : my_factory(other.my_factory), nSeqs(other.nSeqs), my_space(other.my_space), my_pars(other.my_pars) { /*copy( other );*/ }
 
         // assignment
         ExprPar& operator=( const ExprPar& other ) { copy( other ); return *this; }
 
         // access methods
         int nFactors() const {
-            return ((gsparams::DictList)this->my_pars)["tfs"].size();
+            return ((gsparams::DictList&)this->my_pars)["tfs"].size();
         }
 
         GEMSTAT_PAR_FLOAT_T getBetaForSeq(int enhancer_ID) const; //Returns the appropriate value of beta for this sequence. This allows some sequences to share one beta value, while others share another, or each have their own.
@@ -71,7 +71,7 @@ class ExprPar
         ThermodynamicParameterSpace my_space;
         const ParFactory* my_factory;
 
-        gsparams::DictList my_pars;
+        gsparams::DictList my_pars; //all storage here.
 
         /*
         // parameters
@@ -133,6 +133,7 @@ class ParFactory
       ~ParFactory(){};
 
       //the raison d'etre for this class
+      //virtual void set_prototype(const gsparams::DictList& in);
       virtual ExprPar create_expr_par() const;
       virtual ExprPar create_expr_par(const vector<double>& pars, const ThermodynamicParameterSpace in_space) const;
 
@@ -142,6 +143,7 @@ class ParFactory
       void setFreeFix(const vector<bool>& in_free_fix);
 
       ExprPar createDefaultMinMax(bool min_or_max) const;
+      ExprPar createDefaultFreeFix() const;
 
       ExprPar changeSpace(const ExprPar& in_par, const ThermodynamicParameterSpace new_space) const;
 
@@ -168,7 +170,7 @@ class ParFactory
       ExprPar load_old(istream& fin);//Don't use this directly
       ExprPar load_1_6a(istream& fin);//Don't use this directly TODO:Add exceptions
 
-
+      gsparams::DictList prototype;
       const ExprModel& expr_model;
       SearchType searchOption;
     private:

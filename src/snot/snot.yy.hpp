@@ -311,7 +311,7 @@ extern int yylex (void);
 #undef YY_DECL
 #endif
 
-#line 73 "snot.l"
+#line 74 "snot.l"
 
 
 #line 318 "snot.yy.hpp"

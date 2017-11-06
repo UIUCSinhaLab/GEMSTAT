@@ -9,6 +9,10 @@ ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec
     //par = _par;//NOTE: made this const, and that solved a memory leak.
 
     int nFactors = par.nFactors();
+    if(motifs.size() != nFactors){
+        //std::cerr << " MOTFIS " << motifs.size() << " : factors par " << nFactors << std::endl;
+        throw std::runtime_error(" Motifs and factors did not match");
+    }
     assert( motifs.size() == nFactors );
     assert( actIndicators.size() == nFactors );
     assert( repIndicators.size() == nFactors );
@@ -26,17 +30,29 @@ ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec
     repEffects.clear();
 
     for(int i = 0;i<nFactors;i++){
-        maxBindingWts.push_back( ((gsparams::DictList)par.my_pars)["tfs"][i]["maxbind"] );
-        txpEffects.push_back( ((gsparams::DictList)par.my_pars)["tfs"][i]["alpha_a"] );
-        repEffects.push_back( ((gsparams::DictList)par.my_pars)["tfs"][i]["alpha_r"] );
+        maxBindingWts.push_back( ((gsparams::DictList&)par.my_pars)["tfs"][i]["maxbind"] );
+        txpEffects.push_back( ((gsparams::DictList&)par.my_pars)["tfs"][i]["alpha_a"] );
+        repEffects.push_back( ((gsparams::DictList&)par.my_pars)["tfs"][i]["alpha_r"] );
     }
 
     //factorIntMat = Matrix(nFactors, nFactors);                      // (maximum) interactions between pairs of factors: omega(f,f')
 
-    
-    for(int i = 0;i<nFactors;i++)
-        for(int j = 0;j<nFactors;j++)
-            factorIntMat.setElement(i,j,((gsparams::DictList)par.my_pars)["inter"][i][j]);
+    std::map<std::string, int> tf_names_to_ids;
+    for(int i = 0;i<expr_model->motifnames.size();i++){
+        tf_names_to_ids[expr_model->motifnames.at(i)] = i;
+    }
+
+    for(int k = 0;k<((gsparams::DictList&)par.my_pars)["inter"].size();k++){
+        //need to split the name.
+        std::string key = ((gsparams::DictList&)par.my_pars)["inter"].map_key_storage.at(k);
+        double value = ((gsparams::DictList&)par.my_pars)["inter"].list_storage.at(k);
+
+        int split_pos = key.find(":");
+        int i = tf_names_to_ids[key.substr(0,split_pos)];//TODO: more defensive here. Make sure the value actually existed.
+        int j = tf_names_to_ids[key.substr(split_pos+1,key.size())];
+        factorIntMat.setElement(i,j,value);
+        factorIntMat.setElement(j,i,value);
+    }
 
 
     this->setupSitesAndBoundaries(sites_,seq_length, seq_num);
