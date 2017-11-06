@@ -190,17 +190,23 @@ ExprPar ParFactory::create_expr_par() const
 
   int numBTMS = expr_model.one_qbtm_per_crm ? nSeqs : 1;
 
-  the_params["btm"] = gsparams::DictList();
+  the_params["qbtm"] = gsparams::DictList();
 
   double basalTxp_val = expr_model.modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : log( ExprPar::default_basal_Thermo );
 
   for(int i = 0;i<numBTMS;i++){
-      gsparams::DictList one_btm;
-      one_btm["q"] = basalTxp_val;
-      one_btm["pi"] = log( ExprPar::default_pi );
-      one_btm["beta"] = log( ExprPar::default_beta );
 
-      the_params["btm"].push_back(one_btm);
+      the_params["qbtm"].push_back(basalTxp_val);
+  }
+
+  the_params["enh"] = gsparams::DictList();
+  int numEnhancers = expr_model.shared_scaling ? 1 : nSeqs;
+  for(int i = 0;i<numEnhancers;i++){
+      gsparams::DictList one_scale;
+      one_scale["pi"] = log( ExprPar::default_pi );
+      one_scale["beta"] = log( ExprPar::default_beta );
+
+      the_params["enh"].push_back(one_scale);
   }
 
   tmp_par.my_space = ENERGY_SPACE;
@@ -707,7 +713,7 @@ void ExprPar::getRawPars( vector< double >& pars) const
 
 GEMSTAT_PAR_FLOAT_T ExprPar::getBetaForSeq(int enhancer_ID) const {
     int use_enhancerID = (this->my_factory->expr_model.shared_scaling ? 0 : enhancer_ID);
-    return ((gsparams::DictList)this->my_pars)["btm"][ use_enhancerID ]["beta"];
+    return ((gsparams::DictList)this->my_pars)["enh"][ use_enhancerID ]["beta"];
 }
 
 GEMSTAT_PROMOTER_DATA_T ExprPar::getPromoterData(int enhancer_ID) const {
@@ -717,9 +723,9 @@ GEMSTAT_PROMOTER_DATA_T ExprPar::getPromoterData(int enhancer_ID) const {
     int use_enhancerID = (this->my_factory->expr_model.shared_scaling ? 0 : enhancer_ID);
     int use_basal = (this->my_factory->expr_model.one_qbtm_per_crm ? use_enhancerID : 0);
 
-    the_return_value.basal_trans = ((gsparams::DictList)this->my_pars)["btm"][ use_basal ]["q"];;
-    the_return_value.pi = ((gsparams::DictList)this->my_pars)["btm"][ use_enhancerID ]["pi"];;
-    the_return_value.beta = ((gsparams::DictList)this->my_pars)["btm"][ use_enhancerID ]["beta"];;
+    the_return_value.basal_trans = ((gsparams::DictList)this->my_pars)["qbtm"][ use_basal ];;
+    the_return_value.pi = ((gsparams::DictList)this->my_pars)["enh"][ use_enhancerID ]["pi"];;
+    the_return_value.beta = ((gsparams::DictList)this->my_pars)["enh"][ use_enhancerID ]["beta"];;
 
     return the_return_value;
 }
