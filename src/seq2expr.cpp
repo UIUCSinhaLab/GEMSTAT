@@ -70,13 +70,14 @@ int main( int argc, char* argv[] )
     string lower_bound_file; ExprPar lower_bound_par; bool lower_bound_par_read = false;
     string upper_bound_file; ExprPar upper_bound_par; bool upper_bound_par_read = false;
     string free_fix_indicator_filename;
-    ExprPar::one_qbtm_per_crm = false;
-    ExprFunc::one_qbtm_per_crm = false;
+    //ExprPar::one_qbtm_per_crm = false;
+    //ExprFunc::one_qbtm_per_crm = false;
 
     // additional control parameters
     double gcContent = 0.5;
     FactorIntType intOption = BINARY;             // type of interaction function
-    ExprPar::searchOption = CONSTRAINED;          // search option: unconstrained; constrained.
+    SearchType cmdline_search_option = CONSTRAINED;//TODO:: actually read this from the commandline
+    //ExprPar::searchOption = CONSTRAINED;          // search option: unconstrained; constrained.
 
     int cmdline_n_alternations = 5;
     int cmdline_n_random_starts = 0;
@@ -131,8 +132,8 @@ int main( int argc, char* argv[] )
         {
             cmdline_one_qbtm_per_crm = true;
 
-            ExprPar::one_qbtm_per_crm = true;
-            ExprFunc::one_qbtm_per_crm = true;
+            //ExprPar::one_qbtm_per_crm = true;
+            //ExprFunc::one_qbtm_per_crm = true;
         }
         else if ( !strcmp( "-et", argv[i] ) ){
             eTF = atof( argv[ ++i ] );
@@ -290,7 +291,7 @@ int main( int argc, char* argv[] )
         //TODO: Kind of a hacky workaround, the models/DP implementations should know that they need to ignore this during their setup.
         repressionDistThr = 0;
     }
-    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, maxContact, actIndicators, repIndicators, repressionMat, repressionDistThr);
+    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, motifNames, maxContact, actIndicators, repIndicators, repressionMat, repressionDistThr);
     expr_model.shared_scaling = cmdline_one_beta;
 
     //********* SETUP COOPERTIVITIES ********
@@ -319,7 +320,7 @@ int main( int argc, char* argv[] )
     //Deleted AXIS_WEIGHTS from here
 
     //Setup a parameter factory
-    ParFactory *param_factory = new ParFactory(expr_model, nSeqs);
+    ParFactory *param_factory = new ParFactory(expr_model, nSeqs, cmdline_search_option);
 
     // read the initial parameter values
     ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
@@ -344,6 +345,7 @@ int main( int argc, char* argv[] )
     //prevent optimization of annotation thresholds if that will be useless.
     for(int i = 0;i<motifs.size();i++){indicator_bool[indicator_bool.size()-(1+i)] = false;}
     #endif
+    /*//TODO: Parse free fix
     if( !free_fix_indicator_filename.empty() )
     {
         ExprPar param_ff;
@@ -367,6 +369,7 @@ int main( int argc, char* argv[] )
           else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
         }
     }
+    */
 
 
     /*
@@ -419,12 +422,13 @@ int main( int argc, char* argv[] )
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
+    /*//TODO: par_init
     if(read_par_init_file){
       assert(par_init.my_space == PROB_SPACE);
       assert(energyThrFactors.size() == par_init.energyThrFactors.size());
       energyThrFactors = par_init.energyThrFactors;
     }
-
+    */
     //TODO: move this to after the reading of the factor_thr_file? Meh. We should never use factor_thr_file anyway.
     if(read_factor_thresh_eTF){
       energyThrFactors.assign(energyThrFactors.size(),eTF);
@@ -441,8 +445,8 @@ int main( int argc, char* argv[] )
 
     //assign that back to the initial par file so that it receives any changes made.
     assert(par_init.my_space == PROB_SPACE);
-    assert(energyThrFactors.size() == par_init.energyThrFactors.size());
-    par_init.energyThrFactors = energyThrFactors;
+    //assert(energyThrFactors.size() == par_init.energyThrFactors.size());//TODO: restore
+    //par_init.energyThrFactors = energyThrFactors;//TODO: restore
 
     // site representation of the sequences
     // TODO: Should this code be removed? If we are using this code, and no command-line option was provided for energyThrFactors, but a .par file was provided, shouldn't it use the thresholds learned there? (So, shouldn't it happen after reading the par file?)
@@ -584,7 +588,7 @@ int main( int argc, char* argv[] )
         cout << "Interaction_Distance_Threshold = " << coopDistThr << endl;
         if ( intOption == GAUSSIAN ) cout << "Sigma = " << factorIntSigma << endl;
     }
-    cout << "Search_Option = " << getSearchOptionStr( ExprPar::searchOption ) << endl;
+    //cout << "Search_Option = " << getSearchOptionStr( ExprPar::searchOption ) << endl; //TODO: restore
 
 
 

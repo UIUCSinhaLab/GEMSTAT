@@ -53,7 +53,7 @@ private:
 class ExprModel {
 
 public: //TODO: Implement good accessors / mutators instead.
-	ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, int _maxContact, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr );
+	ExprModel( ModelType _modelOption, bool _one_qbtm_per_crm, vector< Motif>& _motifs, vector< string>& _motif_names, int _maxContact, vector< bool >& _actIndicators, vector< bool>& _repIndicators, IntMatrix& _repressionMat, double _repressionDistThr );
 
 
 	ModelType modelOption;			//model option TODO: remove this later and use inheritance for that.
@@ -61,6 +61,7 @@ public: //TODO: Implement good accessors / mutators instead.
     bool shared_scaling;
 
 	vector< Motif >& motifs;		//The motifs
+    vector< string > motifnames;
 
     CoopInfo* coop_setup;
 

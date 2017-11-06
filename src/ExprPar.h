@@ -4,6 +4,8 @@
 #include "ExprModel.h"
 #include "PredictorTrainer.h"
 
+#include "snot/param_storage.h"
+
 class ParFactory;
 class ExprModel;
 
@@ -38,19 +40,21 @@ class ExprPar
     friend class ParFactory;
     public:
         // constructors
-        ExprPar() : factorIntMat() {}
+        ExprPar() {}
         ExprPar( int _nFactors, int _nSeqs );     // default values of parameters
-        ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors );
+        //ExprPar( const vector< double >& _maxBindingWts, const Matrix& _factorIntMat, const vector< double >& _txpEffects, const vector< double >& _repEffects, const vector < double >&  _basalTxps, const vector <double>& _pis, const vector <double>& _betas, int _nSeqs, const vector< double >& _energyThrFactors );
                                                   // construct from a "flat" vector of free parameters (assuming they are in the correct/uniform scale)
-        ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );
-        void copy( const ExprPar& other ) { maxBindingWts = other.maxBindingWts; factorIntMat = other.factorIntMat; txpEffects = other.txpEffects; repEffects = other.repEffects; basalTxps = other.basalTxps; pis = other.pis, betas = other.betas, energyThrFactors = other.energyThrFactors, nSeqs = basalTxps.size(); my_space = other.my_space; my_factory = other.my_factory; }
-        ExprPar( const ExprPar& other ) { copy( other ); }
+        //ExprPar( const vector< double >& pars, const IntMatrix& coopMat, const vector< bool >& actIndicators, const vector< bool >& repIndicators, int _nSeqs );
+        void copy( const ExprPar& other ) { my_pars=other.my_pars; nSeqs = other.nSeqs; my_space = other.my_space; my_factory = other.my_factory; }
+        //ExprPar( const ExprPar& other ) { copy( other ); }
 
         // assignment
         ExprPar& operator=( const ExprPar& other ) { copy( other ); return *this; }
 
         // access methods
-        int nFactors() const { return maxBindingWts.size(); }
+        int nFactors() const {
+            return ((gsparams::DictList)this->my_pars)["tfs"].size();
+        }
 
         GEMSTAT_PAR_FLOAT_T getBetaForSeq(int enhancer_ID) const; //Returns the appropriate value of beta for this sequence. This allows some sequences to share one beta value, while others share another, or each have their own.
 
@@ -67,8 +71,9 @@ class ExprPar
         ThermodynamicParameterSpace my_space;
         const ParFactory* my_factory;
 
+        gsparams::DictList my_pars;
 
-
+        /*
         // parameters
         vector < GEMSTAT_PAR_FLOAT_T > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
         Matrix factorIntMat;                      // (maximum) interactions between pairs of factors: omega(f,f')
@@ -80,11 +85,8 @@ class ExprPar
 
         vector < GEMSTAT_PAR_FLOAT_T > betas;
         vector < GEMSTAT_PAR_FLOAT_T > energyThrFactors;
+        */
         int nSeqs;
-
-        static ModelType modelOption;             // model option
-        static SearchType searchOption;           // search option: 0 - unconstrained search; 1 - constrained search
-        static bool one_qbtm_per_crm;
 
         static double default_weight;             // default binding weight
         static double default_interaction;        // default factor interaction
@@ -127,7 +129,7 @@ class ParFactory
 {
     friend class ExprPar;
     public:
-      ParFactory( const ExprModel& in_model, int in_nSeqs);
+      ParFactory( const ExprModel& in_model, int in_nSeqs, SearchType s_type);
       ~ParFactory(){};
 
       //the raison d'etre for this class
@@ -162,11 +164,13 @@ class ParFactory
 
       ExprPar load(const string& file);//Use this.
       //TODO:make these private or protected. (Except for unit testing?)
+      ExprPar load_SNOT(istream& fin);
       ExprPar load_old(istream& fin);//Don't use this directly
       ExprPar load_1_6a(istream& fin);//Don't use this directly TODO:Add exceptions
 
 
       const ExprModel& expr_model;
+      SearchType searchOption;
     private:
       int nSeqs;
 

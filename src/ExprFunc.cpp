@@ -4,7 +4,7 @@
 #include "ExprPar.h"
 
 //#define DEBUG
-ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num): expr_model(_model), par(_par), motifs( _model->motifs ), actIndicators( _model->actIndicators ), maxContact( _model->maxContact ), repIndicators( _model->repIndicators ), repressionMat( _model->repressionMat ), repressionDistThr( _model->repressionDistThr )
+ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num): expr_model(_model), par(_par), motifs( _model->motifs ), actIndicators( _model->actIndicators ), maxContact( _model->maxContact ), repIndicators( _model->repIndicators ), repressionMat( _model->repressionMat ), repressionDistThr( _model->repressionDistThr ), factorIntMat(_model->motifs.size(),_model->motifs.size())
 {
     //par = _par;//NOTE: made this const, and that solved a memory leak.
 
@@ -18,6 +18,26 @@ ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec
     n_sites = sites_.size();//number of non-psudo sites.
     seq_number = seq_num;
     seq_length = seq_len;
+
+    //setup legacy parameters
+    maxBindingWts.clear();
+    //maxBindingWts = vector < GEMSTAT_PAR_FLOAT_T >(nFactors);          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
+    txpEffects.clear();
+    repEffects.clear();
+
+    for(int i = 0;i<nFactors;i++){
+        maxBindingWts.push_back( ((gsparams::DictList)par.my_pars)["tfs"][i]["maxbind"] );
+        txpEffects.push_back( ((gsparams::DictList)par.my_pars)["tfs"][i]["alpha_a"] );
+        repEffects.push_back( ((gsparams::DictList)par.my_pars)["tfs"][i]["alpha_r"] );
+    }
+
+    //factorIntMat = Matrix(nFactors, nFactors);                      // (maximum) interactions between pairs of factors: omega(f,f')
+
+    
+    for(int i = 0;i<nFactors;i++)
+        for(int j = 0;j<nFactors;j++)
+            factorIntMat.setElement(i,j,((gsparams::DictList)par.my_pars)["inter"][i][j]);
+
 
     this->setupSitesAndBoundaries(sites_,seq_length, seq_num);
 
@@ -58,12 +78,12 @@ void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
   int n = n_sites;
   for ( int i = 1; i <= n; i++ )
   {
-      bindingWts[i] = par.maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio ;
+      bindingWts[i] = maxBindingWts[ sites[i].factorIdx ] * factorConcs[sites[i].factorIdx] * sites[i].prior_probability * sites[i].wtRatio ;
       /*
-      double samee = par.maxBindingWts[sites[i].factorIdx]*factorConcs[sites[i].factorIdx]*sites[i].prior_probability*sites[i].wtRatio;
+      double samee = maxBindingWts[sites[i].factorIdx]*factorConcs[sites[i].factorIdx]*sites[i].prior_probability*sites[i].wtRatio;
       if(samee != samee)
       {
-          cout << "DEBUG: samee for " << i << "\t" << sites[i].factorIdx << "\t" <<  par.maxBindingWts[sites[i].factorIdx] <<"\t" << factorConcs[sites[i].factorIdx] <<"\t" << sites[i].prior_probability <<"\t" << sites[i].wtRatio << endl;
+          cout << "DEBUG: samee for " << i << "\t" << sites[i].factorIdx << "\t" <<  maxBindingWts[sites[i].factorIdx] <<"\t" << factorConcs[sites[i].factorIdx] <<"\t" << sites[i].prior_probability <<"\t" << sites[i].wtRatio << endl;
           exit(1);
       }
       */
@@ -97,7 +117,7 @@ double ExprFunc::predictExpr( const vector< double >& factorConcs )
     // compute the expression (promoter occupancy)
     double efficiency = Z_on / Z_off;
     //cout << "efficiency = " << efficiency << endl;
-    //cout << "basalTxp = " << par.basalTxps[ seq_num ] << endl;
+    //cout << "basalTxp = " << basalTxps[ seq_num ] << endl;
 
     GEMSTAT_PROMOTER_DATA_T my_promoter = par.getPromoterData( this->seq_number );
 
@@ -134,14 +154,14 @@ double Logistic_ExprFunc::predictExpr( const vector< double >& factorConcs ){
   //         cout << "factor\toccupancy\ttxp_effect" << endl;
   for ( int i = 0; i < motifs.size(); i++ )
   {
-      double effect = par.txpEffects[i] * factorOcc[i];
+      double effect = txpEffects[i] * factorOcc[i];
       totalEffect += effect;
       //             cout << i << "\t" << factorOcc[i] << "\t" << effect << endl;
 
       // length correction
       //             totalEffect = totalEffect / (double)length;
   }
-  //         return par.expRatio * logistic( log( my_promoter.basal_trans ) + totalEffect );
+  //         return expRatio * logistic( log( my_promoter.basal_trans ) + totalEffect );
   return logistic( my_promoter.basal_trans + totalEffect );
 }
 
@@ -294,11 +314,11 @@ double Markov_ExprFunc::expr_from_config(const vector< double >& marginals){
 
     if( actIndicators[ sites[ i ].factorIdx ] )
     {
-        log_effect = log(par.txpEffects[ sites[ i ].factorIdx ]);
+        log_effect = log(txpEffects[ sites[ i ].factorIdx ]);
     }
     if( repIndicators[ sites[ i ].factorIdx ] )
     {
-        log_effect = log(par.repEffects[ sites[ i ].factorIdx ]);
+        log_effect = log(repEffects[ sites[ i ].factorIdx ]);
     }
 
     sum_total += log_effect*marginals[i];
@@ -349,7 +369,7 @@ double ExprFunc::compPartFuncOff() const
                 cout << "Factors:\t" << sites[ i ].factorIdx << "\t" << sites[ j ].factorIdx << endl;
                 cout << "compFactorInt:\t" << compFactorInt( sites[ j ], sites[ i ] ) << endl;
                 cout << "Z[j]:\t" << Z[ j ] << endl;
-                cout << i << "\t" << j << "\t" << par.factorIntMat( (sites[i]).factorIdx, (sites[j]).factorIdx ) << endl;
+                cout << i << "\t" << j << "\t" << factorIntMat( (sites[i]).factorIdx, (sites[j]).factorIdx ) << endl;
                 cout << "DEBUG: sum nan/inf\t"<< sum << endl;
                 exit(1);
             }
@@ -408,7 +428,7 @@ double ChrMod_ExprFunc::compPartFuncOff() const
             }
         }
         Z0[i] = bindingWts[i] * sum0;
-        if ( repIndicators[ sites[i].factorIdx ] ) Z1[i] = bindingWts[i] * par.repEffects[ sites[i].factorIdx ] * sum1;
+        if ( repIndicators[ sites[i].factorIdx ] ) Z1[i] = bindingWts[i] * repEffects[ sites[i].factorIdx ] * sum1;
         else Z1[i] = 0;
         Zt[i] = Z0[i] + Z1[i] + Zt[i - 1];
     }
@@ -451,23 +471,23 @@ double Direct_ExprFunc::compPartFuncOn() const
             if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
             sum += compFactorInt( sites[ j ], sites[ i ] ) * Z[ j ];
         }
-        //Z[i] = bindingWts[ i ] * par.txpEffects[ sites[i].factorIdx ] * sum;
+        //Z[i] = bindingWts[ i ] * txpEffects[ sites[i].factorIdx ] * sum;
         if( actIndicators[ sites[ i ].factorIdx ] )
         {
-            Z[ i ] = bindingWts[ i ] * par.txpEffects[ sites[ i ].factorIdx ] * sum;
-            //cout << "1: " << par.txpEffects[ sites[ i ].factorIdx ] << endl;
+            Z[ i ] = bindingWts[ i ] * txpEffects[ sites[ i ].factorIdx ] * sum;
+            //cout << "1: " << txpEffects[ sites[ i ].factorIdx ] << endl;
         }
         if( repIndicators[ sites[ i ].factorIdx ] )
         {
-            Z[ i ] = bindingWts[ i ] * par.repEffects[ sites[ i ].factorIdx ] * sum;
-            //cout << "2: " << par.repEffects[ sites[ i ].factorIdx ] << endl;
+            Z[ i ] = bindingWts[ i ] * repEffects[ sites[ i ].factorIdx ] * sum;
+            //cout << "2: " << repEffects[ sites[ i ].factorIdx ] << endl;
         }
         //cout << "DEBUG 0: " << sum << "\t" << Zt[ i - 1] << endl;
         Zt[i] = Z[i] + Zt[i - 1];
         /*if( actIndicators[ sites[ i ].factorIdx ] )
-            cout << "DEBUG 1: " << Zt[i] << "\t" << bindingWts[i]*par.txpEffects[sites[i].factorIdx]*(Zt[ i - 1] + 1) << endl;
+            cout << "DEBUG 1: " << Zt[i] << "\t" << bindingWts[i]*txpEffects[sites[i].factorIdx]*(Zt[ i - 1] + 1) << endl;
         if( repIndicators[ sites[ i ].factorIdx ] )
-            cout << "DEBUG 2: " << Zt[i] << "\t" << bindingWts[i]*par.repEffects[sites[i].factorIdx]*(Zt[ i - 1] + 1) << endl;*/
+            cout << "DEBUG 2: " << Zt[i] << "\t" << bindingWts[i]*repEffects[sites[i].factorIdx]*(Zt[ i - 1] + 1) << endl;*/
     }
 
     return Zt[n];
@@ -513,7 +533,7 @@ double Quenching_ExprFunc::compPartFuncOn() const
             {
                 if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
                 bool R = testRepression( sites[j], sites[i] );
-                double effect = actIndicators[sites[j].factorIdx] * ( 1 - testRepression( sites[i], sites[j] ) ) * Z1.getElement(j,k-1) * par.txpEffects[sites[j].factorIdx];
+                double effect = actIndicators[sites[j].factorIdx] * ( 1 - testRepression( sites[i], sites[j] ) ) * Z1.getElement(j,k-1) * txpEffects[sites[j].factorIdx];
                 double term = compFactorInt( sites[ j ], sites[ i ] ) * ( Z1.getElement(j,k) + Z0.getElement(j,k) + effect );
                 sum1 += ( 1 - R )* term;
                 sum0 += R * term;
@@ -542,7 +562,7 @@ double Quenching_ExprFunc::compPartFuncOn() const
         }
         for ( int k = 0; k <= N0 - 1; k++ )
         {
-            Z_on += actIndicators[sites[i].factorIdx] * Z1.getElement(i,k) * par.txpEffects[sites[i].factorIdx];
+            Z_on += actIndicators[sites[i].factorIdx] * Z1.getElement(i,k) * txpEffects[sites[i].factorIdx];
         }
     }
     return Z_on;
@@ -582,8 +602,8 @@ double ChrModUnlimited_ExprFunc::compPartFuncOn() const
                 if ( dist > repressionDistThr ) sum1 += Z0[j];
             }
         }
-        Z0[i] = bindingWts[i] * par.txpEffects[ sites[i].factorIdx ] * sum0;
-        if ( repIndicators[ sites[i].factorIdx ] ) Z1[i] = bindingWts[i] * par.repEffects[ sites[i].factorIdx ] * sum1;
+        Z0[i] = bindingWts[i] * txpEffects[ sites[i].factorIdx ] * sum0;
+        if ( repIndicators[ sites[i].factorIdx ] ) Z1[i] = bindingWts[i] * repEffects[ sites[i].factorIdx ] * sum1;
         else Z1[i] = 0;
         Zt[i] = Z0[i] + Z1[i] + Zt[i - 1];
     }
@@ -644,8 +664,8 @@ double ChrModLimited_ExprFunc::compPartFuncOn() const
                 }
             }
             Z0.setElement(i,k,bindingWts[i] * sum0);
-            if ( actIndicators[sites[i].factorIdx] ) Z0(i,k) += k > 0 ? bindingWts[i] * par.txpEffects[sites[i].factorIdx] * sum0A : 0;
-            if ( repIndicators[ sites[i].factorIdx ] ) Z1(i,k) = bindingWts[i] * par.repEffects[ sites[i].factorIdx ] * sum1;
+            if ( actIndicators[sites[i].factorIdx] ) Z0(i,k) += k > 0 ? bindingWts[i] * txpEffects[sites[i].factorIdx] * sum0A : 0;
+            if ( repIndicators[ sites[i].factorIdx ] ) Z1(i,k) = bindingWts[i] * repEffects[ sites[i].factorIdx ] * sum1;
             else Z1.setElement(i,k,0.0);
             Zt.setElement(i,k,Z0.getElement(i,k) + Z1.getElement(i,k) + Zt.getElement(i - 1,k));
             //             cout << "i = " << i << " k = " << k << " Z0 = " << Z0[i][k] << " Z1 = " << Z1[i][k] << " Zt = " << Zt[i][k] << endl;
@@ -660,7 +680,7 @@ double ChrModLimited_ExprFunc::compPartFuncOn() const
 double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
 {
     // 	assert( !siteOverlap( a, b, motifs ) );
-    double maxInt = par.factorIntMat( a.factorIdx, b.factorIdx );
+    double maxInt = factorIntMat( a.factorIdx, b.factorIdx );
     double dist = abs( b.start - a.start );
     //bool orientation = ( a.strand == b.strand );
 
