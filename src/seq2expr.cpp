@@ -77,7 +77,6 @@ int main( int argc, char* argv[] )
     double gcContent = 0.5;
     FactorIntType intOption = BINARY;             // type of interaction function
     SearchType cmdline_search_option = CONSTRAINED;//TODO:: actually read this from the commandline
-    //ExprPar::searchOption = CONSTRAINED;          // search option: unconstrained; constrained.
 
     int cmdline_n_alternations = 5;
     int cmdline_n_random_starts = 0;
@@ -321,7 +320,7 @@ int main( int argc, char* argv[] )
 
     cerr << "Created the parameter factory...";
     //Setup a parameter factory
-    ParFactory *param_factory = new ParFactory(expr_model, nSeqs, cmdline_search_option);
+    ParFactory *param_factory = new ParFactory(expr_model, nSeqs);//This param_factory is used for loading/unloading, it should be unconstrained.
     cerr << "DONE." << endl;
 
     cerr << "Creating the initial parameters...";
@@ -376,6 +375,9 @@ int main( int argc, char* argv[] )
           else if (0.9999999 < one_val && 1.0000001 > one_val){ indicator_bool.push_back(true);}
           else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
         }
+
+
+
 
     /******* END OF FREE free_fix
     */
@@ -606,6 +608,7 @@ int main( int argc, char* argv[] )
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames );
     //And setup parameters from the commandline
+    predictor->search_option = cmdline_search_option;
     predictor->set_objective_option(cmdline_obj_option);
     predictor->n_alternations = cmdline_n_alternations;
     predictor->n_random_starts = cmdline_n_random_starts;
@@ -672,6 +675,7 @@ int main( int argc, char* argv[] )
     gsl_rng_free( rng );
     // print the training results
     ExprPar par = predictor->getPar();
+    par = predictor->param_factory->changeSpace(par, PROB_SPACE);
     if( par_out_stream){
         par.print( par_out_stream, motifNames, expr_model.coop_setup->coop_matrix );
         par_out_stream.close();

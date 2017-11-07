@@ -23,7 +23,7 @@ string parameterSpaceStr(ThermodynamicParameterSpace in){
 }
 
 
-ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs, SearchType s_in) : expr_model(in_model), nSeqs(in_nSeqs), searchOption(s_in)
+ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in_model), nSeqs(in_nSeqs)
 {
 
   //setup prototype

@@ -129,7 +129,7 @@ class ParFactory
 {
     friend class ExprPar;
     public:
-      ParFactory( const ExprModel& in_model, int in_nSeqs, SearchType s_type);
+      ParFactory( const ExprModel& in_model, int in_nSeqs);
       ~ParFactory(){};
 
       //the raison d'etre for this class
@@ -172,7 +172,6 @@ class ParFactory
 
       gsparams::DictList prototype;
       const ExprModel& expr_model;
-      SearchType searchOption;
     private:
       int nSeqs;
 

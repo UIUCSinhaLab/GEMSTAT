@@ -12,7 +12,8 @@ double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_da
 ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
 		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
 	expr_model( _expr_model),
-	indicator_bool ( _indicator_bool ), motifNames ( _motifNames )
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ),
+	search_option(UNCONSTRAINED)
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
 	cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
@@ -50,7 +51,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     }
 
     //expr_model was already initialized. Setup the parameter factory.
-    param_factory = new ParFactory(expr_model, nSeqs(),UNCONSTRAINED);
+    param_factory = new ParFactory(expr_model, nSeqs());
 
 	trainingObjective = NULL;
 	set_objective_option(objOption);
@@ -124,7 +125,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     cout << "Objective function value: " << objFunc( par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
-    if ( n_alternations > 0 && param_factory->searchOption == CONSTRAINED ){
+    if ( n_alternations > 0 && this->search_option == CONSTRAINED ){
       par_model = param_factory->truncateToBounds(par_model, indicator_bool);
 
     }
@@ -331,7 +332,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     optimizer.set_initial_step(1.0);//TODO: enforce simplex starting size.
 	if(max_simplex_iterations > -1){ optimizer.set_maxeval(max_simplex_iterations); }
 
-    if(param_factory->searchOption == CONSTRAINED){
+    if(this->search_option == CONSTRAINED){
       vector<double> free_mins;
       vector<double> fix_mins;
 
@@ -399,7 +400,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     }
     optimizer.set_ftol_abs(ftol);
 
-    if(param_factory->searchOption == CONSTRAINED){
+    if(this->search_option == CONSTRAINED){
       vector<double> free_mins;
       vector<double> fix_mins;
 

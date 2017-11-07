@@ -81,6 +81,7 @@ class ExprPredictor
         // Factory for Parameter vectors;
         ParFactory *param_factory;
         ObjFunc *trainingObjective;
+        SearchType search_option;
     private:
         //***** training data ******
         const DataSet& training_data;               //input and output curves

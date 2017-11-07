@@ -395,7 +395,6 @@ class iterator : public std::forward_iterator_tag {
             }
 
             bool loop_continues = false;
-
             while(my_stack.size() > 1 && loop_continues){
                 my_stack.top().second++;
                 if(my_stack.top().second >= my_stack.top().first->size()){
@@ -415,6 +414,7 @@ class iterator : public std::forward_iterator_tag {
                 //some compound type, gets pushed to the stack, equivalent to recursion
                 if(undecided != check_type && primitive != check_type){
                     my_stack.push(std::make_pair(current_pointed_element,-1));
+                    loop_continues = true;
                     continue;//need to descend into that.
                 }
 
