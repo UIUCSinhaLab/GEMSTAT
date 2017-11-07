@@ -42,6 +42,6 @@ AT_DATA([ff.txt],[[{"tfs":{"foo":{"annot_thresh":0,"maxbind":1,"alpha_a":1,"alph
 ]])
 
 
-AT_CHECK([testexec seq2expr -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -et 0.6 -6dna 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; cat 1.par | sed 's/[[[[:space:]]]]*$//'], [0], [[{"tfs":{"foo":{"annot_thresh":0.6,"maxbind":7,"alpha_a":4,"alpha_r":1}},"inter":{},"qbtm":[0.03],"enh":[{"pi":1,"beta":3}]}]])
+AT_CHECK([testexec seq2expr -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -et 0.6 -6dna 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; cat 1.par | sed 's/[[[[:space:]]]]*$//'], [0], [[{"tfs":{"foo":{"annot_thresh":0.6,"maxbind":7,"alpha_a":4,"alpha_r":0.997421}},"inter":{},"qbtm":[0.03],"enh":[{"pi":1,"beta":3}]}]])
 
 AT_CLEANUP
