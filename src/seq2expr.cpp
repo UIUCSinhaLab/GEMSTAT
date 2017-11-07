@@ -386,10 +386,12 @@ int main( int argc, char* argv[] )
 
     /*
     //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
-    if( read_factor_thresh ){
+    if( read_factor_thresh_eTF ){
         par_init = param_factory->changeSpace(par_init, PROB_SPACE);
         ASSERT_MESSAGE(par_init.my_space == PROB_SPACE,"This should never happen: Preconditions not met for -et option. This is a programming error, and not the fault of the user. For now, you can try avoiding the -et commandline option, and contact the software maintainer.");
-        par_init.energyThrFactors = energyThrFactors;
+        //par_init.energyThrFactors = energyThrFactors;
+        //I really don't want to have code dependent on the structure of the parameters here.
+        //dammit.
     }
     */
 
@@ -438,13 +440,18 @@ int main( int argc, char* argv[] )
     if(read_par_init_file){
       assert(par_init.my_space == PROB_SPACE);
       //assert(energyThrFactors.size() == par_init.energyThrFactors.size());
+
       //energyThrFactors = par_init.energyThrFactors;
+      for(int i = 0;i<((gsparams::DictList&)par_init.my_pars)["tfs"].size();i++){
+          energyThrFactors[i] = ((gsparams::DictList&)par_init.my_pars)["tfs"][i]["annot_thresh"];
+      }
     }
 
     //TODO: move this to after the reading of the factor_thr_file? Meh. We should never use factor_thr_file anyway.
     if(read_factor_thresh_eTF){
       energyThrFactors.assign(energyThrFactors.size(),eTF);
     }
+
 
     if( ! factor_thr_file.empty() )//TODO: Totally eliminate the factor_thr_file.
     {
@@ -458,7 +465,17 @@ int main( int argc, char* argv[] )
     //assign that back to the initial par file so that it receives any changes made.
     assert(par_init.my_space == PROB_SPACE);
     //assert(energyThrFactors.size() == par_init.energyThrFactors.size());//TODO: restore
-    //par_init.energyThrFactors = energyThrFactors;//TODO: restore
+
+    //New way to do this
+    //par_init.energyThrFactors = energyThrFactors;
+
+    for(int i = 0;i<((gsparams::DictList&)par_init.my_pars)["tfs"].size();i++){
+        par_init.my_pars["tfs"][i]["annot_thresh"] = energyThrFactors.at(i);
+    }
+
+    cerr << "DEBUG " << energyThrFactors << endl;
+    cerr << par_init.my_pars << endl;
+    exit(1);
 
     // site representation of the sequences
     // TODO: Should this code be removed? If we are using this code, and no command-line option was provided for energyThrFactors, but a .par file was provided, shouldn't it use the thresholds learned there? (So, shouldn't it happen after reading the par file?)
