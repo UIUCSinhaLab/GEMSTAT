@@ -319,14 +319,20 @@ int main( int argc, char* argv[] )
 
     //Deleted AXIS_WEIGHTS from here
 
+    cerr << "Created the parameter factory...";
     //Setup a parameter factory
     ParFactory *param_factory = new ParFactory(expr_model, nSeqs, cmdline_search_option);
+    cerr << "DONE." << endl;
 
+    cerr << "Creating the initial parameters...";
     // read the initial parameter values
     ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
+    cerr << " ... " << par_init.my_pars;
     par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
                                                                 //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
+    cerr << "DONE." << endl;
 
+    cerr << "Created the parameter factory." << endl;
 
     if ( !parFile.empty() ){
         try{
@@ -347,7 +353,9 @@ int main( int argc, char* argv[] )
     {
         //ExprPar param_ff;
         try{
+          cerr << "loading free fix" << endl;
           param_ff = param_factory->load( free_fix_indicator_filename );
+          cerr << "loaded free fix" << endl;
         }catch (int& e){
           cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
           exit(1);

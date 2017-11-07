@@ -103,7 +103,7 @@ class DictList {
             }
         }
 
-        inline int populate_internal(std::vector< dictlist_primitive_t >& target,int starting_at) const {
+        inline int populate_internal(const std::vector< dictlist_primitive_t >& target,int starting_at) {
             //public function has already cleared and setup the beginnigs of the target vector.
             if(undecided == this->my_type){
                 return 0;
@@ -394,42 +394,38 @@ class iterator : public std::forward_iterator_tag {
                 return *this;
             }
 
-            my_stack.top().second++;
-            while(true){ //we need to alternate backtracking out of the current thing if we are beyond it end, and descending it whatever the next is.
-                //POPPING / backtracking
-                while(my_stack.size() > 0 && my_stack.top().second >= my_stack.top().first->size()){
+            bool loop_continues = false;
+
+            while(my_stack.size() > 1 && loop_continues){
+                my_stack.top().second++;
+                if(my_stack.top().second >= my_stack.top().first->size()){
+                    //primitives will never be on the stack, so this is ok.
+                    //The stack is only those containers that we have descended into.
+                    //So, I guess that implies that iterators for undecided and primitive types need to be initialized to .end();
                     my_stack.pop();
-                    if(my_stack.size() > 0){
-                        my_stack.top().second++;
-                    }
+                    loop_continues = true;
+                    continue;
                 }
 
-                if(my_stack.size() <= 0){
-                    //done, off end.
-                    return *this;
-                }
-
-                /*Now, we are either pointing off the end, or at another DictList.
-                If the new dictlist we are pointing at is not primitive or undecided,
-                we need to add it to the stack and begin traversing it.
-                */
-
+                //We're looking at the next subobject of the thing on top of the stack.
+                //If it is another compound object, we need to descend into it( put it on top of the stack. )
                 DictList *current_pointed_element = &(my_stack.top().first->at(my_stack.top().second));
                 DictListType check_type = current_pointed_element->my_type;
 
+                //some compound type, gets pushed to the stack, equivalent to recursion
+                if(undecided != check_type && primitive != check_type){
+                    my_stack.push(std::make_pair(current_pointed_element,-1));
+                    continue;//need to descend into that.
+                }
+
                 if(undecided == check_type){
-                    //Descended into an undecided element, need to back up and continue.
-                    std::cerr << "DAMMIT" << my_stack.top().first << std::endl;
-                    exit(1);
+                    //Yes, iterators now iterate over undecided.
+                    loop_continues = false;
                     break;
                 }
                 if(primitive == check_type){
+                    loop_continues = false;
                     break;
-                }
-
-                if(undecided != check_type && primitive != check_type){
-                    my_stack.push(std::make_pair(current_pointed_element,0));
-                    continue;
                 }
 
                 throw std::runtime_error("Never make it here.");
