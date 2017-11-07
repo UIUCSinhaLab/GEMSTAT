@@ -394,6 +394,21 @@ class iterator : public std::forward_iterator_tag {
                 return *this;
             }
 
+            /* COROUTINE-like code.
+            So, we really want a coroutine here, and we'd like it to be recursive.
+            That's unrolled and done below. Pseudocode:
+
+            traverse(X):
+                for o in X:
+                    if( o is container ):
+                        traverse(o)
+                    elif( o is primitive ):
+                        yield o
+                    elif( o is undef ):
+                        continue #skip over these
+
+            */
+
             bool loop_continues = false;
             while(my_stack.size() > 1 && loop_continues){
                 my_stack.top().second++;
