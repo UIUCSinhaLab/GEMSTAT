@@ -250,8 +250,8 @@ ExprPar ParFactory::createDefaultFreeFix() const
   for(int i = 0; i<tmp_par.my_pars["tfs"].size();i++){
       tmp_par.my_pars["tfs"][i]["annot_thresh"] = 0.0;
       tmp_par.my_pars["tfs"][i]["maxbind"] = 1.0;
-      tmp_par.my_pars["tfs"][i]["alpha_a"] = 1.0;//TODO: better handling of factor roles?
-      tmp_par.my_pars["tfs"][i]["alpha_r"] = 0.0;
+      tmp_par.my_pars["tfs"][i]["alpha_a"] = expr_model.actIndicators[i] ? 1.0 : 0.0;//TODO: better handling of factor roles?
+      tmp_par.my_pars["tfs"][i]["alpha_r"] = expr_model.repIndicators[i] ? 1.0 : 0.0;
   }
   //set the interaction maximums
   //tmp_par.factorIntMat.setAll(min_or_max ? log(ExprPar::max_interaction) : log(ExprPar::min_interaction));
