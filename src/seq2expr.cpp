@@ -473,10 +473,6 @@ int main( int argc, char* argv[] )
         par_init.my_pars["tfs"][i]["annot_thresh"] = energyThrFactors.at(i);
     }
 
-    cerr << "DEBUG " << energyThrFactors << endl;
-    cerr << par_init.my_pars << endl;
-    exit(1);
-
     // site representation of the sequences
     // TODO: Should this code be removed? If we are using this code, and no command-line option was provided for energyThrFactors, but a .par file was provided, shouldn't it use the thresholds learned there? (So, shouldn't it happen after reading the par file?)
     // TODO: Relates to issue #19
