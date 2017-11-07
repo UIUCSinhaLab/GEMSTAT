@@ -45,15 +45,19 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs, SearchType s_in
 
   //setup the interaction matrix
   gsparams::DictList int_matr;
+  int_matr.undecided_to_dict_else_error();
 
   for(int i = 0;i<_nFactors;i++){
     std::string row_tf_name = expr_model.motifnames[i];
     for(int j = i;j<_nFactors;j++){
         std::string col_tf_name = expr_model.motifnames[j];
-        int_matr.set(row_tf_name + ":" + col_tf_name, log( ExprPar::default_interaction ));
+        if(expr_model.coop_setup->has_coop(i,j)){//Only create cooperativity parameters for those that cooperate.
+            int_matr.set(row_tf_name + ":" + col_tf_name, log( ExprPar::default_interaction ));
+        }
     }
     }
   the_params["inter"] = int_matr;
+
 
 
   //QBTM
