@@ -25,23 +25,28 @@ ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec
 
     //setup legacy parameters
     maxBindingWts.clear();
+    maxBindingWts.assign(nFactors,1.0);
     //maxBindingWts = vector < GEMSTAT_PAR_FLOAT_T >(nFactors);          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
     txpEffects.clear();
+    txpEffects.resize(nFactors,1.0);
     repEffects.clear();
-
-    for(int i = 0;i<nFactors;i++){
-        maxBindingWts.push_back( ((gsparams::DictList&)par.my_pars)["tfs"][i]["maxbind"] );
-        txpEffects.push_back( ((gsparams::DictList&)par.my_pars)["tfs"][i]["alpha_a"] );
-        repEffects.push_back( ((gsparams::DictList&)par.my_pars)["tfs"][i]["alpha_r"] );
-    }
-
-    //factorIntMat = Matrix(nFactors, nFactors);                      // (maximum) interactions between pairs of factors: omega(f,f')
+    repEffects.resize(nFactors,1.0);
 
     std::map<std::string, int> tf_names_to_ids;
     for(int i = 0;i<expr_model->motifnames.size();i++){
         tf_names_to_ids[expr_model->motifnames.at(i)] = i;
     }
 
+    //Do not assume that the tfs dictionary is in our internal order.
+    for(int i = 0;i<nFactors;i++){
+        const std::string &which_tf = expr_model->motifnames.at(i);
+        maxBindingWts[i] = ((gsparams::DictList&)par.my_pars)["tfs"][which_tf]["maxbind"] ;
+        txpEffects[i] = ((gsparams::DictList&)par.my_pars)["tfs"][which_tf]["alpha_a"] ;
+        repEffects[i] = ((gsparams::DictList&)par.my_pars)["tfs"][which_tf]["alpha_r"] ;
+    }
+
+    //factorIntMat = Matrix(nFactors, nFactors);                      // (maximum) interactions between pairs of factors: omega(f,f')
+    //Order doesn't matter for factor interactions, positions will be looked up.
     for(int k = 0;k<((gsparams::DictList&)par.my_pars)["inter"].size();k++){
         //need to split the name.
         std::string key = ((gsparams::DictList&)par.my_pars)["inter"].map_key_storage.at(k);

@@ -411,6 +411,7 @@ class iterator : public std::forward_iterator_tag {
 
             bool loop_continues = false;
             while(my_stack.size() > 1 && loop_continues){
+                loop_continues = false;
                 my_stack.top().second++;
                 if(my_stack.top().second >= my_stack.top().first->size()){
                     //primitives will never be on the stack, so this is ok.
