@@ -22,7 +22,7 @@ AT_DATA([factor_expr.tab],[[Rows	1	2
 foo	1.0	0.0
 ]])
 
-AAT_DATA([lower.par],[[{"tfs":{"foo":{"annot_thresh":0.5,"maxbind":0.1,"alpha_a":1.0,"alpha_r":0.001}},
+AT_DATA([lower.par],[[{"tfs":{"foo":{"annot_thresh":0.5,"maxbind":0.1,"alpha_a":1.0,"alpha_r":0.001}},
 "inter":{},
 "qbtm":[0.01],
 "enh":[{"pi":0.00000000001,"beta":0.1}]}
@@ -48,7 +48,7 @@ AT_DATA([ff.txt],[[{"tfs":{"foo":{"annot_thresh":0,"maxbind":1,"alpha_a":1,"alph
 ]])
 
 
-AT_CHECK([testexec seq2expr -p start.par -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -na 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; tail -n1 1.par | sed 's/.*annot_thresh":\([^,]\).*/\1/'],
+AT_CHECK([testexec seq2expr -p start.par -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -na 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; tail -n1 1.par | sed 's/.*annot_thresh":\(@<:@^,@:>@*\),.*/\1/'],
 [0],
 [[0.5567
 ]])
