@@ -233,7 +233,7 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
 	targetExprs.resize(nConds());
     for ( int j = 0; j < nConds(); j++ )
     {
-		Condition concs = training_data.getCondition( j );
+		Condition concs = training_data.getCondition( j , par );
         double predicted = func->predictExpr( concs );
         targetExprs[j] = ( predicted );
     }

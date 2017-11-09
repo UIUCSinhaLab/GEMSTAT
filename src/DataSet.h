@@ -9,6 +9,7 @@
 #define SRC_DATASET_H_
 
 #include "Tools.h"
+#include "ExprPar.h"
 
 class Condition{
   public:
@@ -23,7 +24,7 @@ public:
 
   int nConds() const;
 
-  Condition getCondition(int i) const;
+  virtual Condition getCondition(int i , ExprPar signalling_params) const;
 
   const Matrix& exprData;                   // expressions of the corresponding sequences across multiple conditions
   const Matrix& factorExprData;             // [TF] of all factors over multiple conditions
