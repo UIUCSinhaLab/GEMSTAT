@@ -534,8 +534,11 @@ class iterator : public std::forward_iterator_tag {
                 int top_index = tmp_stack.top().second;
                 tmp_stack.pop();
 
+
                 if(list == top_container->my_type){
-                    path_str = std::string("[") + std::to_string(top_index) + std::string("]")  + path_str;
+			std::ostringstream int_to_str_ss;
+			int_to_str_ss << top_index;
+                    path_str = std::string("[") + int_to_str_ss.str() + std::string("]")  + path_str;
                 }else if(dict == top_container->my_type){
                     path_str = std::string("[\"") + top_container->map_key_storage.at(top_index) + std::string("\"]")  + path_str;
 
