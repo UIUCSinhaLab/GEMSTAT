@@ -328,7 +328,8 @@ int main( int argc, char* argv[] )
     ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
     cerr << " ... " << par_init.my_pars;
     par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
-                                                                //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
+
+                                                    //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
     cerr << "DONE." << endl;
 
     cerr << "Created the parameter factory." << endl;
@@ -473,6 +474,7 @@ int main( int argc, char* argv[] )
         par_init.my_pars["tfs"][i]["annot_thresh"] = energyThrFactors.at(i);
     }
 
+    //**** ANNOTATE THE SEQUENCES
     // site representation of the sequences
     // TODO: Should this code be removed? If we are using this code, and no command-line option was provided for energyThrFactors, but a .par file was provided, shouldn't it use the thresholds learned there? (So, shouldn't it happen after reading the par file?)
     // TODO: Relates to issue #19
@@ -560,6 +562,8 @@ int main( int argc, char* argv[] )
         }
     }
 
+    //***** DONE ANNOTATING
+
     //TODO: R_SEQ Either remove this feature or un-comment it.
     /*
     //site representation of the random sequences
@@ -576,7 +580,6 @@ int main( int argc, char* argv[] )
 
     }
     */
-
 
     // CHECK POINT
     //     cout << "Sequences:" << endl;
@@ -641,12 +644,15 @@ int main( int argc, char* argv[] )
 
 
     //Setup regularization objective function
+    ExprPar tmp_centers, tmp_l1, tmp_l2;
+    bool setup_regularization = false;
     if(0.0 != l1 || 0.0 != l2){
+        setup_regularization = true;
       cerr << "INFO: Regularization was turned on and will be used. l1 = " << l1 << " l2 = " << l2 << " ."<< endl;
 
-      ExprPar tmp_centers = predictor->param_factory->create_expr_par();
-      ExprPar tmp_l1 = predictor->param_factory->create_expr_par();
-      ExprPar tmp_l2 = predictor->param_factory->create_expr_par();
+      tmp_centers = predictor->param_factory->create_expr_par();
+      tmp_l1 = predictor->param_factory->create_expr_par();
+      tmp_l2 = predictor->param_factory->create_expr_par();
 
       //TODO: add an option to read l1 and l2 values from a file.
       vector< double > tmp_l12_vector;
@@ -673,6 +679,45 @@ int main( int argc, char* argv[] )
     if(lower_bound_par_read){
     	predictor->param_factory->setMinimums(lower_bound_par);
     }
+
+    //**** CHECK that all loaded pars have the same ordering and parameter names.
+    vector<string> path_vector;
+    for(gsparams::DictList::iterator itr = par_init.my_pars.begin();itr != par_init.my_pars.end();++itr){
+        path_vector.push_back(itr.get_path());
+    }
+    vector< gsparams::DictList* > all_loaded_params;
+    all_loaded_params.push_back(&(param_ff.my_pars));
+    all_loaded_params.push_back(&(lower_bound_par.my_pars));
+    all_loaded_params.push_back(&(upper_bound_par.my_pars));
+    /*Only if using l1/l2 regularization*/
+    if(setup_regularization){
+        all_loaded_params.push_back(&(tmp_centers.my_pars));
+        all_loaded_params.push_back(&(tmp_l1.my_pars));
+        all_loaded_params.push_back(&(tmp_l2.my_pars));
+    }
+
+    for(int i = 0;i<all_loaded_params.size();i++){
+        gsparams::DictList::iterator itr = all_loaded_params[i]->begin();
+        int j = 0;
+        while(itr!=all_loaded_params[i]->end()){
+            if(0 != path_vector[j].compare(itr.get_path())){
+                /*
+                std::cerr << par_init.my_pars["inter"] << std::endl;
+                std::cerr << (*all_loaded_params[i])["inter"] << std::endl;
+
+                std::cerr << par_init.my_pars << std::endl;
+                std::cerr << (*all_loaded_params[i]) << std::endl;
+                */
+                throw std::invalid_argument("Error in one of the input parameter files (.par, free_fix, lower/upper bounds, etc.) \nTrying to compare SNOT objects, it seems that one of the inputs is misordered.  " + path_vector[j] + " is not " + itr.get_path());
+            }
+            ++itr;
+            j++;
+        }
+    }
+
+
+
+
 
     // random number generator
     gsl_rng* rng;

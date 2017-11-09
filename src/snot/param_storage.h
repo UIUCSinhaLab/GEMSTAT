@@ -345,6 +345,45 @@ class DictList {
             return false;
         }
 
+        /**
+        *   Create a new DictList hierarchy using values from another, but ordering according to this.
+        */
+        inline DictList use_as_prototype(DictList &other){
+            DictList ret_list;
+
+            if(undecided == this->my_type || primitive == this->my_type){
+                if(this->my_type != other.my_type){
+                    throw std::runtime_error("Could not use as prototype (mismatched types) ");
+                }
+                ret_list = DictList(other);
+                return ret_list;
+            }
+
+            if(list == this->my_type){
+                if(this->my_type != other.my_type) { throw std::runtime_error("Could not use as prototype (mismatched types) "); }
+                if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
+                for(int i = 0;i<this->list_storage.size();i++){
+                    ret_list.push_back(this->at(i).use_as_prototype(other.at(i)));
+                }
+
+                return ret_list;
+            }
+
+            if(dict == this->my_type){
+                if(this->my_type != other.my_type) { throw std::runtime_error("Could not use as prototype (mismatched types) "); }
+                if(this->size() != other.size()) { throw std::runtime_error("Could not use as prototype (mismatched length) "); }
+                for(int i = 0;i<this->map_key_storage.size();i++){
+                    std::string the_key = this->map_key_storage.at(i);
+                    DictList blah = this->at(the_key).use_as_prototype(other.at(the_key));
+                    ret_list.set(the_key, blah);
+                }
+
+                return ret_list;
+            }
+
+            throw std::logic_error("Should not make it to the bottom of DictList::use_as_prototype.");
+            return ret_list;
+        }
 
 class iterator : public std::forward_iterator_tag {
     protected:

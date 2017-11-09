@@ -55,7 +55,9 @@ START: ARRAY {
   }
 ;
 OBJECT: O_BEGIN O_END {
-    $$ = new DictList();
+    	DictList *retval = new DictList();
+	retval->undecided_to_dict_else_error();
+	$$ = retval;
   }
 | O_BEGIN MEMBERS O_END {
     DictList *retval = new DictList();
