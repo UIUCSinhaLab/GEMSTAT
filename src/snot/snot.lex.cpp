@@ -485,16 +485,19 @@ int yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
-#line 1 "snot.l"
-#line 2 "snot.l"
+#line 1 "snot.lpp"
+#line 2 "snot.lpp"
     #include<stdio.h>
     #include <string.h>
+    #include <string>
 
     #include "param_storage.h"
 
+
     #include "snot.tab.hpp"
 
-    /*
+
+/*    
     #define STRING "str"
     #define NUMBER "number"
     #define O_BEGIN "o_begin"
@@ -502,8 +505,9 @@ char *yytext;
     #define A_BEGIN "a_begin"
     #define A_END "a_end"
     #define COMMA "comma"
-    */
-#line 507 "snot.lex.cpp"
+  */  
+
+#line 511 "snot.lex.cpp"
 
 #define INITIAL 0
 
@@ -685,9 +689,9 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 35 "snot.l"
+#line 39 "snot.lpp"
 
-#line 691 "snot.lex.cpp"
+#line 695 "snot.lex.cpp"
 
 	if ( !(yy_init) )
 		{
@@ -771,10 +775,10 @@ do_action:	/* This label is used only to access EOF actions. */
 			goto yy_find_action;
 
 case 1:
-#line 37 "snot.l"
+#line 41 "snot.lpp"
 case 2:
 YY_RULE_SETUP
-#line 37 "snot.l"
+#line 41 "snot.lpp"
 {
     yylval.sym=new std::string(yytext,1,strlen(yytext)-2);
     return STRING;
@@ -782,7 +786,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 41 "snot.l"
+#line 45 "snot.lpp"
 {
     yylval.val=atof(yytext);
     return NUMBER;
@@ -790,42 +794,42 @@ YY_RULE_SETUP
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 45 "snot.l"
+#line 49 "snot.lpp"
 {
     return O_BEGIN;
 };
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 49 "snot.l"
+#line 53 "snot.lpp"
 {
     return O_END;
 };
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 53 "snot.l"
+#line 57 "snot.lpp"
 {
     return A_BEGIN;
 };
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 57 "snot.l"
+#line 61 "snot.lpp"
 {
     return A_END;
 };
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 61 "snot.l"
+#line 65 "snot.lpp"
 {
     return COMMA;
 };
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 64 "snot.l"
+#line 68 "snot.lpp"
 {
     return COLON;
 };
@@ -833,12 +837,12 @@ YY_RULE_SETUP
 case 10:
 /* rule 10 can match eol */
 YY_RULE_SETUP
-#line 68 "snot.l"
+#line 72 "snot.lpp"
 /* ignore whitespace */;
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 70 "snot.l"
+#line 74 "snot.lpp"
 {
     printf("Unexpected: %c\nExiting...\n",*yytext);
     exit(0);
@@ -846,10 +850,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 74 "snot.l"
+#line 78 "snot.lpp"
 ECHO;
 	YY_BREAK
-#line 853 "snot.lex.cpp"
+#line 857 "snot.lex.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1846,7 +1850,11 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 74 "snot.l"
+#line 78 "snot.lpp"
 
 
+
+int yywrap(void) {
+	return 1;
+}
 

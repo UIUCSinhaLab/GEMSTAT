@@ -1,0 +1,20 @@
+
+all: lib
+
+lib: libsnot.a
+
+
+snot.tab.cpp snot.tab.hpp : snot.ypp
+	bison -d snot.ypp
+
+snot.lex.cpp snot.yy.hpp: snot.lpp
+	flex -o snot.lex.cpp --header-file=snot.yy.hpp snot.lpp
+
+snot.tab.o snot.lex.o:	snot.tab.cpp snot.tab.hpp snot.lex.cpp snot.yy.hpp param_storage.h
+	g++ -g -c snot.tab.cpp snot.lex.cpp
+
+libsnot.a: snot.tab.o snot.lex.o
+	ar -rcs libsnot.a snot.tab.o snot.lex.o
+
+clean:
+	rm snot snot.tab.* snot.lex.*

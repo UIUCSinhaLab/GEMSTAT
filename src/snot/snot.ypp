@@ -1,0 +1,144 @@
+
+%{
+#include <iostream>
+#include <string>
+#include <map>
+#include <vector>
+#include <utility>
+#include <cstdlib>
+
+#include "param_storage.h"
+#include "snot.yy.hpp"
+
+//-- I need this for atoi
+using namespace std;
+using namespace gsparams;
+
+//-- Lexer prototype required by bison, aka getNextToken()
+DictList *last_object;
+int yylex();
+int yyerror(const char *p) { cerr << "Parse error!" << endl; }
+%}
+
+%require "2.3"
+
+%debug
+
+%start START
+
+%defines
+
+%union {
+  double val;
+  std::string *sym;
+  gsparams::DictList *onevalue;
+  std::pair< std::string , gsparams::DictList> *onepair;
+  std::vector< std::pair< std::string , gsparams::DictList> > *pairlist;
+};
+
+%token <val> NUMBER
+%token <sym> STRING
+%type <onevalue> OBJECT ELEMENTS ARRAY
+%type <onepair> PAIR
+%type <onevalue> VALUE
+%type <pairlist> MEMBERS
+%type <sym> COMMA
+%left O_BEGIN O_END A_BEGIN A_END
+%left COMMA
+%left COLON
+%%
+START: ARRAY {
+  }
+| OBJECT {
+    last_object = $1;
+    //delete $1;
+  }
+;
+OBJECT: O_BEGIN O_END {
+    $$ = new DictList();
+  }
+| O_BEGIN MEMBERS O_END {
+    DictList *retval = new DictList();
+    std::vector< std::pair< std::string , gsparams::DictList> >::iterator itr;
+    for(itr = $2->begin();itr!= $2->end();++itr){
+        retval->set(itr->first,itr->second);
+    }
+    delete $2;
+    $$=retval;
+  }
+;
+MEMBERS: PAIR {
+    std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
+    retptr->push_back(*$1);
+    delete $1;
+    $$ = retptr;
+  }
+| PAIR COMMA MEMBERS {
+    std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
+    *retptr = *$3;
+    retptr->insert(retptr->begin(), *$1);
+    delete $1;
+    delete $3;//Maybe could have just used that.
+    $$ = retptr;
+  }
+;
+PAIR: STRING COLON VALUE {
+    std::pair<std::string, DictList> *retpair = new std::pair<std::string, DictList>;
+    *retpair = std::make_pair(*$1, *$3);
+    delete $1;
+    delete $3;
+    $$ = retpair;
+  }
+;
+ARRAY: A_BEGIN A_END {
+    DictList *retval = new DictList();
+    retval->undecided_to_list_else_error();
+    $$ = retval;
+  }
+| A_BEGIN ELEMENTS A_END {
+    $$ = $2;
+}
+;
+ELEMENTS: VALUE {
+    DictList *retval = new DictList();
+    retval->undecided_to_list_else_error();
+    retval->push_back(*$1);
+    delete $1;
+    $$ = retval;
+  }
+| VALUE COMMA ELEMENTS {
+    DictList *retval = new DictList();
+    retval->undecided_to_list_else_error();
+    retval->push_back(*$1);
+    for(int i = 0;i<$3->size();i++){
+        retval->push_back($3->at(i));
+    }
+    delete $1;
+    delete $3;
+    $$ = retval;
+  }
+;
+VALUE: NUMBER {$$=new DictList(yylval.val);}
+| OBJECT {$$=$1;}
+| ARRAY {$$=$1;}
+;
+%%
+//-- FUNCTION DEFINITIONS ---------------------------------
+#include <iostream>
+
+DictList parse_dictlist(std::string &in){
+    yy_scan_string(in.c_str());
+    int parse_val = yyparse();
+    if(parse_val == 0){
+
+    }else{
+        if(NULL != last_object){
+            delete last_object;
+        }
+        throw std::runtime_error("Could not parse a DictList");
+    }
+
+    DictList retval = *last_object;
+    delete last_object;
+    return retval;
+}
