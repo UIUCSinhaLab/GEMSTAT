@@ -47,11 +47,7 @@ class ExprPredictor
         // predict expression values of a sequence (across all conditions)
         int predict( const ExprPar& par, const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num) const;
         int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num) const;
-<<<<<<< HEAD
-        //int predict_all( const ExprPar& par , vector< vector< double > > &targetExprs ) const;
-=======
         int predict_all( const ExprPar& par , vector< vector< double > > &targetExprs ) const;
->>>>>>> develop
         //TODO: Implement this such that the previous calls it, it is not slow, and it is DRY and KISS
         //int predict( const SiteVec& targetSites, int targetSeqLength, vector<int> condition_index_list, vector< double >& targetExprs, int seq_num ) const;
 
