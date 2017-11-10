@@ -285,6 +285,7 @@ int main( int argc, char* argv[] )
         training_dataset = new DataSet_Signal(factorExprData,exprData, signal_data_matrix);
 
         ((DataSet_Signal*)training_dataset)->set_row_names(tmp_labels);
+        ((DataSet_Signal*)training_dataset)->set_signal_row_names(labels);
         cerr << "Created a signaling dataset." << endl;
     }
 
@@ -342,7 +343,7 @@ int main( int argc, char* argv[] )
 
     //Deleted AXIS_WEIGHTS from here
 
-    cerr << "Created the parameter factory...";
+    cerr << "creating the parameter factory...";
     //Setup a parameter factory
     ParFactory *param_factory = new ParFactory(expr_model, nSeqs);//This param_factory is used for loading/unloading, it should be unconstrained.
     cerr << "DONE." << endl;

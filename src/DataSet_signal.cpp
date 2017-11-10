@@ -18,6 +18,13 @@ void DataSet_Signal::set_row_names(const vector<string> &in_names){
     }
 }
 
+void DataSet_Signal::set_signal_row_names(const vector<string> &in_names){
+    signal_row_names = in_names;
+    for(int i = 0;i<signal_row_names.size();i++){
+        signal_row_names_to_row[signal_row_names[i]] = i;
+    }
+}
+
 Condition DataSet_Signal::getCondition(int i, const ExprPar &signaling_params) const{
 
 
@@ -26,6 +33,8 @@ Condition DataSet_Signal::getCondition(int i, const ExprPar &signaling_params) c
     //We're just going to put CIC attenuation right here. blah. It should be a subclass.
 
     int cic_i = this->row_names_to_row.at("cic");
+
+    int dperk_i = this->signal_row_names_to_row.at("dperk");
 
 
     //cerr << "TYpE : " << ((gsparams::DictList)signaling_params.my_pars).at("signaling").at("cic_att").my_type << endl;
@@ -38,7 +47,7 @@ Condition DataSet_Signal::getCondition(int i, const ExprPar &signaling_params) c
         throw e;
     }
 
-    double foobar = signaling_data.getElement(cic_i,i);
+    double foobar = signaling_data.getElement(dperk_i,i);
     //double foobar = 0.0;
     values[cic_i] = values[cic_i]*pow(1.0 + foobar*exp(att_param),-1.0);
 

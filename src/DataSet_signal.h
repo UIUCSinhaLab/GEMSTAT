@@ -19,6 +19,7 @@ public:
   ~DataSet_Signal(){};
 
   void set_row_names(const vector<string> &in_names);
+  void set_signal_row_names(const vector<string> &in_names);
 
   int nConds() const;
 
@@ -27,6 +28,8 @@ public:
   const Matrix& signaling_data;
   vector<string> row_names;
   map<string, int> row_names_to_row;
+  vector<string> signal_row_names;
+  map<string, int> signal_row_names_to_row;
 };
 
 #endif
