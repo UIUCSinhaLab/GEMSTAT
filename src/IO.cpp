@@ -111,14 +111,15 @@ int writePredictions(const string& filename, ExprPredictor& predictor, const Mat
 	}
 	ExprPar par = predictor.getPar();
 	//SiteVec unusedSV = SiteVec();
-	const vector< SiteVec >& allSeqSites = predictor.getSeqSites();//Needed if we are no longer reannotating each prediction.
+	vector< vector< double > > predictions;
+
+	predictor.predict_all(par, predictions);
 
 	fout << "Rows\t" << expr_condNames << endl;
 
 	for ( int i = 0; i < predictor.nSeqs(); i++ )
     {
-        vector< double > targetExprs;
-        predictor.predict( allSeqSites[i], predictor.seqs[i].size(), targetExprs, i );
+        vector< double > targetExprs = predictions[i];
         vector< double > observedExprs = exprData.getRow( i );
 
         // error
