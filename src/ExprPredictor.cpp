@@ -242,6 +242,38 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
     return 0;
 }
 
+int ExprPredictor::predict_all( const ExprPar& par , vector< vector< double > > &targetExprs ) const
+{
+	vector< int > seqLengths( seqs.size() );
+	vector< SiteVec > seqSites( seqs.size() ); //
+	targetExprs.clear();
+
+    for( int i = 0; i < seqs.size(); i++ ){
+      seqLengths[i] = seqs[i].size();
+    }
+
+
+    #ifdef REANNOTATE_EACH_PREDICTION
+    SeqAnnotator ann( expr_model.motifs, par.energyThrFactors );
+    for ( int i = 0; i < seqs.size(); i++ ) {
+       	ann.annot( seqs[ i ], seqSites[ i ] );
+    }
+    #else
+    seqSites = this->seqSites;
+    #endif
+
+    //Create predictions for every sequence and condition
+    for ( int i = 0; i < nSeqs(); i++ ) {
+		vector<double> one_seq_predictions(nConds());
+
+		this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
+
+		targetExprs.push_back(one_seq_predictions);
+    }
+
+	return 0;
+}
+
 int ExprPredictor::maxShift = 5;
 double ExprPredictor::shiftPenalty = 0.8;
 
@@ -305,34 +337,14 @@ int indices_of_crm_in_gene[] =
 
 double ExprPredictor::evalObjective( const ExprPar& par )
 {
+	vector<vector<double> > ground_truths;
+	vector<vector<double> > predictions;
 
-    vector< int > seqLengths( seqs.size() );
-    for( int i = 0; i < seqs.size(); i++ ){
-      seqLengths[i] = seqs[i].size();
-    }
+	for(int i = 0;i< nSeqs();i++){//Populate ground truths
+		ground_truths.push_back(training_data.exprData.getRow(i));
+	}
 
-    vector< SiteVec > seqSites( seqs.size() ); //
-    #ifdef REANNOTATE_EACH_PREDICTION
-    SeqAnnotator ann( expr_model.motifs, par.energyThrFactors );
-    for ( int i = 0; i < seqs.size(); i++ ) {
-       	ann.annot( seqs[ i ], seqSites[ i ] );
-    }
-    #else
-    seqSites = this->seqSites;
-    #endif
-
-    vector<vector<double> > ground_truths;
-    vector<vector<double> > predictions;
-
-    //Create predictions for every sequence and condition
-    for ( int i = 0; i < nSeqs(); i++ ) {
-        ground_truths.push_back(training_data.exprData.getRow(i));
-		vector<double> one_seq_predictions(nConds());
-
-		this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
-
-		predictions.push_back(one_seq_predictions);
-    }
+	this->predict_all(par, predictions);
 
     //Evaluate the objective function on that.
     double ret_val = trainingObjective->eval(ground_truths, predictions, &par);
