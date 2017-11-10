@@ -25,7 +25,7 @@ Condition DataSet_Signal::getCondition(int i, const ExprPar &signaling_params) c
 
     //We're just going to put CIC attenuation right here. blah. It should be a subclass.
 
-    int cic_i = this->row_names_to_row.at("bcd");
+    int cic_i = this->row_names_to_row.at("cic");
 
 
     //cerr << "TYpE : " << ((gsparams::DictList)signaling_params.my_pars).at("signaling").at("cic_att").my_type << endl;
