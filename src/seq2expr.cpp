@@ -31,6 +31,8 @@
 
 #include "ObjFunc.h"
 
+#include "DataSet_signal.h"
+
 #include <stdexcept>
 
 int main( int argc, char* argv[] )
@@ -42,6 +44,8 @@ int main( int argc, char* argv[] )
     string factor_thr_file;
     string par_out_file; // the learned parameters will get stored here
     ofstream par_out_stream; // Uninitialized at first.
+
+    string signaling_filename;
 
     string train_weights_filename;
     bool train_weights_loaded = false;
@@ -162,6 +166,9 @@ int main( int argc, char* argv[] )
             cmdline_interaction_option_str = argv[ ++i ];
     else if( !strcmp("-train_weights", argv[ i ]))
         train_weights_filename = argv[ ++i ];
+    else if( !strcmp("-signal", argv[ i ]) ){
+        signaling_filename = argv[ ++i ];
+        }
     }
 
     if ( seqFile.empty() || exprFile.empty() || motifFile.empty() || factorExprFile.empty() || outFile.empty() || ( ( cmdline_modelOption == QUENCHING || cmdline_modelOption == CHRMOD_UNLIMITED || cmdline_modelOption == CHRMOD_LIMITED ) &&  factorInfoFile.empty() ) || ( cmdline_modelOption == QUENCHING && repressionFile.empty() ) )
@@ -262,7 +269,24 @@ int main( int argc, char* argv[] )
     ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
 
     //Initialize the dataset that is actually provided
-    DataSet training_dataset(factorExprData,exprData);
+    Matrix signal_data_matrix;
+    DataSet *training_dataset = NULL;
+    if( signaling_filename.empty() ){
+        training_dataset = new DataSet(factorExprData,exprData);
+    }else{
+    //if( !signaling_filename.empty() ){
+        vector<string> tmp_labels(labels);
+        data.clear();
+        labels.clear();
+        rval = readMatrix( signaling_filename, labels, condNames, data );
+        ASSERT_MESSAGE( rval != RET_ERROR , "Could not read the signal data matrix");
+        signal_data_matrix = Matrix( data );
+        ASSERT_MESSAGE( factorExprData.nCols() == signal_data_matrix.nCols(), "The signaling data had a different number of columns than the factor expression data.");
+        training_dataset = new DataSet_Signal(factorExprData,exprData, signal_data_matrix);
+
+        ((DataSet_Signal*)training_dataset)->set_row_names(tmp_labels);
+        cerr << "Created a signaling dataset." << endl;
+    }
 
     //****** MODEL ********
 
@@ -337,6 +361,7 @@ int main( int argc, char* argv[] )
     if ( !parFile.empty() ){
         try{
           par_init = param_factory->load( parFile );
+          param_factory->prototype = gsparams::DictList(par_init.my_pars);
           read_par_init_file = true;
         }catch (int& e){
             cerr << "Cannot read parameters from " << parFile << endl;
@@ -622,8 +647,10 @@ int main( int argc, char* argv[] )
 
 
     // create the expression predictor
-    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames );
+    ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, *training_dataset, motifs, expr_model, indicator_bool, motifNames );
     //And setup parameters from the commandline
+    delete predictor->param_factory;
+    predictor->param_factory = param_factory;
     predictor->search_option = cmdline_search_option;
     predictor->set_objective_option(cmdline_obj_option);
     predictor->n_alternations = cmdline_n_alternations;
@@ -743,7 +770,7 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( cmdline_obj_option == SSE || cmdline_obj_option == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, training_dataset.exprData, expr_condNames, cmdline_write_gt, true);
+    writePredictions(outFile, *predictor, training_dataset->exprData, expr_condNames, cmdline_write_gt, true);
 
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*
