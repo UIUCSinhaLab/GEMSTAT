@@ -20,9 +20,9 @@ MODEL_ARGUMENTS="-o Direct -ct 50 -rt 0"
 
 TRAINING_ARGUMENTS="-oo SSE -na 1"
 
-${BASE_DIR}/src/seq2expr ${DATA_ARGUMENTS} ${MODEL_ARGUMENTS} ${TRAINING_ARGUMENTS} -fo example_02.out -po example_02.par \
+${BASE_DIR}/src/seq2expr ${DATA_ARGUMENTS} ${MODEL_ARGUMENTS} ${TRAINING_ARGUMENTS} -fo example_03.out -po example_03.par \
 	-onebeta \
-	-ff ff.txt \
-	-lower_bound lower.par \
-	-upper_bound upper.par \
-	-p start.par
+	-ff ${SCRIPT_DIR}/ff.txt \
+	-lower_bound ${SCRIPT_DIR}/lower.par \
+	-upper_bound ${SCRIPT_DIR}/upper.par \
+	-p ${SCRIPT_DIR}/start.par
