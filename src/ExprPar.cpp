@@ -498,7 +498,16 @@ ExprPar ParFactory::load(const string& file){
 		cerr << "because: \"" << int_error << endl;
 		cerr << "If the above is a message about calling a deprecated ParFactory::load_XXXX then it means there is probably a file-format problem." << endl;
 		cerr << endl;
-		throw runtime_error("Problem parsing '" + file + "' caused by int exception: " + std::to_string(int_error));
+
+
+		//std::to_string(int) is a C++0X extension and not available on all compilers. In particular, not on our CI system.
+		//WORKAROUND
+		std::stringstream just_for_tostring;
+		just_for_tostring << int_error;
+		std::string int_error_as_str;
+		just_for_tostring >> int_error_as_str;
+
+		throw runtime_error("Problem parsing '" + file + "' caused by int exception: " + int_error_as_str);
 	}
 
   return ret_par;
