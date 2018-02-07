@@ -467,7 +467,7 @@ ExprPar ParFactory::randSamplePar( const gsl_rng* rng) const
 
 
 ExprPar ParFactory::load(const string& file){
-  ExprPar ret_par;
+	ExprPar ret_par;
   // open the file
   ifstream fin( file.c_str() );
   if ( !fin ){ cerr << "Cannot open parameter file " << file << endl; exit( 1 ); }
@@ -476,14 +476,30 @@ ExprPar ParFactory::load(const string& file){
   std::getline(fin,header);
   fin.seekg(0,fin.beg);//Every loader can expect to be at the beginning of the file.
 
-  if(0 < header.size() && '{' == header[0]){
-      ret_par = load_SNOT(fin);
-  }else if(0 == header.compare("#GSPAR1.6a")) {//TODO: remove any whitespace off the end of header.
-    ret_par = load_1_6a(fin);
-  }else{
-    ret_par = load_old(fin);
-  }
-  fin.close();
+	try{
+		if(0 < header.size() && '{' == header[0]){
+			ret_par = load_SNOT(fin);
+		}else if(0 == header.compare("#GSPAR1.6a")) {//TODO: remove any whitespace off the end of header.
+			ret_par = load_1_6a(fin);
+		}else{
+			ret_par = load_old(fin);
+		}
+		fin.close();
+	}catch( runtime_error the_error){
+		cerr << endl << " ** FATAL ERROR ** " << endl;
+		cerr << "There was an error while trying to load the file \"" << file << "\" " << endl;
+		cerr << "because: \"" << the_error.what() << endl;
+		cerr << "If the above is a message about calling a deprecated ParFactory::load_XXXX then it means there is probably a file-format problem." << endl;
+		cerr << endl;
+		throw runtime_error("Problem parsing '" + file + "' caused by: " + the_error.what());
+	}catch( int& int_error){
+		cerr << endl << " ** FATAL ERROR ** " << endl;
+		cerr << "There was an error while trying to load the file \"" << file << "\" " << endl;
+		cerr << "because: \"" << int_error << endl;
+		cerr << "If the above is a message about calling a deprecated ParFactory::load_XXXX then it means there is probably a file-format problem." << endl;
+		cerr << endl;
+		throw runtime_error("Problem parsing '" + file + "' caused by int exception: " + std::to_string(int_error));
+	}
 
   return ret_par;
 }
@@ -504,6 +520,8 @@ ExprPar ParFactory::load_SNOT(istream& fin){
 }
 
 ExprPar ParFactory::load_1_6a(istream& fin){
+	throw runtime_error("Called deprecated ParFactory::load_1_6a");
+
     ExprPar tmp_par = create_expr_par();
     tmp_par = changeSpace(tmp_par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );//TODO: get rid of this so that logistic models are stored in the same space with the other models.
 
@@ -659,6 +677,8 @@ ExprPar ParFactory::load_1_6a(istream& fin){
 }
 
 ExprPar ParFactory::load_old(istream& fin){
+
+	throw runtime_error("Called deprecated ParFactory::load_old");
 
   ExprPar tmp_par = create_expr_par();
   tmp_par = changeSpace(tmp_par, expr_model.modelOption == LOGISTIC ? ENERGY_SPACE : PROB_SPACE );//TODO: get rid of this so that logistic models are stored in the same space with the other models.

@@ -338,7 +338,7 @@ int main( int argc, char* argv[] )
         try{
           par_init = param_factory->load( parFile );
           read_par_init_file = true;
-        }catch (int& e){
+	  }catch (exception& e){
             cerr << "Cannot read parameters from " << parFile << endl;
             exit( 1 );
         }
@@ -356,7 +356,7 @@ int main( int argc, char* argv[] )
           cerr << "loading free fix" << endl;
           param_ff = param_factory->load( free_fix_indicator_filename );
           cerr << "loaded free fix" << endl;
-        }catch (int& e){
+	  }catch (exception& e){
           cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
           exit(1);
         }
@@ -401,7 +401,7 @@ int main( int argc, char* argv[] )
 		upper_bound_par = param_factory->load( upper_bound_file );
 		upper_bound_par = param_factory->changeSpace(upper_bound_par, ENERGY_SPACE);
 		upper_bound_par_read = true;
-	}catch (int& e){
+	}catch (exception& e){
 		cerr << "Cannot read upper bounds from " << upper_bound_file << endl;
 		exit( 1 );
 	}
@@ -412,7 +412,7 @@ int main( int argc, char* argv[] )
 		lower_bound_par = param_factory->load( lower_bound_file );
 		lower_bound_par = param_factory->changeSpace(lower_bound_par, ENERGY_SPACE);
 		lower_bound_par_read = true;
-	}catch (int& e){
+	}catch (exception& e){
 		cerr << "Cannot read lower bounds from " << lower_bound_file << endl;
 		exit( 1 );
 	}
