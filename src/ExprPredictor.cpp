@@ -141,7 +141,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     if ( n_alternations == 0 ) return 0;
 
     // alternate between two different methods
-    ExprPar par_result;
+    ExprPar par_result = param_factory->create_expr_par();
     double obj_result;
     for ( int i = 0; i < n_alternations; i++ )
     {
