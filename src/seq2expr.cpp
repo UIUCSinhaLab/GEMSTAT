@@ -422,6 +422,7 @@ int main( int argc, char* argv[] )
     vector < double > all_pars_for_test;
     par_init.getRawPars(all_pars_for_test );
     ASSERT_MESSAGE(all_pars_for_test.size() == indicator_bool.size(), "For some reason, the number of entries in free_fix did not match the number of free parameters.\n"
+			"(This might happen if you added a new optimization parameter but did not have it in all of the '-p','-ff','-lower_bound',&'-upper_bound' argument files.)\n"
 		  "Remember that whatever model, there are 3 parameters for every transcription factor\n");
     all_pars_for_test.clear();//Won't be used again.
     //It is possible that the user wants to write out to the same par file, doing this after reading the par file means we won't have overridden it before reading
