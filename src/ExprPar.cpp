@@ -46,8 +46,6 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in
   //setup the interaction matrix
   gsparams::DictList int_matr;
   int_matr.undecided_to_dict_else_error();
-  the_params["inter"] = int_matr;
-  assert(the_params["inter"].my_type == gsparams::dict);
 
   for(int i = 0;i<_nFactors;i++){
     std::string row_tf_name = expr_model.motifnames[i];
@@ -59,7 +57,10 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in
     }
     }
 
-
+    //C++ stores this by value, not by reference, it needs to be stored AFTER it is populated.
+    the_params["inter"] = int_matr;
+    assert(the_params["inter"].my_type == gsparams::dict);
+  //END interactions setup.
 
 
   //QBTM

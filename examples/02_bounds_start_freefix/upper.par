@@ -1,0 +1,3 @@
+{"tfs":{"bcd":{"annot_thresh":1,"maxbind":1000,"alpha_a":1000,"alpha_r":1000},"cad":{"annot_thresh":1,"maxbind":1000,"alpha_a":1000,"alpha_r":1000},"gt":{"annot_thresh":1,"maxbind":1000,"alpha_a":1000,"alpha_r":1000},"hb":{"annot_thresh":1,"maxbind":1000,"alpha_a":1000,"alpha_r":1000},"kni":{"annot_thresh":1,"maxbind":1000,"alpha_a":1000,"alpha_r":1000},"Kr":{"annot_thresh":1,"maxbind":1000,"alpha_a":1000,"alpha_r":1000}},"inter":{"bcd:bcd":1,"kni:kni":1},"qbtm":[1],
+"enh":[{"pi":10,"beta":1}
+],"signaling":{"cic_att":10}}
