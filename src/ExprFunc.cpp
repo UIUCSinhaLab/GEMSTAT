@@ -72,8 +72,16 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
   // store the sequence
   int n = _sites.size();
   sites = SiteVec(_sites);
-  sites.insert( sites.begin(), Site(_sites[0].start-1000,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
-  sites.push_back( Site(_sites[_sites.size()-1].start+1000,true,-1,0.0,1.0) );       //and another pseudo-site at the end
+
+  int pseudo_start = -1000;
+  int pseudo_end = length+1000;
+  if(sites.size() > 0){
+	pseudo_start = _sites[0].start-1000;
+	pseudo_end = _sites[_sites.size()-1].start+1000;
+  }
+
+  sites.insert( sites.begin(), Site(pseudo_start,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
+  sites.push_back( Site(pseudo_end,true,-1,0.0,1.0) );       //and another pseudo-site at the end
 
   boundaries.resize(n_sites+2);
   boundaries[0] = 0;//value for starting pseudosite
