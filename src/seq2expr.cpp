@@ -361,12 +361,7 @@ int main( int argc, char* argv[] )
 
     if( !free_fix_indicator_filename.empty() )
     {
-<<<<<<< HEAD
         //ExprPar param_ff;
-=======
-		cerr << "Loading free_fix...";
-        ExprPar param_ff;
->>>>>>> develop
         try{
           cerr << "loading free fix" << endl;
           param_ff = param_factory->load( free_fix_indicator_filename );
@@ -392,17 +387,12 @@ int main( int argc, char* argv[] )
           else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
         }
 
-<<<<<<< HEAD
 
 
 
     /******* END OF FREE free_fix
     */
 
-=======
-		cerr << "DONE." << endl; //loading free fix.
-    }
->>>>>>> develop
 
 
     /*
