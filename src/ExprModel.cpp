@@ -125,7 +125,7 @@ int CoopInfo::get_longest_coop_thr() const {
 void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
 
         ifstream fin;
-		fin.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+		fin.exceptions ( std::ifstream::failbit);// | std::ifstream::badbit );
 		fin.open( filename.c_str(), std::ifstream::in );
 
         std:string line;
@@ -139,6 +139,9 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                                 back_inserter(M_TOK_VECT))
 
         while(std::getline(fin,line)){
+				if(fin.bad()){
+					throw std::runtime_error("Badbit set");
+				}
                 LOCAL_TOKENIZE(tokens,line,line_ss);
                 int tf_i = factorIdxMap[tokens[0]];
                 int tf_j = factorIdxMap[tokens[1]];
@@ -257,6 +260,12 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
         //cerr << coop_matrix << endl;
 
         //exit(1);
+		/*
+		//TODO: It seems I don't fully understand C++ file error states. This always raises an exception.
+		if(fin.bad()){
+			throw std::runtime_error("badbit");
+		}
+		*/
         fin.close();
         //cerr << "finished reading file" << endl;
 }
