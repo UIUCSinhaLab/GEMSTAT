@@ -159,7 +159,7 @@ int Sequence::load( const string& file, string& name, int format )
     vector< Sequence > seqs;
     vector< string > names;
     int rval = readSequences( file, seqs, names, format );
-    if ( rval == RET_ERROR ) return RET_ERROR;
+    if ( rval == RET_ERROR ) return RET_ERROR; //TODO: throw an exception
 
     copy( seqs[ 0 ] );
     name = names[ 0 ];
@@ -191,13 +191,13 @@ ostream& operator<<( ostream& os, const Sequence& seq )
 int readSequences( const string& file, vector< Sequence >& seqs, vector< string >& names, int format )
 {
     // check if the format character is legal
-    if ( format != FASTA ) { return RET_ERROR; }
+    if ( format != FASTA ) { return RET_ERROR; }//TODO: throw an exception
     seqs.clear();
     names.clear();
 
     // 	open the file
     ifstream fin( file.c_str() );
-    if ( !fin ) { cerr << "Cannot open" << file << endl; return RET_ERROR; }
+    if ( !fin ) { cerr << "Cannot open" << file << endl; return RET_ERROR; }//TODO: throw an exception
 
     string line;
     Sequence seq;
@@ -242,7 +242,7 @@ int readSequences( const string& file, vector< Sequence >& seqs, vector< string 
                     else
                     {
                         cerr << "Illegal symbol: " << nt << " in " << file << endl;
-                        return RET_ERROR;
+                        return RET_ERROR; //TODO: throw an exception
                     }
                 }
             }
@@ -269,7 +269,7 @@ int writeSequences( const string& file, const vector< Sequence >& seqs, const ve
     assert( seqs.size() == names.size() );
 
     // check if the format character is legal
-    if ( format != FASTA ) { return RET_ERROR; }
+    if ( format != FASTA ) { return RET_ERROR; }//TODO: throw an exception
 
     ofstream fout( file.c_str() );
 
@@ -405,7 +405,7 @@ int Motif::load( const string& file, const vector< double >& background, string&
     vector< Motif > motifs;
     vector< string > names;
     int rval = readMotifs( file, background, motifs, names );
-    if ( rval == RET_ERROR ) return RET_ERROR;
+    if ( rval == RET_ERROR ) return RET_ERROR;//TODO: throw an exception
 
     copy( motifs[ 0 ] );
     name = names[ 0 ];
@@ -464,7 +464,7 @@ int readMotifs( const string& file, const vector< double >& background, vector< 
 {
     // 	open the file
     ifstream fin( file.c_str() );
-    if ( !fin ) { cerr << "Cannot open" << file << endl; return RET_ERROR; }
+    if ( !fin ) { cerr << "Cannot open" << file << endl; return RET_ERROR; } //TODO: throw an exception
     motifs.clear();
     names.clear();
 
@@ -553,7 +553,7 @@ int readSites( const string& file, const map< string, int >& factorIdxMap, vecto
     ifstream fin( file.c_str() );
     if ( !fin )
     {
-        return RET_ERROR;
+        return RET_ERROR; //TODO: throw an exception
     }
     sites.clear();
     names.clear();
