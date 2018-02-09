@@ -730,21 +730,22 @@ int main( int argc, char* argv[] )
     for(gsparams::DictList::iterator itr = par_init.my_pars.begin();itr != par_init.my_pars.end();++itr){
         path_vector.push_back(itr.get_path());
     }
-    vector< gsparams::DictList* > all_loaded_params;
-    all_loaded_params.push_back(&(param_ff.my_pars));
-    all_loaded_params.push_back(&(lower_bound_par.my_pars));
-    all_loaded_params.push_back(&(upper_bound_par.my_pars));
+    vector< std::pair<std::string , gsparams::DictList* > > all_loaded_params;
+
+    all_loaded_params.push_back(std::make_pair("free_fix",&(param_ff.my_pars)));
+    all_loaded_params.push_back(std::make_pair("lower_bounds",&(lower_bound_par.my_pars)));
+    all_loaded_params.push_back(std::make_pair("upper_bounds",&(upper_bound_par.my_pars)));
     /*Only if using l1/l2 regularization*/
     if(setup_regularization){
-        all_loaded_params.push_back(&(tmp_centers.my_pars));
-        all_loaded_params.push_back(&(tmp_l1.my_pars));
-        all_loaded_params.push_back(&(tmp_l2.my_pars));
+        all_loaded_params.push_back(std::make_pair("reg_centers",&(tmp_centers.my_pars)));
+        all_loaded_params.push_back(std::make_pair("l1_weights",&(tmp_l1.my_pars)));
+        all_loaded_params.push_back(std::make_pair("l2_weights",&(tmp_l2.my_pars)));
     }
 
     for(int i = 0;i<all_loaded_params.size();i++){
-        gsparams::DictList::iterator itr = all_loaded_params[i]->begin();
+        gsparams::DictList::iterator itr = all_loaded_params[i].second->begin();
         int j = 0;
-        while(itr!=all_loaded_params[i]->end()){
+        while(itr!=all_loaded_params[i].second->end()){
             if(0 != path_vector[j].compare(itr.get_path())){
                 /*
                 std::cerr << par_init.my_pars["inter"] << std::endl;
@@ -753,7 +754,7 @@ int main( int argc, char* argv[] )
                 std::cerr << par_init.my_pars << std::endl;
                 std::cerr << (*all_loaded_params[i]) << std::endl;
                 */
-                throw std::invalid_argument("Error in one of the input parameter files (.par, free_fix, lower/upper bounds, etc.) \nTrying to compare SNOT objects, it seems that one of the inputs is misordered.  " + path_vector[j] + " is not " + itr.get_path());
+                throw std::invalid_argument("Error in one of the input parameter files (.par, free_fix, lower/upper bounds, etc.) \nTrying to compare SNOT objects, it seems that one of the inputs is misordered.  starting_parameters" + path_vector[j] + " is not " + all_loaded_params[i].first + itr.get_path() + " ");
             }
             ++itr;
             j++;
