@@ -343,6 +343,7 @@ int main( int argc, char* argv[] )
     cerr << "Created the parameter factory." << endl;
 
     if ( !parFile.empty() ){
+		cerr << "Loading initial parameters...";
         try{
           par_init = param_factory->load( parFile );
           read_par_init_file = true;
@@ -350,6 +351,7 @@ int main( int argc, char* argv[] )
             cerr << "Cannot read parameters from " << parFile << endl;
             exit( 1 );
         }
+		cerr << "DONE." << endl;
     }
 
     /******** FREE fix
@@ -359,7 +361,12 @@ int main( int argc, char* argv[] )
 
     if( !free_fix_indicator_filename.empty() )
     {
+<<<<<<< HEAD
         //ExprPar param_ff;
+=======
+		cerr << "Loading free_fix...";
+        ExprPar param_ff;
+>>>>>>> develop
         try{
           cerr << "loading free fix" << endl;
           param_ff = param_factory->load( free_fix_indicator_filename );
@@ -385,12 +392,17 @@ int main( int argc, char* argv[] )
           else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
         }
 
+<<<<<<< HEAD
 
 
 
     /******* END OF FREE free_fix
     */
 
+=======
+		cerr << "DONE." << endl; //loading free fix.
+    }
+>>>>>>> develop
 
 
     /*
@@ -405,7 +417,9 @@ int main( int argc, char* argv[] )
     */
 
     if ( !upper_bound_file.empty() ){
+		cerr << "Loading upper bounds...";
 	try{
+
 		upper_bound_par = param_factory->load( upper_bound_file );
 		upper_bound_par = param_factory->changeSpace(upper_bound_par, ENERGY_SPACE);
 		upper_bound_par_read = true;
@@ -413,10 +427,13 @@ int main( int argc, char* argv[] )
 		cerr << "Cannot read upper bounds from " << upper_bound_file << endl;
 		exit( 1 );
 	}
+		cerr << "DONE." << endl;
     }
 
     if ( !lower_bound_file.empty() ){
+		cerr << "Loading lower bounds...";
 	try{
+
 		lower_bound_par = param_factory->load( lower_bound_file );
 		lower_bound_par = param_factory->changeSpace(lower_bound_par, ENERGY_SPACE);
 		lower_bound_par_read = true;
@@ -424,6 +441,7 @@ int main( int argc, char* argv[] )
 		cerr << "Cannot read lower bounds from " << lower_bound_file << endl;
 		exit( 1 );
 	}
+		cerr << "DONE." << endl;
     }
 
     //Check AGAIN that the indicator_bool will be the right shape for the parameters that are read.
