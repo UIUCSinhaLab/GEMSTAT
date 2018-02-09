@@ -124,7 +124,9 @@ int CoopInfo::get_longest_coop_thr() const {
 
 void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
 
-        ifstream fin( filename.c_str() );
+        ifstream fin;
+		fin.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+		fin.open( filename.c_str(), std::ifstream::in );
 
         std:string line;
         std::istringstream line_ss;

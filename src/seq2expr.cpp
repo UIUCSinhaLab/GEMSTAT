@@ -312,7 +312,15 @@ int main( int argc, char* argv[] )
     // read the cooperativity matrix
     if ( !coopFile.empty() )
     {
-        expr_model.coop_setup->read_coop_file(coopFile, factorIdxMap);
+		try{
+			cerr << "Reading coop file...";
+        	expr_model.coop_setup->read_coop_file(coopFile, factorIdxMap);
+			cerr << "DONE." << endl;
+		}catch(exception& e){
+			cerr << "There was an exception when attempting to read the coop file: '" << coopFile << "'" << endl;
+			cerr << "Its message was: " << endl << e.what() << endl;
+			exit(1);
+		}
     }
     //***** END COOPS *****
 
