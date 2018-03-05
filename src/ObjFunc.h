@@ -83,6 +83,8 @@ public:
   double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
 
   void set_weights(Matrix *in_weights);
+  Matrix* get_weights(){return weights;}
+  double get_total_weight(){return total_weight;}
 private:
     Matrix *weights;
     double total_weight;

@@ -1,3 +1,6 @@
+#include <typeinfo>
+
+
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_multimin.h>
 
@@ -12,8 +15,8 @@ double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_da
 ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
 		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
 	expr_model( _expr_model),
-	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ),
-	search_option(UNCONSTRAINED)
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), in_training ( false )
+	, search_option(UNCONSTRAINED)
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
 	cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
@@ -143,6 +146,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     // alternate between two different methods
     ExprPar par_result = param_factory->create_expr_par();
     double obj_result;
+		in_training = true;
     for ( int i = 0; i < n_alternations; i++ )
     {
         simplex_minimize( par_result, obj_result );
@@ -155,6 +159,8 @@ int ExprPredictor::train( const ExprPar& par_init )
     #ifdef BETAOPTBROKEN
     optimize_beta( par_model, obj_result );
     #endif
+
+		in_training = false;
 
     // commit the parameters and the value of the objective function
     //par_model = par_result;
@@ -227,15 +233,38 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
 	return this->predict(par_model,targetSites_,targetSeqLength,targetExprs,seq_num);
 }
 
+/**
+In training mode, will skip zero-weighted bins.
+*/
 int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const
 {
 	// predict the expression
 
+		
+		//Code for skipping during training BEGIN_SKIPPING
+		Matrix *weights = NULL;
+		if( typeid(*(this->trainingObjective)) == typeid(Weighted_RMSEObjFunc)){
+			weights = ((Weighted_RMSEObjFunc*)this->trainingObjective)->get_weights();
+
+		}
+		//End of skipping code.	END_SKIPPING
+
+
     ExprFunc* func = createExprFunc( par , targetSites_, targetSeqLength, seq_num);
-	targetExprs.resize(nConds());
+		targetExprs.resize(nConds());
     for ( int j = 0; j < nConds(); j++ )
     {
-		Condition concs = training_data.getCondition( j , par );
+				//Code for skipping during training BEGIN_SKIPPING
+				if( in_training && weights != NULL && weights->getElement(seq_num,j) <= 0.0){
+					//cerr << "TEMPORARY DEBUG CODE, skipping unweighted bin (" << seq_num << "," << j << ")." << endl;
+					targetExprs[j] = 0.0;
+					continue;
+				}
+				//cerr << "Unskipped bin, making prediction." << endl;
+				//End of skipping code. END_SKIPPING
+
+
+				Condition concs = training_data.getCondition( j , par );
         double predicted = func->predictExpr( concs );
         targetExprs[j] = ( predicted );
     }
@@ -244,6 +273,9 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
     return 0;
 }
 
+/**
+While in training mode (private in_training variable == true), this method will skip the prediction of zero-weighted positions.
+*/
 int ExprPredictor::predict_all( const ExprPar& par , vector< vector< double > > &targetExprs ) const
 {
 	vector< int > seqLengths( seqs.size() );
@@ -266,11 +298,11 @@ int ExprPredictor::predict_all( const ExprPar& par , vector< vector< double > > 
 
     //Create predictions for every sequence and condition
     for ( int i = 0; i < nSeqs(); i++ ) {
-		vector<double> one_seq_predictions(nConds());
+			vector<double> one_seq_predictions(nConds());
 
-		this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
+			this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
 
-		targetExprs.push_back(one_seq_predictions);
+			targetExprs.push_back(one_seq_predictions);
     }
 
 	return 0;
