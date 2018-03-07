@@ -239,12 +239,15 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
 {
 	// predict the expression
 
-		
-		//Code for skipping during training BEGIN_SKIPPING
-		Matrix *weights = NULL;
-		if( typeid(*(this->trainingObjective)) == typeid(Weighted_RMSEObjFunc)){
-			weights = ((Weighted_RMSEObjFunc*)this->trainingObjective)->get_weights();
 
+		//Code for skipping during training BEGIN_SKIPPING
+		/*TODO: dynamic_cast is slow, maybe it would be better to move this code that decides
+		which bins to predict out to some pre-epoch place so it only gets called once.
+		For now, we value correctness above efficiency.
+		*/
+		Matrix *weights = NULL;
+		if( NULL != dynamic_cast<const Weighted_ObjFunc_Mixin*>(this->trainingObjective) ){
+			weights = ((Weighted_ObjFunc_Mixin*)this->trainingObjective)->get_weights();
 		}
 		//End of skipping code.	END_SKIPPING
 
