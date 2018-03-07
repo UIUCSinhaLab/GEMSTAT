@@ -3,6 +3,18 @@
 
 #include "ExprPar.h"
 
+class Weighted_ObjFunc_Mixin {
+  public:
+    Weighted_ObjFunc_Mixin() : weights(NULL) {}
+    ~Weighted_ObjFunc_Mixin(){if(NULL != weights){delete weights;}}
+
+    virtual void set_weights(Matrix *in_weights);//Some child classes might autocreate weights
+    virtual Matrix* get_weights(){ return weights;}
+  protected:
+      Matrix *weights;
+      double total_weight;
+};
+
 class ObjFunc {
 public:
   ObjFunc(){}
@@ -54,6 +66,9 @@ private:
   double bias;
 };
 
+/**
+Decorator/container objective function, it wraps other objective functions.
+*/
 class RegularizedObjFunc: public ObjFunc {
 public:
   RegularizedObjFunc(ObjFunc* wrapped_obj_func, const ExprPar& centers, const ExprPar& l1, const ExprPar& l2);
@@ -70,22 +85,19 @@ private:
   //vector<double> cache_sq_diffs;
 };
 
+//TODO: Make this class also inherit from Weighted_ObjFunc_Mixin and explicitly calculate a weight matrix.
 class PeakWeightedObjFunc: public ObjFunc {
 public:
   ~PeakWeightedObjFunc(){}
   double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
 };
 
-class Weighted_RMSEObjFunc: public RMSEObjFunc {
+class Weighted_RMSEObjFunc: public RMSEObjFunc, public Weighted_ObjFunc_Mixin {
 public:
-    Weighted_RMSEObjFunc() : RMSEObjFunc(), weights(NULL) {}
-  ~Weighted_RMSEObjFunc(){if(NULL != weights){delete weights;}}
+    Weighted_RMSEObjFunc() : RMSEObjFunc(), Weighted_ObjFunc_Mixin() {}
+    ~Weighted_RMSEObjFunc(){};
   double eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction, const ExprPar* par);
 
-  void set_weights(Matrix *in_weights);
-private:
-    Matrix *weights;
-    double total_weight;
 };
 
 #endif
