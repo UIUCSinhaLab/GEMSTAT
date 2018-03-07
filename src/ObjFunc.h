@@ -10,6 +10,7 @@ class Weighted_ObjFunc_Mixin {
 
     virtual void set_weights(Matrix *in_weights);//Some child classes might autocreate weights
     virtual Matrix* get_weights(){ return weights;}
+    virtual double get_total_weight(){return total_weight;}
   protected:
       Matrix *weights;
       double total_weight;
