@@ -468,7 +468,7 @@ ExprPar ParFactory::load(const string& file){
   ExprPar ret_par;
   // open the file
   ifstream fin;
-  fin.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+  //fin.exceptions ( std::ifstream::failbit | std::ifstream::badbit ); //TODO: Decide on some better exception handling.
   fin.open( file.c_str(), std::ifstream::in );
   if ( !fin ){ cerr << "Cannot open parameter file " << file << endl; exit( 1 ); }
 
