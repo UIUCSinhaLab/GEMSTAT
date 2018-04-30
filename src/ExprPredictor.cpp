@@ -15,8 +15,8 @@ double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_da
 ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
 		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
 	expr_model( _expr_model),
-	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), in_training ( false )
-	, search_option(UNCONSTRAINED)
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), in_training ( false ),
+	search_option(UNCONSTRAINED)
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
 	cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
@@ -240,12 +240,15 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
 {
 	// predict the expression
 
-		
-		//Code for skipping during training BEGIN_SKIPPING
-		Matrix *weights = NULL;
-		if( typeid(*(this->trainingObjective)) == typeid(Weighted_RMSEObjFunc)){
-			weights = ((Weighted_RMSEObjFunc*)this->trainingObjective)->get_weights();
 
+		//Code for skipping during training BEGIN_SKIPPING
+		/*TODO: dynamic_cast is slow, maybe it would be better to move this code that decides
+		which bins to predict out to some pre-epoch place so it only gets called once.
+		For now, we value correctness above efficiency.
+		*/
+		Matrix *weights = NULL;
+		if( NULL != dynamic_cast<const Weighted_ObjFunc_Mixin*>(this->trainingObjective) ){
+			weights = ((Weighted_ObjFunc_Mixin*)this->trainingObjective)->get_weights();
 		}
 		//End of skipping code.	END_SKIPPING
 
