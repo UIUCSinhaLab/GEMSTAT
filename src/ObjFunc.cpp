@@ -211,7 +211,7 @@ double Weighted_RMSEObjFunc::eval(const vector<vector<double> >& ground_truth, c
     return rmse;
 }
 
-void Weighted_RMSEObjFunc::set_weights(Matrix *in_weights){
+void Weighted_ObjFunc_Mixin::set_weights(Matrix *in_weights){
     if(NULL != weights){delete weights;}
     weights = in_weights;
 
