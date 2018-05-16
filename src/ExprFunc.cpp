@@ -234,21 +234,21 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
     cerr << "Done setting bindingWts" << endl;
     #endif
     // initialization
-    vector< double > Z( n + 2 );
+    vector< long double > Z( n + 2 );
     Z[0] = 1.0;
-    vector< double > Zt( n + 2 );
+    vector< long double > Zt( n + 2 );
     Zt[0] = 1.0;
 
-    vector< double > backward_Z(n+2,0.0);
+    vector< long double > backward_Z(n+2,0.0);
     backward_Z[backward_Z.size()-1] = 1.0;
-    vector< double > backward_Z_sum(n+1,0.0);
-    vector< double > backward_Zt(n+2,0.0);
+    vector< long double > backward_Z_sum(n+1,0.0);
+    vector< long double > backward_Zt(n+2,0.0);
     backward_Zt[backward_Zt.size()-1] = 1.0;
 
     // recurrence forward
     for ( int i = 1; i <= n; i++ )
     {
-        double sum = Zt[boundaries[i]];
+        long double sum = Zt[boundaries[i]];
         for ( int j = boundaries[i] + 1; j < i; j++ )
         {
             if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
@@ -261,7 +261,7 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
     // recurrence backward
     for ( int i = n; i >= 1; i-- )
     {
-        double sum = backward_Zt[rev_bounds[i]];
+        long double sum = backward_Zt[rev_bounds[i]];
         for ( int j = rev_bounds[i] - 1; j > i; j-- )
         {
             if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
@@ -285,7 +285,7 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
 
     for(int i = 1;i<=n_sites;i++){
       //Notice the i+1, we are skipping the pseudosite.
-      double one_final_Z = Z[i] * backward_Z_sum[i];
+      long double one_final_Z = Z[i] * backward_Z_sum[i];
       #ifdef DEBUG
       final_Z[i] = one_final_Z;
       final_Zt[i] = Zt[i] * backward_Zt[i];
@@ -357,7 +357,7 @@ double Markov_ExprFunc::expr_from_config(const vector< double >& marginals){
 double ExprFunc::compPartFuncOff() const
 {
     #ifdef DEBUG
-      assert(modelOption != CHRMOD_UNLIMITED && modelOption != CHRMOD_LIMITED );
+      //assert(modelOption != CHRMOD_UNLIMITED && modelOption != CHRMOD_LIMITED );
     #endif
 
     int n = n_sites;
