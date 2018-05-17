@@ -12,16 +12,16 @@
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data);
 
-ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
-		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
+ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, TrainingDataset* _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
+		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : TrainingAware(), seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
 	expr_model( _expr_model),
-	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ), in_training ( false ),
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ),
 	search_option(UNCONSTRAINED)
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
-	cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
-    assert( training_data.exprData.nRows() == nSeqs() );
-    assert( training_data.factorExprData.nRows() == nFactors() && training_data.factorExprData.nCols() == nConds() );
+	cerr << "exprData size: " << training_data->n_rows_output() << "  " << nSeqs() << endl;
+    assert( training_data->n_rows_output() == nSeqs() );
+    //assert( training_data->factorExprData.nRows() == nFactors() && training_data->factorExprData.nCols() == nConds() );
     //assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
     assert( expr_model.actIndicators.size() == nFactors() );
     assert( expr_model.maxContact > 0 );
@@ -146,9 +146,11 @@ int ExprPredictor::train( const ExprPar& par_init )
     // alternate between two different methods
     ExprPar par_result = param_factory->create_expr_par();
     double obj_result;
-		in_training = true;
-    for ( int i = 0; i < n_alternations; i++ )
+	this->start_training();
+
+    for ( int i = 1; i <= n_alternations; i++ )
     {
+		this->begin_epoch(i);
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
 
@@ -160,7 +162,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     optimize_beta( par_model, obj_result );
     #endif
 
-		in_training = false;
+	this->end_training();
 
     // commit the parameters and the value of the objective function
     //par_model = par_result;
@@ -267,7 +269,7 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
 				//End of skipping code. END_SKIPPING
 
 
-				Condition concs = training_data.getCondition( j , par );
+				Condition concs = training_data->getCondition( j , par );
         double predicted = func->predictExpr( concs );
         targetExprs[j] = ( predicted );
     }
@@ -348,7 +350,7 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 	vector<vector<double> > predictions;
 
 	for(int i = 0;i< nSeqs();i++){//Populate ground truths
-		ground_truths.push_back(training_data.exprData.getRow(i));
+		ground_truths.push_back(training_data->get_output_row(i));
 	}
 
 	this->predict_all(par, predictions);

@@ -262,7 +262,7 @@ int main( int argc, char* argv[] )
     ASSERT_MESSAGE( factorExprData.nCols() == nConds , "Number of columns in factor expression data differs from the number of conditions.");
 
     //Initialize the dataset that is actually provided
-    DataSet training_dataset(factorExprData,exprData);
+    TrainingDataset *training_dataset = new TrainingDataset(factorExprData,exprData);
 
     //****** MODEL ********
 
@@ -761,7 +761,7 @@ int main( int argc, char* argv[] )
     cout << "Performance = " << setprecision( 5 ) << ( ( cmdline_obj_option == SSE || cmdline_obj_option == PGP ) ? predictor->getObj() : -predictor->getObj() ) << endl;
 
     // print the predictions
-    writePredictions(outFile, *predictor, training_dataset.exprData, expr_condNames, cmdline_write_gt, true);
+    writePredictions(outFile, *predictor, training_dataset->get_output_matrix(), expr_condNames, cmdline_write_gt, true);
 
     //TODO: R_SEQ Either remove this feature or make it conditional.
     /*
