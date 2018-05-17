@@ -42,6 +42,7 @@ protected:
 class TrainingDataset : public DataSet , public TrainingAware {
 public:
 	TrainingDataset(const Matrix& tf_concentrations, const Matrix& output_values) : TrainingAware(), DataSet(tf_concentrations, output_values) {}
+	TrainingDataset(const DataSet &other) : TrainingAware(), DataSet(other) {}
 	~TrainingDataset(){};
 };
 
