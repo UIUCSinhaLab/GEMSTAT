@@ -485,6 +485,9 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
 
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data){
+		ExprPredictor* predictor = (ExprPredictor*)f_data;
+		predictor->begin_batch();
+
         gsl_vector *xv = vector2gsl(x); //TODO: Ugly, remove (Make all objective functions use native STL vectors)
         double objective = gsl_obj_f(xv, f_data);
 
