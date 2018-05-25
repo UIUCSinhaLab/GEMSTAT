@@ -56,10 +56,14 @@ int readFactorThresholdFile( const string& filename, vector< double >& destinati
 }
 
 
-void altered_site_print( ostream& os, const Site& site , vector< string > motifNames )
+void altered_site_print( ostream& os, const Site& site , const vector< Motif >& motifs )
 {
 	char strandChar = site.strand ? '+' : '-';
-	os << site.start + 1 << "\t" << strandChar << "\t" << motifNames[site.factorIdx] << "\t" << site.energy << "\t" << site.wtRatio;
+    os << site.start + 1;
+	if(site.end != -1){
+		os << ".." << site.end+1;
+	}
+	os << "\t" << strandChar << "\t" << motifs[site.factorIdx].get_name() << "\t" << site.energy << "\t" << site.wtRatio;
 }
 
 int main( int argc, char* argv[] )
@@ -235,7 +239,7 @@ int main( int argc, char* argv[] )
 		    if( traditional_format){
 			    cout << seqSites[i][j] << endl;
 		    }else{
-		    	altered_site_print(cout, seqSites[i][j], motifNames);
+		    	altered_site_print(cout, seqSites[i][j], motifs);
 		    	cout << endl;
 		    }
 		}
