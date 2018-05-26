@@ -1,7 +1,13 @@
 git submodule init
 git submodule update
 
-glibtoolize
+if [ -x "$(command -v glibtoolize)" ]
+then
+	glibtoolize
+else
+	libtoolize
+fi
+
 aclocal -I m4 --install
 autoconf
 automake --add-missing
