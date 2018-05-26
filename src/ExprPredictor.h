@@ -15,16 +15,16 @@
  ******************************************************/
 
 /* ExprPredictor class: the thermodynamic sequence-to-expression predictor */
-class ExprPredictor
+class ExprPredictor : public TrainingAware
 {
     public:
         // constructors
-        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites,  const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames);
+        ExprPredictor( const vector < Sequence >& _seqs, const vector< SiteVec >& _seqSites,  const vector< int >& _seqLengths, TrainingDataset* _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model, const vector < bool >& _indicator_bool, const vector <string>& _motifNames);
         ~ExprPredictor();
         // access methods
         int nSeqs() const { return seqs.size(); }
         int nFactors() const { return expr_model.motifs.size(); }
-        int nConds() const { return training_data.nConds(); }
+        int nConds() const { return training_data->nConds(); }
         const IntMatrix& getCoopMat() const { return expr_model.get_coop_mat_immutable(); }
         const vector< bool >& getActIndicators() const { return expr_model.actIndicators; }
         const vector< bool >& getRepIndicators() const { return expr_model.repIndicators; }
@@ -82,9 +82,10 @@ class ExprPredictor
         // Factory for Parameter vectors;
         ParFactory *param_factory;
         ObjFunc *trainingObjective;
+        SearchType search_option;
     private:
         //***** training data ******
-        const DataSet& training_data;               //input and output curves
+        TrainingDataset *training_data;               //input and output curves
         //
         const vector< SiteVec >& seqSites;        // the extracted sites for all sequences
         const vector< int >& seqLengths;          // lengths of all sequences
@@ -119,6 +120,10 @@ class ExprPredictor
                                                   // gradient: BFGS or conjugate gradient
         int gradient_minimize( ExprPar& par_result, double& obj_result );
         //  	int SA_minimize( ExprPar& par_result, double& obj_result ) const;	// simulated annealing
+
+        //bool in_training;
+		virtual void epoch_begun(int new_epoch){this->training_data->begin_epoch(new_epoch);};
+		virtual void batch_begun(int new_batch){this->training_data->begin_batch(new_batch);};
 };
 
 // the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize

@@ -22,36 +22,35 @@ AT_DATA([factor_expr.tab],[[Rows	1	2
 foo	1.0	0.0
 ]])
 
-AT_DATA([lower.par],[[foo     0.1  1.0 0.001
-basal_transcription = 0.01
-0.00000000001
-0.1
-0.5
+AT_DATA([lower.par],[[{"tfs":{"foo":{"annot_thresh":0.5,"maxbind":0.1,"alpha_a":1.0,"alpha_r":0.001}},
+"inter":{},
+"qbtm":[0.01],
+"enh":[{"pi":0.00000000001,"beta":0.1}]}
 ]])
 
-AT_DATA([upper.par],[[foo     7.0  4.0 1.0
-basal_transcription = 0.03
-1.0
-3.0
-0.61
+AT_DATA([upper.par],[[{"tfs":{"foo":{"annot_thresh":0.61,"maxbind":7.0,"alpha_a":4.0,"alpha_r":1.0}},
+"inter":{},
+"qbtm":[0.03],
+"enh":[{"pi":1.0,"beta":3.0}]}
 ]])
 
-AT_DATA([start.par],[[foo     0.1  1.0 0.001
-basal_transcription = 0.01
-0.00000000001
-0.1
-0.5567
-]])
-
-AT_DATA([ff.txt],[[foo	1	1	1
-basal_transcription = 1
-0
-1
-0
+AT_DATA([start.par],[[{"tfs":{"foo":{"annot_thresh":0.5567,"maxbind":0.1,"alpha_a":1,"alpha_r":0.001}},
+"inter":{},
+"qbtm":[0.01],
+"enh":[{"pi":0.00000000001,"beta":1}]}
 ]])
 
 
-AT_CHECK([testexec seq2expr -p start.par -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -na 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; tail -n1 1.par | sed 's/[[[[:space:]]]]*$//'], [0], [[0.5567
+AT_DATA([ff.txt],[[{"tfs":{"foo":{"annot_thresh":0,"maxbind":1,"alpha_a":1,"alpha_r":1}},
+"inter":{},
+"qbtm":[1],
+"enh":[{"pi":0,"beta":1}]}
+]])
+
+
+AT_CHECK([testexec seq2expr -p start.par -ff ff.txt -lower_bound lower.par -upper_bound upper.par -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -na 10 -o Direct -oo SSE -fo 1.out -po 1.par > 1_stdout 2> 1_stderr ; tail -n1 1.par | sed 's/.*annot_thresh":\(@<:@^,@:>@*\),.*/\1/'],
+[0],
+[[0.5567
 ]])
 
 AT_CLEANUP

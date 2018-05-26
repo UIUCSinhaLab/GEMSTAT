@@ -1,3 +1,6 @@
+#include <typeinfo>
+
+
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_multimin.h>
 
@@ -9,15 +12,16 @@
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data);
 
-ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, const DataSet& _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
-		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
+ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< SiteVec >& _seqSites, const vector< int >& _seqLengths, TrainingDataset* _training_data, const vector< Motif >& _motifs, const ExprModel& _expr_model,
+		const vector < bool >& _indicator_bool, const vector <string>& _motifNames) : TrainingAware(), seqs(_seqs), seqSites( _seqSites ), seqLengths( _seqLengths ), training_data( _training_data ),
 	expr_model( _expr_model),
-	indicator_bool ( _indicator_bool ), motifNames ( _motifNames )
+	indicator_bool ( _indicator_bool ), motifNames ( _motifNames ),
+	search_option(UNCONSTRAINED)
 {
     //TODO: Move appropriate lines from this block to the ExprModel class.
-	cerr << "exprData size: " << training_data.exprData.nRows() << "  " << nSeqs() << endl;
-    assert( training_data.exprData.nRows() == nSeqs() );
-    assert( training_data.factorExprData.nRows() == nFactors() && training_data.factorExprData.nCols() == nConds() );
+	cerr << "exprData size: " << training_data->n_rows_output() << "  " << nSeqs() << endl;
+    assert( training_data->n_rows_output() == nSeqs() );
+    //assert( training_data->factorExprData.nRows() == nFactors() && training_data->factorExprData.nCols() == nConds() );
     //assert( expr_model.coopMat.isSquare() && expr_model.coopMat.isSymmetric() && expr_model.coopMat.nRows() == nFactors() );
     assert( expr_model.actIndicators.size() == nFactors() );
     assert( expr_model.maxContact > 0 );
@@ -39,7 +43,7 @@ ExprPredictor::ExprPredictor( const vector <Sequence>& _seqs, const vector< Site
     //gene_crm_fout.open( "gene_crm_fout.txt" );
 
     // set the model option for ExprPar and ExprFunc
-    ExprPar::modelOption = expr_model.modelOption;//TODO: Remove both of these.
+    //ExprPar::modelOption = expr_model.modelOption;//TODO: Remove both of these.
     //ExprFunc::modelOption = expr_model.modelOption;
 
     // set the values of the parameter range according to the model option
@@ -70,6 +74,7 @@ ExprPredictor::~ExprPredictor()
 {
   delete param_factory;
   delete trainingObjective;
+  delete training_data;
 }
 
 void ExprPredictor::set_objective_option( ObjType in_obj_option ){
@@ -124,7 +129,7 @@ int ExprPredictor::train( const ExprPar& par_init )
     cout << "Objective function value: " << objFunc( par_model ) << endl;
     cout << "*******************************************" << endl << endl;
 
-    if ( n_alternations > 0 && ExprPar::searchOption == CONSTRAINED ){
+    if ( n_alternations > 0 && this->search_option == CONSTRAINED ){
       par_model = param_factory->truncateToBounds(par_model, indicator_bool);
 
     }
@@ -140,10 +145,13 @@ int ExprPredictor::train( const ExprPar& par_init )
     if ( n_alternations == 0 ) return 0;
 
     // alternate between two different methods
-    ExprPar par_result;
+    ExprPar par_result = param_factory->create_expr_par();
     double obj_result;
-    for ( int i = 0; i < n_alternations; i++ )
+	this->start_training();
+
+    for ( int i = 1; i <= n_alternations; i++ )
     {
+		this->begin_epoch(i);
         simplex_minimize( par_result, obj_result );
         par_model = par_result;
 
@@ -154,6 +162,8 @@ int ExprPredictor::train( const ExprPar& par_init )
     #ifdef BETAOPTBROKEN
     optimize_beta( par_model, obj_result );
     #endif
+
+	this->end_training();
 
     // commit the parameters and the value of the objective function
     //par_model = par_result;
@@ -226,14 +236,45 @@ int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, ve
 	return this->predict(par_model,targetSites_,targetSeqLength,targetExprs,seq_num);
 }
 
+/**
+In training mode, will skip zero-weighted bins.
+*/
 int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const
 {
 	// predict the expression
+
+
+		//Code for skipping during training BEGIN_SKIPPING
+		/*TODO: dynamic_cast is slow, maybe it would be better to move this code that decides
+		which bins to predict out to some pre-epoch place so it only gets called once.
+
+		TODO: probably the best thing would be to make the trainingObjective request which sites it wants predicted.
+		The reason I don't do that at the moment is that its the setup of the ExprFunc that takes so much time, and we currently cache and reuse that.
+
+		For now, we value correctness above efficiency.
+		*/
+		Matrix *weights = NULL;
+		if( NULL != dynamic_cast<const Weighted_ObjFunc_Mixin*>(this->trainingObjective) ){
+			weights = ((Weighted_ObjFunc_Mixin*)this->trainingObjective)->get_weights();
+		}
+		//End of skipping code.	END_SKIPPING
+
+
     ExprFunc* func = createExprFunc( par , targetSites_, targetSeqLength, seq_num);
-	targetExprs.resize(nConds());
+		targetExprs.resize(nConds());
     for ( int j = 0; j < nConds(); j++ )
     {
-		Condition concs = training_data.getCondition( j , par );
+				//Code for skipping during training BEGIN_SKIPPING
+				if( this->is_training() && weights != NULL && weights->getElement(seq_num,j) <= 0.0){
+					//cerr << "TEMPORARY DEBUG CODE, skipping unweighted bin (" << seq_num << "," << j << ")." << endl;
+					targetExprs[j] = 0.0;
+					continue;
+				}
+				//cerr << "Unskipped bin, making prediction." << endl;
+				//End of skipping code. END_SKIPPING
+
+
+				Condition concs = training_data->getCondition( j , par );
         double predicted = func->predictExpr( concs );
         targetExprs[j] = ( predicted );
     }
@@ -242,6 +283,9 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
     return 0;
 }
 
+/**
+While in training mode (private in_training variable == true), this method will skip the prediction of zero-weighted positions.
+*/
 int ExprPredictor::predict_all( const ExprPar& par , vector< vector< double > > &targetExprs ) const
 {
 	vector< int > seqLengths( seqs.size() );
@@ -264,11 +308,11 @@ int ExprPredictor::predict_all( const ExprPar& par , vector< vector< double > > 
 
     //Create predictions for every sequence and condition
     for ( int i = 0; i < nSeqs(); i++ ) {
-		vector<double> one_seq_predictions(nConds());
+			vector<double> one_seq_predictions(nConds());
 
-		this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
+			this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
 
-		targetExprs.push_back(one_seq_predictions);
+			targetExprs.push_back(one_seq_predictions);
     }
 
 	return 0;
@@ -289,37 +333,7 @@ void ExprPredictor::printPar( const ExprPar& par ) const
     cout.setf( ios::fixed );
     cout.precision( 8 );
     //     cout.width( 8 );
-
-    // print binding weights
-    cout << "MAXBIND : " << par.maxBindingWts << endl;
-    cout << "INTER : " ;
-    // print the interaction matrix
-    for ( int i = 0; i < nFactors(); i++ )
-    {
-        for ( int j = 0; j <= i; j++ )
-        {
-           cout << par.factorIntMat( i, j ) << "\t";
-        }
-    }
-    cout << endl;
-
-    // print the transcriptional effects
-    cout << "TXP : " << par.txpEffects << endl;
-
-    // print the repression effects
-    cout << "REP : " << par.repEffects << endl;
-
-    // print the basal transcriptions
-    cout << "BASAL : " << par.basalTxps << endl;
-
-    //print the pi values
-    cout << "PIS : " << par.pis << endl;
-
-    //print the beta values
-    cout << "BETAS : " << par.betas << endl;
-    //assert( par.betas.size() == nSeqs() );
-
-    cout << "THRESH : " << par.energyThrFactors << endl;
+	cout << par.my_pars;
     cout << flush;
 }
 
@@ -341,7 +355,7 @@ double ExprPredictor::evalObjective( const ExprPar& par )
 	vector<vector<double> > predictions;
 
 	for(int i = 0;i< nSeqs();i++){//Populate ground truths
-		ground_truths.push_back(training_data.exprData.getRow(i));
+		ground_truths.push_back(training_data->get_output_row(i));
 	}
 
 	this->predict_all(par, predictions);
@@ -372,7 +386,7 @@ int ExprPredictor::simplex_minimize( ExprPar& par_result, double& obj_result )
     optimizer.set_initial_step(1.0);//TODO: enforce simplex starting size.
 	if(max_simplex_iterations > -1){ optimizer.set_maxeval(max_simplex_iterations); }
 
-    if(ExprPar::searchOption == CONSTRAINED){
+    if(this->search_option == CONSTRAINED){
       vector<double> free_mins;
       vector<double> fix_mins;
 
@@ -440,7 +454,7 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
     }
     optimizer.set_ftol_abs(ftol);
 
-    if(ExprPar::searchOption == CONSTRAINED){
+    if(this->search_option == CONSTRAINED){
       vector<double> free_mins;
       vector<double> fix_mins;
 
@@ -476,6 +490,9 @@ int ExprPredictor::gradient_minimize( ExprPar& par_result, double& obj_result )
 
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data){
+		ExprPredictor* predictor = (ExprPredictor*)f_data;
+		predictor->begin_batch();
+
         gsl_vector *xv = vector2gsl(x); //TODO: Ugly, remove (Make all objective functions use native STL vectors)
         double objective = gsl_obj_f(xv, f_data);
 

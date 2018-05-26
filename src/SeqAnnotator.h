@@ -4,6 +4,9 @@
 #include <cctype>
 #include <cstring>
 
+#include <string>
+#include <map>
+
 #include "Tools.h"
 
 using namespace std;
@@ -121,15 +124,18 @@ class Motif
 {
     public:
         // constructors
-        Motif() : pwm(), background() {}
-        Motif( const Matrix& _pwm, const vector< double >& _background );
+        Motif() : name("UNNAMED_MOTIF"), pwm(), background() {}
+		Motif( const string& _name) : name(_name), pwm(), background() {}
+		Motif( const Matrix& _pwm, const vector< double >& _background , const string& name = "UNNAMED_MOTIF");
                                                   // countMatrix in Transfac format
-        Motif( const Matrix& countMatrix, double pseudoCount, const vector< double >& _background );
-        void copy( const Motif& other ) { pwm = other.pwm; background = other.background; LLRMat = other.LLRMat; maxSite = other.maxSite; maxLLR = other.maxLLR; }
+		Motif( const Matrix& countMatrix, double pseudoCount, const vector< double >& _background , const string& name = "UNNAMED_MOTIF");
+        void copy( const Motif& other ) { name = other.name; pwm = other.pwm; background = other.background; LLRMat = other.LLRMat; maxSite = other.maxSite; maxLLR = other.maxLLR; }
         Motif( const Motif& other ) { copy( other ); }
 
         // assignment
         Motif& operator=( const Motif& other ) { copy( other ); return *this; }
+
+		Motif reverse_complement() const;
 
         // access methods
         int length() const { return pwm.nRows(); }
@@ -152,6 +158,8 @@ class Motif
         int load( const string& file, const vector< double >& background, string& name );
         int load( const string& file, const vector< double >& background );
 
+		void set_name( const string& new_name){name = new_name;}
+		const string& get_name() const { return name;}
         // output
         friend ostream& operator<<( ostream& os, const Motif& motif );
     private:
@@ -160,6 +168,7 @@ class Motif
         Matrix LLRMat;                            // LLR matrix, M(i,b) = log( f_i(b) / p(b) ), where f_i(b) is the frequency of b at position i of PWM, and p(b) the frequency of b at the background
         Sequence maxSite;                         // the sequence of the strongest site
         double maxLLR;                            // LLR of the strongest site
+		string	name;								//The name of the motif.
 
         // initialization: compute the LLR matrix and maxLLR
         void init();
@@ -178,10 +187,10 @@ class Site
 {
     public:
         // constructors
-        Site() : start( 0 ), strand( true ), factorIdx( 0 ), energy( 0 ), wtRatio( 1 ), prior_probability( 1 ) {}
-        Site( int _start, bool _strand, int _factorIdx, double _prior_probability ) : start( _start ), strand( _strand ), factorIdx( _factorIdx ), energy( 0 ), wtRatio( 1 ), prior_probability( _prior_probability ) {}
-        Site( int _start, bool _strand, int _factorIdx, double _energy, double _prior_probability ) : start( _start ), strand( _strand ), factorIdx( _factorIdx ), energy( _energy ), prior_probability( _prior_probability ) { wtRatio = exp( -energy ); }
-        void copy( const Site& other ) { start = other.start; strand = other.strand; factorIdx = other.factorIdx; energy = other.energy; wtRatio = other.wtRatio; prior_probability = other.prior_probability; }
+        Site() : start( 0 ), end(-1), strand( true ), factorIdx( 0 ), energy( 0 ), wtRatio( 1 ), prior_probability( 1 ) {}
+		Site( int _start, int _end, bool _strand, int _factorIdx, double _prior_probability ) : start( _start ), end(_end), strand( _strand ), factorIdx( _factorIdx ), energy( 0 ), wtRatio( 1 ), prior_probability( _prior_probability ) {}
+		Site( int _start, int _end, bool _strand, int _factorIdx, double _energy, double _prior_probability ) : start( _start ), end(_end), strand( _strand ), factorIdx( _factorIdx ), energy( _energy ), prior_probability( _prior_probability ) { wtRatio = exp( -energy ); }
+		void copy( const Site& other ) { start = other.start; end = other.end; strand = other.strand; factorIdx = other.factorIdx; energy = other.energy; wtRatio = other.wtRatio; prior_probability = other.prior_probability; }
         Site( const Site& other ) { copy( other ); }
 
         // assignment
@@ -190,6 +199,7 @@ class Site
         friend ostream& operator<<( ostream& os, const Site& site );
 
         int start;                                // start position: 0-based
+		int end;									// end position: 0-based, the index of the last nucleotide in the site. -1 indicates no information.
         bool strand;                              // 1: positive; 0: negative
         int factorIdx;                            // the index of the associated TF, starting from 0
         double energy;                            // the energy relative to the strongest site (nonnegative)
@@ -203,9 +213,6 @@ bool siteOverlap( const Site& a, const Site& b, const vector< Motif >& motifs );
 // representation of Sequence as a Site vector
 typedef vector< Site > SiteVec;
 
-// read sites (of potentially multiple sequences)
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, vector< string >& names, bool readEnergy = false );
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, bool readEnergy = false );
 
 /* SeqAnnotator class: annotate a given sequence by extracting its TFBSs */
 class SeqAnnotator
@@ -216,15 +223,30 @@ class SeqAnnotator
 
         // annotate a sequence
         int annot( const Sequence& seq, SiteVec& sites ) const;
-        //    int annot( const Sequence& seq, SiteVec& sites, const vector < double >& dnase_start, const vector < double >& dnase_end ) const;
-        int annot( const Sequence& seq, SiteVec& sites, const vector < double >& dnase_start, const vector < double >& dnase_end, const vector < double >& scores, const double seq_start ) const;
+
+		// read sites (of potentially multiple sequences)
+		int readSites( const string& file, vector< SiteVec >& sites, vector< string >& names, bool readEnergy = false );
+		int readSites( const string& file, vector< SiteVec >& sites, bool readEnergy = false );
+
         // compute the energy of sites (update the input sites)
         int compEnergy( const Sequence& seq, SiteVec& sites ) const;
         double sigmoidal( const double score ) const;
         static double alpha;
         static double beta;
+
+		//We also want the SeqAnnotator to function as a means of storing motifs.
+		const vector< Motif >& get_motifs() const { return motifs; }
+		void set_motifs( vector< Motif > new_motifs){motifs = new_motifs; for(int i = 0; i < motifs.size();i++){factorIdxMap[motifs[i].get_name()] = i;} }
+		void add_motif( const Motif& new_motif ) { motifs.push_back(new_motif); factorIdxMap[new_motif.get_name()] = motifs.size()-1;}
+
+		const Motif& get_motif(int i) const { return motifs[i];}
+		const Motif& get_motif(const string& mname);
+
+		void set_energy_thresholds(const vector<double>& new_thresholds){energyThrFactors = new_thresholds;}
+		const vector< double >& get_energy_thresholds() const { return energyThrFactors;}
     private:
         vector< Motif > motifs;                   // all the TF binding motifs
+		map< string, int > factorIdxMap;				//map for looking up factors by name.
         vector< double > energyThrFactors;        // energy thresholds for all the motifs
 };
 #endif
