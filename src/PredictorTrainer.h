@@ -63,4 +63,13 @@ class TrainingAware {
 #include "SeqAnnotator.h"
 
 
+double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data);
+
+
+// the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize
+double gsl_obj_f( const gsl_vector* v, void* params );
+void gsl_obj_df( const gsl_vector* v, void* params, gsl_vector* grad );
+void gsl_obj_fdf( const gsl_vector* v, void* params, double* result, gsl_vector* grad );
+
+
 #endif /* SRC_PREDICTORTRAINER_H_ */

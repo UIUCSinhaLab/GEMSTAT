@@ -126,8 +126,4 @@ class ExprPredictor : public TrainingAware
 		virtual void batch_begun(int new_batch){this->training_data->begin_batch(new_batch);};
 };
 
-// the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize
-double gsl_obj_f( const gsl_vector* v, void* params );
-void gsl_obj_df( const gsl_vector* v, void* params, gsl_vector* grad );
-void gsl_obj_fdf( const gsl_vector* v, void* params, double* result, gsl_vector* grad );
 #endif
