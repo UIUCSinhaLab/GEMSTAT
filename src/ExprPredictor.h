@@ -4,11 +4,11 @@
 #include "ExprModel.h"
 #include "FactorIntFunc.h"
 #include "SeqAnnotator.h"
-#include "PredictorTrainer.h"
 #include "ExprPar.h"
 #include "ObjFunc.h"
 #include "ExprFunc.h"
 #include "DataSet.h"
+#include "PredictorTrainer.h"
 
 /*****************************************************
  * Model Training and Testing

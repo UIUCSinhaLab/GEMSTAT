@@ -5,10 +5,15 @@
  *      Author: lunt
  */
 
-#include "ExprPredictor.h"
+
 #include "ExprPar.h"
+#include "DataSet.h"
+
 
 #include "PredictorTrainer.h"
+
+#include "ExprPredictor.h"
+
 
 ObjType getObjOption( const string& objOptionStr )
 {
@@ -48,6 +53,13 @@ string getSearchOptionStr( SearchType searchOption )
     return "Invalid";
 }
 
+ExprPar TrainingPipeline::train(const ExprPredictor* predictor, const TrainingDataset* training_data, const ExprPar& par_start ){
+	ExprPar current = par_start;
+	for(int i = 0;i<trainers.size();i++){
+		current = trainers[i].get()->train(predictor, training_data, current);
+	}
+	return current;
+}
 
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data){

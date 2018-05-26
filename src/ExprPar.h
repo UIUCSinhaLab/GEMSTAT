@@ -2,7 +2,7 @@
 #define EXPRPAR_H
 
 #include "ExprModel.h"
-#include "PredictorTrainer.h"
+//#include "PredictorTrainer.h"
 
 #include "snot/param_storage.h"
 

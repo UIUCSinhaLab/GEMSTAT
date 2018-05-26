@@ -10,17 +10,24 @@
 
 #include <string>
 
+#include "DataSet.h"
+
+#include "SeqAnnotator.h"
+
+//#include "ExprPredictor.h"
+class ExprPredictor;
+
 using namespace std;
 
 enum ObjType
 {
-    SSE,                                          // sum of squared error
-    CORR,                                         // Pearson correlation
-    CROSS_CORR,                                   // cross correlation (maximum in a range of shifts)
-    PGP,                                           // PGP score
-    LOGISTIC_REGRESSION,                            // Logistic Regression
-    PEAK_WEIGHTED,                                  // SSE with equal weight to peaks and non-peaks
-    WEIGHTED_SSE                                  //User provides weights for sse.
+	SSE,                                          // sum of squared error
+	CORR,                                         // Pearson correlation
+	CROSS_CORR,                                   // cross correlation (maximum in a range of shifts)
+	PGP,                                           // PGP score
+	LOGISTIC_REGRESSION,                            // Logistic Regression
+	PEAK_WEIGHTED,                                  // SSE with equal weight to peaks and non-peaks
+	WEIGHTED_SSE                                  //User provides weights for sse.
 };
 
 ObjType getObjOption( const string& objOptionStr );
@@ -28,12 +35,11 @@ string getObjOptionStr( ObjType objOption );
 
 enum SearchType
 {
-    UNCONSTRAINED,                                // unconstrained search
-    CONSTRAINED                                   // constrained search
+	UNCONSTRAINED,                                // unconstrained search
+	CONSTRAINED                                   // constrained search
 };
 
 string getSearchOptionStr( SearchType searchOption );
-
 
 class TrainingAware {
 	protected:
@@ -59,9 +65,30 @@ class TrainingAware {
 
 };
 
+class TrainingDataset : public DataSet , public TrainingAware {
+public:
+	TrainingDataset(const Matrix& tf_concentrations, const Matrix& output_values) : TrainingAware(), DataSet(tf_concentrations, output_values) {}
+	TrainingDataset(const DataSet &other) : TrainingAware(), DataSet(other) {}
+	~TrainingDataset(){};
+};
 
-#include "SeqAnnotator.h"
+class PredictorTrainer {
+	public:
+		PredictorTrainer(){};
+		~PredictorTrainer(){};
 
+		virtual ExprPar train(const ExprPredictor* predictor, const TrainingDataset* training_data, const ExprPar& par_start ) = 0;
+};
+
+class TrainingPipeline : public PredictorTrainer {
+	public:
+		TrainingPipeline(vector< std::shared_ptr<PredictorTrainer> > _trainers ) : trainers(_trainers) {}
+		~TrainingPipeline(){};
+
+		virtual ExprPar train(const ExprPredictor* predictor, const TrainingDataset* training_data, const ExprPar& par_start );
+	private:
+		vector< std::shared_ptr<PredictorTrainer> > trainers;
+};
 
 double nlopt_obj_func( const vector<double> &x, vector<double> &grad, void* f_data);
 
