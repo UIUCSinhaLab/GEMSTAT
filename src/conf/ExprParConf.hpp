@@ -1,8 +1,9 @@
 #ifndef EXPRPARCONF_H
 #define EXPRPARCONF_H
 
-ModelType ExprPar::modelOption = CHRMOD_UNLIMITED;
-SearchType ExprPar::searchOption = UNCONSTRAINED;
+//TODO: restore
+//ModelType ExprPar::modelOption = CHRMOD_UNLIMITED;
+//SearchType ExprPar::searchOption = UNCONSTRAINED;
 
 double ExprPar::default_weight = 1.0;
 double ExprPar::default_interaction = 1.0;
@@ -39,8 +40,9 @@ double ExprPar::default_energyThrFactors = 0.9;
 double ExprPar::min_pi = 1.0E-75;
 double ExprPar::max_pi = 1E10;
 
-bool ExprPar::one_qbtm_per_crm = false;
-bool ExprFunc::one_qbtm_per_crm = false;
+//TODO: restore
+//bool ExprPar::one_qbtm_per_crm = false;
+//bool ExprFunc::one_qbtm_per_crm = false;
 
 double SeqAnnotator::alpha = 6.008;
 double SeqAnnotator::beta = 0.207;

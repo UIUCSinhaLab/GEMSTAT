@@ -51,7 +51,7 @@ class ExprFunc
         int seq_length;
 
         // model parameters
-        const ExprPar par;//NOTE: Removing "const" here caused the copy constructor to be called. Thus the ExprFunc gets its own copy that will not have problems when the original par is changed.
+        ExprPar par;//NOTE: Removing "const" here caused the copy constructor to be called. Thus the ExprFunc gets its own copy that will not have problems when the original par is changed.
                           //NOTE: (Additional) put const back, copying is slow, and par should be constant for an ExprFunc, this also fixed a memory leak.
 
         // the sequence whose expression is to be predicted
@@ -76,6 +76,21 @@ class ExprFunc
         virtual double compPartFuncOn() const;
         // compute the partition function when the basal transcriptional machinery (BTM) is not bound
         virtual double compPartFuncOff() const;
+
+
+        /*
+        At setup time, this will get populated from the SNOT object.
+        */
+        // parameters
+        vector < GEMSTAT_PAR_FLOAT_T > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
+        Matrix factorIntMat;                      // (maximum) interactions between pairs of factors: omega(f,f')
+        vector < GEMSTAT_PAR_FLOAT_T > txpEffects;             // transcriptional effects: alpha for Direct and Quenching model, exp(alpha) for Logistic model (so that the same default values can be used). Equal to 1 if a TF is not an activator under the Quenching model
+        vector < GEMSTAT_PAR_FLOAT_T > repEffects;             // repression effects: beta under ChrMod models (the equlibrium constant of nucleosome association with chromatin). Equal to 0 if a TF is not a repressor.
+        //vector < GEMSTAT_PAR_FLOAT_T > pis;
+        //     double expRatio; 		// constant factor of measurement to prediction
+
+        vector < GEMSTAT_PAR_FLOAT_T > betas;
+        //vector < GEMSTAT_PAR_FLOAT_T > energyThrFactors;
 
     private:
 };

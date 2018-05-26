@@ -1,0 +1,82 @@
+%{
+    #include<stdio.h>
+    #include <string.h>
+    #include <string>
+
+    #include "param_storage.h"
+
+
+    #include "snot.tab.hpp"
+
+
+/*    
+    #define STRING "str"
+    #define NUMBER "number"
+    #define O_BEGIN "o_begin"
+    #define O_END "o_end"
+    #define A_BEGIN "a_begin"
+    #define A_END "a_end"
+    #define COMMA "comma"
+  */  
+
+%}
+
+DIGIT1to9 [1-9]
+DIGIT [0-9]
+DIGITS {DIGIT}+
+INT {DIGIT}|{DIGIT1to9}{DIGITS}|-{DIGIT}|-{DIGIT1to9}{DIGITS}
+FRAC [.]{DIGITS}
+EXP {E}{DIGITS}
+E [eE][+-]?
+HEX_DIGIT [0-9a-f]
+NUMBER {INT}|{INT}{FRAC}|{INT}{EXP}|{INT}{FRAC}{EXP}
+UNESCAPEDCHAR [ -!#-\[\]-~]
+ESCAPEDCHAR \\["\\bfnrt/]
+UNICODECHAR \\u{HEX_DIGIT}{HEX_DIGIT}{HEX_DIGIT}{HEX_DIGIT}
+CHAR {UNESCAPEDCHAR}|{ESCAPEDCHAR}|{UNICODECHAR}
+CHARS {CHAR}+
+DBL_QUOTE ["]
+%%
+{DBL_QUOTE}{DBL_QUOTE} |
+{DBL_QUOTE}{CHARS}{DBL_QUOTE} {
+    yylval.sym=new std::string(yytext,1,strlen(yytext)-2);
+    return STRING;
+};
+{NUMBER} {
+    yylval.val=atof(yytext);
+    return NUMBER;
+}
+\{ {
+    return O_BEGIN;
+};
+
+\} {
+    return O_END;
+};
+
+\[ {
+    return A_BEGIN;
+};
+
+\] {
+    return A_END;
+};
+
+, {
+    return COMMA;
+};
+: {
+    return COLON;
+};
+
+[ \t\n]+ /* ignore whitespace */;
+
+. {
+    printf("Unexpected: %c\nExiting...\n",*yytext);
+    exit(0);
+}
+%%
+
+int yywrap(void) {
+	return 1;
+}

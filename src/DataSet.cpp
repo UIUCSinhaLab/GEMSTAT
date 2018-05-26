@@ -10,7 +10,7 @@ int DataSet::nConds() const{
   return factorExprData.nCols();
 }
 
-Condition DataSet::getCondition(int i, ExprPar signalling_params) const{
+Condition DataSet::getCondition(int i, const ExprPar &signalling_params) const{
   vector< double > values = factorExprData.getCol(i);
   return Condition(values);
 

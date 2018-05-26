@@ -70,13 +70,13 @@ int main( int argc, char* argv[] )
     string lower_bound_file; ExprPar lower_bound_par; bool lower_bound_par_read = false;
     string upper_bound_file; ExprPar upper_bound_par; bool upper_bound_par_read = false;
     string free_fix_indicator_filename;
-    ExprPar::one_qbtm_per_crm = false;
-    ExprFunc::one_qbtm_per_crm = false;
+    //ExprPar::one_qbtm_per_crm = false;
+    //ExprFunc::one_qbtm_per_crm = false;
 
     // additional control parameters
     double gcContent = 0.5;
     FactorIntType intOption = BINARY;             // type of interaction function
-    ExprPar::searchOption = CONSTRAINED;          // search option: unconstrained; constrained.
+    SearchType cmdline_search_option = CONSTRAINED;//TODO:: actually read this from the commandline
 
     int cmdline_n_alternations = 5;
     int cmdline_n_random_starts = 0;
@@ -131,8 +131,8 @@ int main( int argc, char* argv[] )
         {
             cmdline_one_qbtm_per_crm = true;
 
-            ExprPar::one_qbtm_per_crm = true;
-            ExprFunc::one_qbtm_per_crm = true;
+            //ExprPar::one_qbtm_per_crm = true;
+            //ExprFunc::one_qbtm_per_crm = true;
         }
         else if ( !strcmp( "-et", argv[i] ) ){
             eTF = atof( argv[ ++i ] );
@@ -290,7 +290,7 @@ int main( int argc, char* argv[] )
         //TODO: Kind of a hacky workaround, the models/DP implementations should know that they need to ignore this during their setup.
         repressionDistThr = 0;
     }
-    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, maxContact, actIndicators, repIndicators, repressionMat, repressionDistThr);
+    ExprModel expr_model( cmdline_modelOption, cmdline_one_qbtm_per_crm, motifs, motifNames, maxContact, actIndicators, repIndicators, repressionMat, repressionDistThr);
     expr_model.shared_scaling = cmdline_one_beta;
 
     //********* SETUP COOPERTIVITIES ********
@@ -326,48 +326,57 @@ int main( int argc, char* argv[] )
 
     //Deleted AXIS_WEIGHTS from here
 
+    cerr << "Created the parameter factory...";
     //Setup a parameter factory
-    ParFactory *param_factory = new ParFactory(expr_model, nSeqs);
+    ParFactory *param_factory = new ParFactory(expr_model, nSeqs);//This param_factory is used for loading/unloading, it should be unconstrained.
+    cerr << "DONE." << endl;
 
+    cerr << "Creating the initial parameters...";
     // read the initial parameter values
     ExprPar par_init = param_factory->create_expr_par(); //Currently, code further down expects par_init to be in PROB_SPACE.
+    cerr << " ... " << par_init.my_pars;
     par_init = param_factory->changeSpace(par_init, PROB_SPACE); //This will cause the expected behaviour, but may hide underlying bugs.
-                                                                //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
+
+                                                    //Code that needs par_init in a particular space should use an assertion, and do the space conversion itself.
+    cerr << "DONE." << endl;
+
+    cerr << "Created the parameter factory." << endl;
+
     if ( !parFile.empty() ){
 		cerr << "Loading initial parameters...";
         try{
           par_init = param_factory->load( parFile );
           read_par_init_file = true;
-        }catch (int& e){
+	  }catch (exception& e){
             cerr << "Cannot read parameters from " << parFile << endl;
             exit( 1 );
         }
 		cerr << "DONE." << endl;
     }
 
+    /******** FREE fix
+    */
     //Load free_fix from the same format as parameter vectors!
-    vector< double > tmp_vector;
-    par_init.getRawPars(tmp_vector);
-    int num_indicators = tmp_vector.size();
-    vector <bool> indicator_bool(num_indicators, true);
-    #ifndef REANNOTATE_EACH_PREDICTION
-    //prevent optimization of annotation thresholds if that will be useless.
-    for(int i = 0;i<motifs.size();i++){indicator_bool[indicator_bool.size()-(1+i)] = false;}
-    #endif
+    ExprPar param_ff = param_factory->createDefaultFreeFix();
+
     if( !free_fix_indicator_filename.empty() )
     {
-		cerr << "Loading free_fix...";
-        ExprPar param_ff;
+        //ExprPar param_ff;
         try{
+          cerr << "loading free fix" << endl;
           param_ff = param_factory->load( free_fix_indicator_filename );
-        }catch (int& e){
+          cerr << "loaded free fix" << endl;
+	  }catch (exception& e){
           cerr << "Could not parse/read the free_fix file " << free_fix_indicator_filename << endl;
           exit(1);
         }
+    }
         #ifndef REANNOTATE_EACH_PREDICTION
         //prevent optimization of annotation thresholds if that will be useless.
-        param_ff.energyThrFactors.assign(param_ff.energyThrFactors.size(),0.0);
+        //param_ff.energyThrFactors.assign(param_ff.energyThrFactors.size(),0.0);
         #endif
+
+        vector <bool> indicator_bool;
         vector < double > tmp_ff;
         param_ff.getRawPars(tmp_ff);
         indicator_bool.clear();
@@ -378,16 +387,22 @@ int main( int argc, char* argv[] )
           else{ ASSERT_MESSAGE(false,"Illegal value in indicator_bool file");}
         }
 
-		cerr << "DONE." << endl; //loading free fix.
-    }
+
+
+
+    /******* END OF FREE free_fix
+    */
+
 
 
     /*
     //Make sure that parameters use the energy thresholds that were specified at either the command-line or factor thresh file.
-    if( read_factor_thresh ){
+    if( read_factor_thresh_eTF ){
         par_init = param_factory->changeSpace(par_init, PROB_SPACE);
         ASSERT_MESSAGE(par_init.my_space == PROB_SPACE,"This should never happen: Preconditions not met for -et option. This is a programming error, and not the fault of the user. For now, you can try avoiding the -et commandline option, and contact the software maintainer.");
-        par_init.energyThrFactors = energyThrFactors;
+        //par_init.energyThrFactors = energyThrFactors;
+        //I really don't want to have code dependent on the structure of the parameters here.
+        //dammit.
     }
     */
 
@@ -398,7 +413,7 @@ int main( int argc, char* argv[] )
 		upper_bound_par = param_factory->load( upper_bound_file );
 		upper_bound_par = param_factory->changeSpace(upper_bound_par, ENERGY_SPACE);
 		upper_bound_par_read = true;
-	}catch (int& e){
+	}catch (exception& e){
 		cerr << "Cannot read upper bounds from " << upper_bound_file << endl;
 		exit( 1 );
 	}
@@ -412,7 +427,7 @@ int main( int argc, char* argv[] )
 		lower_bound_par = param_factory->load( lower_bound_file );
 		lower_bound_par = param_factory->changeSpace(lower_bound_par, ENERGY_SPACE);
 		lower_bound_par_read = true;
-	}catch (int& e){
+	}catch (exception& e){
 		cerr << "Cannot read lower bounds from " << lower_bound_file << endl;
 		exit( 1 );
 	}
@@ -423,6 +438,7 @@ int main( int argc, char* argv[] )
     vector < double > all_pars_for_test;
     par_init.getRawPars(all_pars_for_test );
     ASSERT_MESSAGE(all_pars_for_test.size() == indicator_bool.size(), "For some reason, the number of entries in free_fix did not match the number of free parameters.\n"
+			"(This might happen if you added a new optimization parameter but did not have it in all of the '-p','-ff','-lower_bound',&'-upper_bound' argument files.)\n"
 		  "Remember that whatever model, there are 3 parameters for every transcription factor\n");
     all_pars_for_test.clear();//Won't be used again.
     //It is possible that the user wants to write out to the same par file, doing this after reading the par file means we won't have overridden it before reading
@@ -438,16 +454,22 @@ int main( int argc, char* argv[] )
 
     //initialize the energy threshold factors
     vector < double > energyThrFactors(nFactors, eTF);
+    //TODO: par_init
     if(read_par_init_file){
       assert(par_init.my_space == PROB_SPACE);
-      assert(energyThrFactors.size() == par_init.energyThrFactors.size());
-      energyThrFactors = par_init.energyThrFactors;
+      //assert(energyThrFactors.size() == par_init.energyThrFactors.size());
+
+      //energyThrFactors = par_init.energyThrFactors;
+      for(int i = 0;i<((gsparams::DictList&)par_init.my_pars)["tfs"].size();i++){
+          energyThrFactors[i] = ((gsparams::DictList&)par_init.my_pars)["tfs"][i]["annot_thresh"];
+      }
     }
 
     //TODO: move this to after the reading of the factor_thr_file? Meh. We should never use factor_thr_file anyway.
     if(read_factor_thresh_eTF){
       energyThrFactors.assign(energyThrFactors.size(),eTF);
     }
+
 
     if( ! factor_thr_file.empty() )//TODO: Totally eliminate the factor_thr_file.
     {
@@ -460,9 +482,16 @@ int main( int argc, char* argv[] )
 
     //assign that back to the initial par file so that it receives any changes made.
     assert(par_init.my_space == PROB_SPACE);
-    assert(energyThrFactors.size() == par_init.energyThrFactors.size());
-    par_init.energyThrFactors = energyThrFactors;
+    //assert(energyThrFactors.size() == par_init.energyThrFactors.size());//TODO: restore
 
+    //New way to do this
+    //par_init.energyThrFactors = energyThrFactors;
+
+    for(int i = 0;i<((gsparams::DictList&)par_init.my_pars)["tfs"].size();i++){
+        par_init.my_pars["tfs"][i]["annot_thresh"] = energyThrFactors.at(i);
+    }
+
+    //**** ANNOTATE THE SEQUENCES
     // site representation of the sequences
     // TODO: Should this code be removed? If we are using this code, and no command-line option was provided for energyThrFactors, but a .par file was provided, shouldn't it use the thresholds learned there? (So, shouldn't it happen after reading the par file?)
     // TODO: Relates to issue #19
@@ -511,6 +540,8 @@ int main( int argc, char* argv[] )
         }
     }
 
+    //***** DONE ANNOTATING
+
     //TODO: R_SEQ Either remove this feature or un-comment it.
     /*
     //site representation of the random sequences
@@ -527,7 +558,6 @@ int main( int argc, char* argv[] )
 
     }
     */
-
 
     // CHECK POINT
     //     cout << "Sequences:" << endl;
@@ -564,7 +594,7 @@ int main( int argc, char* argv[] )
         cout << "Interaction_Distance_Threshold = " << coopDistThr << endl;
         if ( intOption == GAUSSIAN ) cout << "Sigma = " << factorIntSigma << endl;
     }
-    cout << "Search_Option = " << getSearchOptionStr( ExprPar::searchOption ) << endl;
+    //cout << "Search_Option = " << getSearchOptionStr( ExprPar::searchOption ) << endl; //TODO: restore
 
 
 
@@ -572,6 +602,7 @@ int main( int argc, char* argv[] )
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames );
     //And setup parameters from the commandline
+    predictor->search_option = cmdline_search_option;
     predictor->set_objective_option(cmdline_obj_option);
     predictor->n_alternations = cmdline_n_alternations;
     predictor->n_random_starts = cmdline_n_random_starts;
@@ -591,12 +622,15 @@ int main( int argc, char* argv[] )
 
 
     //Setup regularization objective function
+    ExprPar tmp_centers, tmp_l1, tmp_l2;
+    bool setup_regularization = false;
     if(0.0 != l1 || 0.0 != l2){
+        setup_regularization = true;
       cerr << "INFO: Regularization was turned on and will be used. l1 = " << l1 << " l2 = " << l2 << " ."<< endl;
 
-      ExprPar tmp_centers = predictor->param_factory->create_expr_par();
-      ExprPar tmp_l1 = predictor->param_factory->create_expr_par();
-      ExprPar tmp_l2 = predictor->param_factory->create_expr_par();
+      tmp_centers = predictor->param_factory->create_expr_par();
+      tmp_l1 = predictor->param_factory->create_expr_par();
+      tmp_l2 = predictor->param_factory->create_expr_par();
 
       //TODO: add an option to read l1 and l2 values from a file.
       vector< double > tmp_l12_vector;
@@ -624,6 +658,46 @@ int main( int argc, char* argv[] )
     	predictor->param_factory->setMinimums(lower_bound_par);
     }
 
+    //**** CHECK that all loaded pars have the same ordering and parameter names.
+    vector<string> path_vector;
+    for(gsparams::DictList::iterator itr = par_init.my_pars.begin();itr != par_init.my_pars.end();++itr){
+        path_vector.push_back(itr.get_path());
+    }
+    vector< std::pair<std::string , gsparams::DictList* > > all_loaded_params;
+
+    all_loaded_params.push_back(std::make_pair("free_fix",&(param_ff.my_pars)));
+    all_loaded_params.push_back(std::make_pair("lower_bounds",&(lower_bound_par.my_pars)));
+    all_loaded_params.push_back(std::make_pair("upper_bounds",&(upper_bound_par.my_pars)));
+    /*Only if using l1/l2 regularization*/
+    if(setup_regularization){
+        all_loaded_params.push_back(std::make_pair("reg_centers",&(tmp_centers.my_pars)));
+        all_loaded_params.push_back(std::make_pair("l1_weights",&(tmp_l1.my_pars)));
+        all_loaded_params.push_back(std::make_pair("l2_weights",&(tmp_l2.my_pars)));
+    }
+
+    for(int i = 0;i<all_loaded_params.size();i++){
+        gsparams::DictList::iterator itr = all_loaded_params[i].second->begin();
+        int j = 0;
+        while(itr!=all_loaded_params[i].second->end()){
+            if(0 != path_vector[j].compare(itr.get_path())){
+                /*
+                std::cerr << par_init.my_pars["inter"] << std::endl;
+                std::cerr << (*all_loaded_params[i])["inter"] << std::endl;
+
+                std::cerr << par_init.my_pars << std::endl;
+                std::cerr << (*all_loaded_params[i]) << std::endl;
+                */
+                throw std::invalid_argument("Error in one of the input parameter files (.par, free_fix, lower/upper bounds, etc.) \nTrying to compare SNOT objects, it seems that one of the inputs is misordered.  starting_parameters" + path_vector[j] + " is not " + all_loaded_params[i].first + itr.get_path() + " ");
+            }
+            ++itr;
+            j++;
+        }
+    }
+
+
+
+
+
     // random number generator
     gsl_rng* rng;
     gsl_rng_env_setup();
@@ -638,6 +712,7 @@ int main( int argc, char* argv[] )
     gsl_rng_free( rng );
     // print the training results
     ExprPar par = predictor->getPar();
+    par = predictor->param_factory->changeSpace(par, PROB_SPACE);
     if( par_out_stream){
         par.print( par_out_stream, motifNames, expr_model.coop_setup->coop_matrix );
         par_out_stream.close();

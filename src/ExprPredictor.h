@@ -82,6 +82,7 @@ class ExprPredictor
         // Factory for Parameter vectors;
         ParFactory *param_factory;
         ObjFunc *trainingObjective;
+        SearchType search_option;
     private:
         //***** training data ******
         const DataSet& training_data;               //input and output curves
@@ -119,6 +120,8 @@ class ExprPredictor
                                                   // gradient: BFGS or conjugate gradient
         int gradient_minimize( ExprPar& par_result, double& obj_result );
         //  	int SA_minimize( ExprPar& par_result, double& obj_result ) const;	// simulated annealing
+
+        bool in_training;
 };
 
 // the objective function and its gradient of ExprPredictor::simplex_minimize or gradient_minimize

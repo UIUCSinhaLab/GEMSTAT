@@ -20,11 +20,12 @@ class Condition{
 class DataSet{
 public:
   DataSet(const Matrix& tf_concentrations, const Matrix& output_values);
+  DataSet(const DataSet &other) : exprData(other.exprData), factorExprData(other.factorExprData){};
   ~DataSet(){};
 
   int nConds() const;
 
-  virtual Condition getCondition(int i , ExprPar signalling_params) const;
+  virtual Condition getCondition(int i , const ExprPar &signalling_params) const;
 
   const Matrix& exprData;                   // expressions of the corresponding sequences across multiple conditions
   const Matrix& factorExprData;             // [TF] of all factors over multiple conditions
