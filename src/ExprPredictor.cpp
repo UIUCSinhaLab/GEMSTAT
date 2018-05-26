@@ -231,15 +231,15 @@ int ExprPredictor::train()
 }
 
 //Called fairly rarely, don't worry about optimality.
-int ExprPredictor::predict( const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num) const
+int ExprPredictor::predict_all_bins( const PredictionCisContext& cis_context, vector< double >& targetExprs) const
 {
-	return this->predict(par_model,targetSites_,targetSeqLength,targetExprs,seq_num);
+	return this->predict_all_bins(par_model,cis_context,targetExprs);
 }
 
 /**
 In training mode, will skip zero-weighted bins.
 */
-int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int targetSeqLength, vector< double >& targetExprs, int seq_num ) const
+int ExprPredictor::predict_all_bins( const ExprPar& par, const PredictionCisContext& cis_context, vector< double >& targetExprs) const
 {
 	// predict the expression
 
@@ -260,13 +260,13 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
 		//End of skipping code.	END_SKIPPING
 
 
-    ExprFunc* func = createExprFunc( par , targetSites_, targetSeqLength, seq_num);
+    ExprFunc* func = createExprFunc( par , cis_context);
 		targetExprs.resize(nConds());
     for ( int j = 0; j < nConds(); j++ )
     {
 				//Code for skipping during training BEGIN_SKIPPING
-				if( this->is_training() && weights != NULL && weights->getElement(seq_num,j) <= 0.0){
-					//cerr << "TEMPORARY DEBUG CODE, skipping unweighted bin (" << seq_num << "," << j << ")." << endl;
+				if( this->is_training() && weights != NULL && weights->getElement(cis_context.seq_number,j) <= 0.0){
+					//cerr << "TEMPORARY DEBUG CODE, skipping unweighted bin (" << cis_context.seq_number << "," << j << ")." << endl;
 					targetExprs[j] = 0.0;
 					continue;
 				}
@@ -310,7 +310,10 @@ int ExprPredictor::predict_all( const ExprPar& par , vector< vector< double > > 
     for ( int i = 0; i < nSeqs(); i++ ) {
 			vector<double> one_seq_predictions(nConds());
 
-			this->predict(par, seqSites[i], seqLengths[i], one_seq_predictions, i );
+			PredictionCisContext tmp_cis_context(seqSites[i],i, seqLengths[i]);
+			//This is gross because it still has getting the input data burried.
+
+			this->predict_all_bins(par, tmp_cis_context, one_seq_predictions );
 
 			targetExprs.push_back(one_seq_predictions);
     }
@@ -338,10 +341,10 @@ void ExprPredictor::printPar( const ExprPar& par ) const
 }
 
 
-ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par, const SiteVec& sites_, const int seq_length, const int seq_num ) const
+ExprFunc* ExprPredictor::createExprFunc( const ExprPar& par, const PredictionCisContext& cis_context ) const
 {
 
-    return expr_model.createNewExprFunc( par, sites_, seq_length, seq_num );
+    return expr_model.createNewExprFunc( par, cis_context.sites, cis_context.length, cis_context.seq_number );
 }
 
 
