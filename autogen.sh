@@ -1,4 +1,4 @@
-libtoolize
+glibtoolize
 aclocal -I m4 --install
 autoconf
 automake --add-missing
