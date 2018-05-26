@@ -50,6 +50,9 @@ AM_CONDITIONAL([DISABLE_NLOPT], [test "x${with_nlopt}" = "xno"])
 AC_PROG_CXX
 AC_LANG(C++)
 
+#require C++11
+AX_CXX_COMPILE_STDCXX([11],[noext], [mandatory])
+
 # Order matters here.
 AC_CHECK_LIB([m], [cos])
 AC_CHECK_LIB([gslcblas], [cblas_dgemm])
