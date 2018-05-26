@@ -30,6 +30,12 @@ AM_CONDITIONAL([BETAOPTBROKEN], [test "x${betaopt}" = "xbroken"])
 AM_CONDITIONAL([BETAOPTSEPARATE], [test "x${betaopt}" = "xseparate"])
 AM_CONDITIONAL([BETAOPTTOGETHER], [test "x${betaopt}" = "xtogether"])
 
+AC_ARG_ENABLE([gtest],
+[  --enable-gtest decides to use google test or not.],
+[to_use_gtest="yes"],
+[to_use_gtest="no"])
+AM_CONDITIONAL([USE_GTEST], [test "x${to_use_gtest}" = "xyes"])
+
 
 # Checks for libraries.
 AX_PATH_GSL([1.13], [], [AC_MSG_ERROR(Could not find the required version of GSL)])
@@ -70,10 +76,17 @@ AC_CHECK_FUNCS([floor pow sqrt strchr])
 AC_CONFIG_FILES([Makefile
 		 src/Makefile])
 
+
 # Setup the test suite.
 AC_CONFIG_TESTDIR(tests)
 AC_CONFIG_FILES([tests/Makefile tests/atlocal])
 AC_CONFIG_FILES([tests/testexec], [chmod +x tests/testexec])
 AM_MISSING_PROG([AUTOM4TE], [autom4te])
+
+AM_COND_IF([USE_GTEST], [
+	AC_CONFIG_SUBDIRS([tests/gtest/googletest])
+	AC_CONFIG_SRCDIR([tests/unittests/src/dummy.cpp])
+	AC_CONFIG_FILES([tests/unittests/Makefile])
+])
 
 AC_OUTPUT

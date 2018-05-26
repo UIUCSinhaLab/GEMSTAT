@@ -1,3 +1,12 @@
+ACLOCAL_AMFLAGS= -I m4
+
+SUBDIRS = 
+
+if USE_GTEST
+SUBDIRS += gtest/googletest
+SUBDIRS += unittests
+endif
+
 # The `:;' works around a Bash 3.2 bug when the output is not writable.
 $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	:;{ \
