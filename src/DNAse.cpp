@@ -24,6 +24,8 @@ map< string, vector< DNAse_region > > read_DNAse_file(const string& filename){
 	vector < double > dnase_end;
 	vector < double > scores;
 
+	map< string, vector< DNAse_region > > gathered_dnase_data();
+
 	while( dnase_input >> temp_s )
 	{
 		dnase_input >> temp_gen >> temp_gen >> temp_gen >> temp_gen >> temp_gen;
@@ -37,6 +39,7 @@ map< string, vector< DNAse_region > > read_DNAse_file(const string& filename){
 			scores.clear();
 			ifstream chr_input( ("chr" + chr + ".bed").c_str() );
 			//cout << "File: " << "chr" + chr + ".bed" << "opened" << endl;
+			//TODO: Make an exception, not an assertion
 			assert( chr_input.is_open() );
 			double chr_start, chr_end, chr_score;
 			//cout << "Starting location on chromosome: " << (long long int)temp_start << endl;
@@ -112,7 +115,7 @@ int DNAseAwareSeqAnnotator::annot( const Sequence& seq, SiteVec& sites, const ve
                 //cout << "Score: " << score << endl;
                 double prior_prob = sigmoidal( score );
                 //cout << "prior_prob: " << prior_prob << endl;
-                sites.push_back( Site( i, 1, k, energy, prior_prob ) );
+                sites.push_back( Site( i, i+l-1, 1, k, energy, prior_prob ) );
             }
 
             // negative strand
@@ -144,7 +147,7 @@ int DNAseAwareSeqAnnotator::annot( const Sequence& seq, SiteVec& sites, const ve
                 //cout << "Score: " << score << endl;
                 double prior_prob = sigmoidal( score );
                 //cout << "prior_prob: " << prior_prob << endl;
-                sites.push_back( Site( i, 0, k, energy, prior_prob ) );
+                sites.push_back( Site( i, i+l-1, 0, k, energy, prior_prob ) );
             }
         }
     }
