@@ -13,7 +13,7 @@ endif
 AM_CPPFLAGS = -I$(top_srcdir)/src $(GSL_CFLAGS) $(BETAOPTFLAGS) $(NLOPT_CPPFLAGS) $(NLOPT_CFLAGS)
 
 $(top_srcdir)/tests/gtest/googletest/lib/libgtest.la:
-	$(MAKE) -C make -C tests/gtest/googletest/ lib/libgtest.la
+	$(MAKE) -C $(top_builddir)/tests/gtest/googletest/ lib/libgtest.la
 
 UNIT_TEST=
 check_PROGRAMS=
