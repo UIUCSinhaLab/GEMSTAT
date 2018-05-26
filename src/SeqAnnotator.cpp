@@ -340,7 +340,7 @@ Matrix compWtmx( const Matrix& countMatrix, double pseudoCount )
 }
 
 
-Motif::Motif( const Matrix& _pwm, const vector< double >& _background ) : pwm( _pwm ), background( _background ), LLRMat( pwm.nRows(), 4 )
+Motif::Motif( const Matrix& _pwm, const vector< double >& _background , const string& name) : name(name), pwm( _pwm ), background( _background ), LLRMat( pwm.nRows(), 4 )
 {
     assert( background.size() == 4 );
 
@@ -348,12 +348,27 @@ Motif::Motif( const Matrix& _pwm, const vector< double >& _background ) : pwm( _
 }
 
 
-Motif::Motif( const Matrix& countMatrix, double pseudoCount, const vector< double >& _background ) : background( _background ), LLRMat( countMatrix.nRows(), 4 )
+Motif::Motif( const Matrix& countMatrix, double pseudoCount, const vector< double >& _background , const string& name) : name(name), background( _background ), LLRMat( countMatrix.nRows(), 4 )
 {
     assert( background.size() == 4 );
 
     pwm = compWtmx( countMatrix, pseudoCount );
     init();
+}
+
+Motif Motif::reverse_complement() const
+{
+	//create a reverse_complement pwm
+	int N = this->pwm.nRows();
+	int M = this->pwm.nCols();
+	Matrix tmp_pwm = Matrix(N,M);
+	for(int i = 0;i<N;i++){
+		for(int j = 0;j<M;j++){
+			tmp_pwm.setElement(i,j, this->pwm.getElement(N-(i+1), M-(j+1)));
+		}
+	}
+
+	return Motif(tmp_pwm, this->background, this->name + "_rev");
 }
 
 
@@ -516,7 +531,7 @@ int readMotifs( const string& file, const vector< double >& background, vector< 
 
         // create the motif
         names.push_back( string( name ) );
-        motifs.push_back( Motif( countMat, pseudoCount, background ) );
+        motifs.push_back( Motif( countMat, pseudoCount, background , name ) );
     } while ( !fin.eof() );
 
     return 0;
@@ -533,7 +548,11 @@ int readMotifs( const string& file, const vector< double >& background, vector< 
 ostream& operator<<( ostream& os, const Site& site )
 {
     char strandChar = site.strand ? '+' : '-';
-    os << site.start + 1 << "\t" << strandChar << "\t" << site.factorIdx << "\t" << site.energy << "\t" << site.wtRatio;
+    os << site.start + 1;
+	if(site.end != -1){
+		os << ".." << site.end+1;
+	}
+	os << "\t" << strandChar << "\t" << site.factorIdx << "\t" << site.energy << "\t" << site.wtRatio;
 
     return os;
 }
@@ -582,11 +601,25 @@ int readSites( const string& file, const map< string, int >& factorIdxMap, vecto
         else
         {
             int start;
+			int end = -1;
+			string start_end;
             char strandChar;
             string factor;
             double energy = 0;
             stringstream ss( line );
-            ss >> start >> strandChar >> factor;
+            ss >> start_end >> strandChar >> factor;	//Read the line
+
+			//This should be done with a regular expression.
+			int start_end_sep_location = start_end.find("..");
+			if(start_end_sep_location == -1){
+				start = atoi(start_end.c_str());
+				end = -1;
+			}else{
+				start = atoi(start_end.substr(0,start_end_sep_location).c_str());
+				end = atoi(start_end.substr(start_end_sep_location+2,start_end.length()-start_end_sep_location+2).c_str());
+			}
+
+
             if ( readEnergy ) ss >> energy;
             bool strand = strandChar == '+' ? 1 : 0;
             map<string, int>::const_iterator iter = factorIdxMap.find( factor );
@@ -594,7 +627,7 @@ int readSites( const string& file, const map< string, int >& factorIdxMap, vecto
               cerr << "The site annotation file reffered to a factor that doesn't exist. \n(Did you use one with factor numbers instead of names? The third column must be textual names.)" << endl;
               exit(1);
             } //TODO: Throw an exception if the factor couldn't be found!
-            currVec.push_back( Site( start - 1, strand, iter->second , energy, 1 ) );
+            currVec.push_back( Site( start - 1, end - 1, strand, iter->second , energy, 1 ) );
         }
     }
 
@@ -631,7 +664,7 @@ int SeqAnnotator::annot( const Sequence& seq, SiteVec& sites ) const
             energy = motifs[ k ].energy( elem );
             if ( energy <= energyThrFactors[ k ] * motifs[ k ].getMaxLLR() )
             {
-                sites.push_back( Site( i, 1, k, energy, 1 ) );
+                sites.push_back( Site( i, i+l-1, 1, k, energy, 1 ) );
             }
 
             // negative strand
@@ -639,7 +672,7 @@ int SeqAnnotator::annot( const Sequence& seq, SiteVec& sites ) const
             energy = motifs[ k ].energy( rcElem );
             if ( energy <= energyThrFactors[ k ]  * motifs[k].getMaxLLR() )
             {
-                sites.push_back( Site( i, 0, k, energy, 1 ) );
+                sites.push_back( Site( i, i+l-1, 0, k, energy, 1 ) );
             }
         }
     }
