@@ -74,6 +74,7 @@ ExprPredictor::~ExprPredictor()
 {
   delete param_factory;
   delete trainingObjective;
+  delete training_data;
 }
 
 void ExprPredictor::set_objective_option( ObjType in_obj_option ){
@@ -246,6 +247,10 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
 		//Code for skipping during training BEGIN_SKIPPING
 		/*TODO: dynamic_cast is slow, maybe it would be better to move this code that decides
 		which bins to predict out to some pre-epoch place so it only gets called once.
+
+		TODO: probably the best thing would be to make the trainingObjective request which sites it wants predicted.
+		The reason I don't do that at the moment is that its the setup of the ExprFunc that takes so much time, and we currently cache and reuse that.
+
 		For now, we value correctness above efficiency.
 		*/
 		Matrix *weights = NULL;
@@ -260,7 +265,7 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
     for ( int j = 0; j < nConds(); j++ )
     {
 				//Code for skipping during training BEGIN_SKIPPING
-				if( in_training && weights != NULL && weights->getElement(seq_num,j) <= 0.0){
+				if( this->is_training() && weights != NULL && weights->getElement(seq_num,j) <= 0.0){
 					//cerr << "TEMPORARY DEBUG CODE, skipping unweighted bin (" << seq_num << "," << j << ")." << endl;
 					targetExprs[j] = 0.0;
 					continue;
