@@ -14,6 +14,32 @@
  * Model Training and Testing
  ******************************************************/
 
+
+class PredictionCisContext {
+	/*
+	TODO: Need to work out a way to make this hashable.
+	That will allow the ExprPredictor to cache ExprFuncs.
+	*/
+	public:
+		PredictionCisContext(const SiteVec& _sites, const int _seq_number, const int _seq_length) : sites(_sites), seq_number(_seq_number), length(_seq_length) {}
+		~PredictionCisContext(){};
+
+		const SiteVec& sites;
+		const int seq_number; //More like promoter number...
+		const int length;
+};
+
+typedef Condition PredictionTransContext;
+
+class PredictionContext {
+	public:
+		PredictionContext(const PredictionCisContext& _cis_context, const PredictionTransContext& _trans_context) : cis_context(_cis_context), trans_context(_trans_context) {}
+		~PredictionContext(){};
+
+		const PredictionCisContext& cis_context;
+		const PredictionTransContext& trans_context;
+};
+
 /* ExprPredictor class: the thermodynamic sequence-to-expression predictor */
 class ExprPredictor : public TrainingAware
 {
@@ -45,8 +71,11 @@ class ExprPredictor : public TrainingAware
         int train();                              // automatic training: first estimate the initial values, then train
 
         // predict expression values of a sequence (across all conditions)
-        int predict( const ExprPar& par, const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num) const;
-        int predict( const SiteVec& targetSites, int targetSeqLength, vector< double >& targetExprs, int seq_num) const;
+
+        int predict_all_bins( const PredictionCisContext& cis_context, vector< double >& targetExprs) const;
+        int predict_all_bins( const ExprPar& par, const PredictionCisContext& cis_context, vector< double >& targetExprs) const;
+
+
         int predict_all( const ExprPar& par , vector< vector< double > > &targetExprs ) const;
         //TODO: Implement this such that the previous calls it, it is not slow, and it is DRY and KISS
         //int predict( const SiteVec& targetSites, int targetSeqLength, vector<int> condition_index_list, vector< double >& targetExprs, int seq_num ) const;
@@ -109,7 +138,7 @@ class ExprPredictor : public TrainingAware
         void printPar( const ExprPar& par ) const;
 
         // create the expression function
-        ExprFunc* createExprFunc( const ExprPar& par, const SiteVec& sites_, const int seq_length, const int seq_num ) const;
+        ExprFunc* createExprFunc( const ExprPar& par, const PredictionCisContext& cis_context ) const;
 
         // objective functions
         double evalObjective( const ExprPar& par );
