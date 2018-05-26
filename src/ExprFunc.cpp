@@ -384,7 +384,7 @@ double ExprFunc::compPartFuncOff() const
             //cout << "Z[j]: " << Z[ j ] << endl;
             double old_sum = sum;
             sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
-            if( sum != sum || isinf( sum ))
+            if( sum != sum || std::isinf( sum ))
             {
                 cout << "Old sum:\t" << old_sum << endl;
                 cout << "Factors:\t" << sites[ i ].factorIdx << "\t" << sites[ j ].factorIdx << endl;
