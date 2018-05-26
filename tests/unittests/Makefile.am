@@ -8,7 +8,7 @@ else
 	NLOPT_CPPFLAGS =
 endif
 
-check_LTLIBRARIES = $(top_builddir)/tests/gtest/googletest/lib/libgtest.la $(top_builddir)/tests/gtest/googletest/lib/libgtest_main.la
+#check_LTLIBRARIES = $(top_builddir)/tests/gtest/googletest/lib/libgtest.la $(top_builddir)/tests/gtest/googletest/lib/libgtest_main.la
 
 AM_CPPFLAGS = -I$(top_srcdir)/src $(GSL_CFLAGS) $(BETAOPTFLAGS) $(NLOPT_CPPFLAGS) $(NLOPT_CFLAGS)
 
