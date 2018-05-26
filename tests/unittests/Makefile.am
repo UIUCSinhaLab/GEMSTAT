@@ -15,6 +15,9 @@ AM_CPPFLAGS = -I$(top_srcdir)/src $(GSL_CFLAGS) $(BETAOPTFLAGS) $(NLOPT_CPPFLAGS
 $(top_srcdir)/tests/gtest/googletest/lib/libgtest.la:
 	$(MAKE) -C $(top_builddir)/tests/gtest/googletest/ lib/libgtest.la
 
+$(top_srcdir)/tests/gtest/googletest/lib/libgtest_main.la:
+	$(MAKE) -C $(top_builddir)/tests/gtest/googletest/ lib/libgtest_main.la
+
 UNIT_TEST=
 check_PROGRAMS=
 
