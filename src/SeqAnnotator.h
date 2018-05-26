@@ -213,9 +213,6 @@ bool siteOverlap( const Site& a, const Site& b, const vector< Motif >& motifs );
 // representation of Sequence as a Site vector
 typedef vector< Site > SiteVec;
 
-// read sites (of potentially multiple sequences)
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, vector< string >& names, bool readEnergy = false );
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, bool readEnergy = false );
 
 /* SeqAnnotator class: annotate a given sequence by extracting its TFBSs */
 class SeqAnnotator
@@ -226,6 +223,11 @@ class SeqAnnotator
 
         // annotate a sequence
         int annot( const Sequence& seq, SiteVec& sites ) const;
+
+		// read sites (of potentially multiple sequences)
+		int readSites( const string& file, vector< SiteVec >& sites, vector< string >& names, bool readEnergy = false );
+		int readSites( const string& file, vector< SiteVec >& sites, bool readEnergy = false );
+
         // compute the energy of sites (update the input sites)
         int compEnergy( const Sequence& seq, SiteVec& sites ) const;
         double sigmoidal( const double score ) const;

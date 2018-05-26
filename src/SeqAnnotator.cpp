@@ -22,6 +22,9 @@ int complement( int a )
     if ( a == 3 ) return 0;
     if ( a == MISSING ) return MISSING;
     if ( a == GAP ) return GAP;
+
+	throw std::invalid_argument("A character outside the hardcoded gapped/missing DNA Alphabet was used as a parameter to complement(). ");
+	return -1;//Makes the compiler warning go away without fiddling with pragmas.
 }
 
 
@@ -251,8 +254,13 @@ int readSequences( const string& file, vector< Sequence >& seqs, vector< string 
         // add the last sequence
         if( seq.size() ) seqs.push_back( seq );
 
+		fin.close();
         return 0;
     }
+
+	fin.close();
+	//TODO: raise an exception.
+	return RET_ERROR;//Wrong format
 }
 
 
@@ -567,7 +575,7 @@ bool siteOverlap( const Site& a, const Site& b, const vector< Motif >& motifs )
 }
 
 
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, vector< string >& names, bool readEnergy )
+int SeqAnnotator::readSites( const string& file, vector< SiteVec >& sites, vector< string >& names, bool readEnergy )
 {
     ifstream fin( file.c_str() );
     if ( !fin )
@@ -609,7 +617,7 @@ int readSites( const string& file, const map< string, int >& factorIdxMap, vecto
             stringstream ss( line );
             ss >> start_end >> strandChar >> factor;	//Read the line
 
-			//This should be done with a regular expression.
+			//TODO: This should be done with a regular expression.
 			int start_end_sep_location = start_end.find("..");
 			if(start_end_sep_location == -1){
 				start = atoi(start_end.c_str());
@@ -632,15 +640,15 @@ int readSites( const string& file, const map< string, int >& factorIdxMap, vecto
     }
 
     sites.push_back( currVec );
-
+	fin.close();
     return 0;
 }
 
 
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, bool readEnergy )
+int SeqAnnotator::readSites( const string& file, vector< SiteVec >& sites, bool readEnergy )
 {
     vector< string > names;
-    return readSites( file, factorIdxMap, sites, names, readEnergy );
+    return this->readSites( file, sites, names, readEnergy );
 }
 
 

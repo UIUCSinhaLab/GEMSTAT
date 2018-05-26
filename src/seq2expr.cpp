@@ -518,7 +518,7 @@ int main( int argc, char* argv[] )
 			/*
 			map< string, vector< DNAse_region > > dnase_data = read_DNAse_file(dnase_file);
 			DNAseAwareSeqAnnotator dnann(ann);
-			
+
             for ( int i = 0; i < nSeqs; i++ )
             {
 				string this_seq_name;//TODO: set this
@@ -531,7 +531,7 @@ int main( int argc, char* argv[] )
     }                                             // read the site representation and compute the energy of sites
     else
     {
-        rval = readSites( annFile, factorIdxMap, seqSites, true );
+        rval = ann.readSites( annFile, seqSites, true );
         assert( rval != RET_ERROR );
         for ( int i = 0; i < nSeqs; i++ )
         {

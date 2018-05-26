@@ -180,7 +180,7 @@ int main( int argc, char* argv[] )
     }                                             // read the site representation and compute the energy of sites
     else
     {
-        rval = readSites( annFile, factorIdxMap, seqSites, true );
+        rval = ann.readSites( annFile, seqSites, true );
         assert( rval != RET_ERROR );
         for ( int i = 0; i < nSeqs; i++ )
         {
