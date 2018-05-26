@@ -216,8 +216,6 @@ class SeqAnnotator
 
         // annotate a sequence
         int annot( const Sequence& seq, SiteVec& sites ) const;
-        //    int annot( const Sequence& seq, SiteVec& sites, const vector < double >& dnase_start, const vector < double >& dnase_end ) const;
-        int annot( const Sequence& seq, SiteVec& sites, const vector < double >& dnase_start, const vector < double >& dnase_end, const vector < double >& scores, const double seq_start ) const;
         // compute the energy of sites (update the input sites)
         int compEnergy( const Sequence& seq, SiteVec& sites ) const;
         double sigmoidal( const double score ) const;

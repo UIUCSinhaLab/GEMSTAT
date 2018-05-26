@@ -483,60 +483,21 @@ int main( int argc, char* argv[] )
         }
         else
         {
+			throw std::runtime_error("DNAse aware GEMSTAT is not currently implmemented. Sorry.");
+			//TODO: Read the dnaase file. The code below is a start. But this feature is not used.
+			//See DNAse.h and DNAse.cpp
+			/*
+			map< string, vector< DNAse_region > > dnase_data = read_DNAse_file(dnase_file);
+			DNAseAwareSeqAnnotator dnann(ann);
+			
             for ( int i = 0; i < nSeqs; i++ )
             {
-                //cout << "Annotated sites for CRM: " << seqNames[i] << endl;
-                ifstream dnase_input( dnase_file.c_str() );
-                assert( dnase_input.is_open());
+				string this_seq_name;//TODO: set this
 
-                string temp_s;
-                string temp_gen;
-                string chr;
-                double temp_start, temp_end;
-                vector < double > dnase_start;
-                vector < double > dnase_end;
-                vector < double > scores;
-
-                while( dnase_input >> temp_s )
-                {
-                    dnase_input >> temp_gen >> temp_gen >> temp_gen >> temp_gen >> temp_gen;
-                    dnase_input >> chr;
-                    dnase_input >> temp_gen >> temp_start >> temp_end >> temp_gen;
-                    if( temp_s == seqNames[ i ] )
-                    {
-                        //cout << "Processing for:\t" << temp_s << endl;
-                        dnase_start.clear();
-                        dnase_end.clear();
-                        scores.clear();
-                        ifstream chr_input( ("chr" + chr + ".bed").c_str() );
-                        //cout << "File: " << "chr" + chr + ".bed" << "opened" << endl;
-                        assert( chr_input.is_open() );
-                        double chr_start, chr_end, chr_score;
-                        //cout << "Starting location on chromosome: " << (long long int)temp_start << endl;
-                        //cout << "Ending location on chromosome: " << (long long int)temp_end << endl;
-                        while( chr_input >> temp_gen >> chr_start >> chr_end >> temp_gen >> chr_score )
-                        {
-                            if( ( chr_start < temp_start && chr_end < temp_start ) || ( chr_start > temp_end && chr_end > temp_end ) )
-                            {
-                                ;
-                            }
-                            else
-                            {
-                                dnase_start.push_back( chr_start );
-                                dnase_end.push_back( chr_end );
-                                scores.push_back( chr_score );
-                                //cout << "Inserting: " << (long long int)chr_start << "\t" << (long long int)chr_end << "\t" << chr_score << endl;
-                            }
-                        }
-                        chr_input.close();
-                        break;
-                    }
-                }
-
-                dnase_input.close();
-                ann.annot( seqs[ i ], seqSites[ i ], dnase_start, dnase_end, scores, temp_start );
+                dnann.annot( seqs[ i ], seqSites[ i ], dnase_data[this_seq_name], temp_start );
                 seqLengths[i] = seqs[i].size();
             }
+			*/
         }
     }                                             // read the site representation and compute the energy of sites
     else
