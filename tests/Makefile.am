@@ -3,7 +3,6 @@ ACLOCAL_AMFLAGS= -I m4
 SUBDIRS = 
 
 if USE_GTEST
-SUBDIRS += gtest/googletest
 SUBDIRS += unittests
 endif
 

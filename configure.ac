@@ -6,7 +6,7 @@ AC_INIT(gemstat, 1.6)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_SRCDIR([src/seq2expr.cpp])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 
 AC_ARG_ENABLE([debug],
 [  --enable-debug	Turn on debugging],
@@ -51,6 +51,8 @@ AC_ARG_ENABLE([nlopt],
 [with_nlopt="yes"])
 AM_CONDITIONAL([DISABLE_NLOPT], [test "x${with_nlopt}" = "xno"])
 
+LT_INIT
+
 
 # Checks for programs.
 AC_PROG_CXX
@@ -84,7 +86,22 @@ AC_CONFIG_FILES([tests/testexec], [chmod +x tests/testexec])
 AM_MISSING_PROG([AUTOM4TE], [autom4te])
 
 AM_COND_IF([USE_GTEST], [
-	AC_CONFIG_SUBDIRS([tests/gtest/googletest])
+
+	# Define variables for unit test using gtest
+GTEST_VERSION="1.8.0"
+GTEST_CPPFLAGS="-DGTEST_HAS_PTHREAD=0 -I\$(top_srcdir)/tests/gtest/googletest/include/"
+GTEST_CXXFLAGS=
+GTEST_LDFLAGS="-L\$(top_builddir)/tests/gtest/googletest/lib/"
+GTEST_LIBS=
+AC_SUBST([GTEST_VERSION])
+AC_SUBST([GTEST_CPPFLAGS])
+AC_SUBST([GTEST_CXXFLAGS])
+AC_SUBST([GTEST_LDFLAGS])
+AC_SUBST([GTEST_LIBS])
+
+
+	AC_CONFIG_SUBDIRS([tests/gtest/])
+	AC_CONFIG_FILES([tests/gtest/Makefile])
 	AC_CONFIG_SRCDIR([tests/unittests/src/dummy.cpp])
 	AC_CONFIG_FILES([tests/unittests/Makefile])
 ])
