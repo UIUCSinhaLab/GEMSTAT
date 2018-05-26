@@ -21,9 +21,15 @@
  *     where repression is optional, and the coop. lines are optional.
  * Note that (5), (6), (7) and (8) may be empty
  ******************************************************/
+
+#include <stdexcept>
+
 #include "utils/gs_errors.h"
 
+
 #include "SeqAnnotator.h"
+
+
 
 
 double SeqAnnotator::alpha = 6.008;
