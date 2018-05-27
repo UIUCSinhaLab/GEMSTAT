@@ -87,7 +87,8 @@ AM_MISSING_PROG([AUTOM4TE], [autom4te])
 
 AM_COND_IF([USE_GTEST], [
 
-	# Define variables for unit test using gtest
+#Some of these variables are copied or inspired by: https://github.com/eiichiroi/autotools-unittest
+# Define variables for unit test using gtest
 GTEST_VERSION="1.8.0"
 GTEST_CPPFLAGS="-DGTEST_HAS_PTHREAD=0 -I\$(top_srcdir)/tests/gtest/googletest/include/"
 GTEST_CXXFLAGS=
