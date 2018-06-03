@@ -51,5 +51,18 @@ Condition DataSet_Signal::getCondition(int i, const ExprPar &signaling_params) c
     //double foobar = 0.0;
     values[cic_i] = values[cic_i]*pow(1.0 + foobar*exp(att_param),-1.0);
 
+    //pMAD (signalled by dpp)
+    if( this->row_names_to_row.find("mad") != this->row_names_to_row.end() && this->signal_row_names_to_row.find("dpp") != this->signal_row_names_to_row.end() ){
+    	int mad_i = this->row_names_to_row.at("mad");
+	int dpp_i = this->signal_row_names_to_row.at("dpp");
+	double dpp_mad_to_pmad = 1.0;
+	try{
+		 dpp_mad_to_pmad = ((gsparams::DictList)(signaling_params.my_pars)).at("signaling").at("dpp_mad_pmad").v();
+	}catch(std::out_of_range e){
+		cerr << "could not find 'signaling::dpp_mad_pmad' in parameters" << endl;
+	}
+	values[mad_i] = values[mad_i]*dpp_mad_to_pmad*signaling_data.getElement(dpp_i,i);
+    }
+
     return Condition(values);
 }
