@@ -54,7 +54,7 @@ double FactorIntFuncGeometric::compFactorInt( double normalInt, double dist, boo
     return spacingTerm * orientationTerm;
 }
 
-double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
+double Helical_FactorIntFunc::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
 {
     assert( dist >= 0 );
 	//bool orientation = ( a_strand == b_strand );
@@ -63,6 +63,7 @@ double FactorIntFuncHelical::compFactorInt( double normalInt, double dist, bool 
 	if(dist >= distThr) return 1.0;
 	double coeff = M_PI*32.7/180.0;
 	if(dist <= 5.0) return 1.0;
+	dist += distance_offset;
 
 	double phasing = 0.5*(cos(coeff * dist) + 1.0)*(spacingTerm - 1.0) + 1.0;
 
@@ -86,4 +87,11 @@ double HalfDirectional_FactorIntFunc::compFactorInt( double normalInt, double di
     assert( dist >= 0 );
 	if( ( enforce_a && (a_strand != expected_a_strand) ) || (enforce_b && (b_strand != expected_b_strand)) || (dist > distThr) ){ return 1.0; }
 	return normalInt;
+}
+
+double HelicalDirectional_FactorIntFunc::compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const
+{
+    assert( dist >= 0 );
+	if( ( enforce_a && (a_strand != expected_a_strand) ) || (enforce_b && (b_strand != expected_b_strand)) || (dist > distThr) ){ return 1.0; }
+	return Helical_FactorIntFunc::compFactorInt( normalInt, dist, a_strand, b_strand );
 }

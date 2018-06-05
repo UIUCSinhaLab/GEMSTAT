@@ -1,0 +1,20 @@
+{
+	"tfs":{
+		"bcd":{"annot_thresh":0.1,"maxbind":0.0001,"alpha_a":0.0001,"alpha_r":0.0001},
+		"cad":{"annot_thresh":0.1,"maxbind":0.0001,"alpha_a":0.0001,"alpha_r":0.0001},
+		"gt":{"annot_thresh":0.1,"maxbind":0.0001,"alpha_a":0.0001,"alpha_r":0.0001},
+		"hb":{"annot_thresh":0.1,"maxbind":0.0001,"alpha_a":0.0001,"alpha_r":0.0001},
+		"kni":{"annot_thresh":0.1,"maxbind":0.0001,"alpha_a":0.0001,"alpha_r":0.0001},
+		"Kr":{"annot_thresh":0.1,"maxbind":0.0001,"alpha_a":0.0001,"alpha_r":0.0001}
+	},
+	"inter":{
+		"bcd:bcd":0.01,
+		"hb:kni":0.01,
+		"kni:kni":0.01
+	},
+	"qbtm":[0.0001],
+	"enh":[
+		{"pi":0.0000000001,"beta":1}
+	],
+	"signaling":{"cic_att":0.001}
+}

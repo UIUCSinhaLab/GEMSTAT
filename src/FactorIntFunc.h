@@ -93,12 +93,14 @@ class FactorIntFuncGeometric : public FactorIntFunc
         double spacingEffect;                     // the effect of spacing
 };
 
-/* FactorIntFuncHelical class: binary distance function */
-class FactorIntFuncHelical : public FactorIntFunc
+/* Helical_FactorIntFunc class: binary distance function */
+class Helical_FactorIntFunc : public FactorIntFunc
 {
+	protected:
+		double distance_offset;
     public:
         // constructors
-        FactorIntFuncHelical( double _distThr, double _orientationEffect = 1.0 ) : FactorIntFunc(_distThr, _orientationEffect)
+        Helical_FactorIntFunc( double _distThr, double _distance_offset, double _orientationEffect = 1.0 ) : FactorIntFunc(_distThr, _orientationEffect)
         {}
 
         // compute the factor interaction
@@ -140,6 +142,36 @@ class HalfDirectional_FactorIntFunc : public Dimer_FactorIntFunc
     protected:
         bool enforce_a;
         bool enforce_b;
+};
+
+/* Helical_FactorIntFunc class: binary distance function */
+class HelicalDirectional_FactorIntFunc : public Helical_FactorIntFunc
+{
+	protected:
+		double distance_offset;
+		bool enforce_a;
+		bool enforce_b;
+		bool expected_a_strand;
+		bool expected_b_strand;
+    public:
+        // constructors
+        HelicalDirectional_FactorIntFunc( double _distThr,
+			double _distance_offset, bool _a_strand, bool _b_strand ,
+					bool _enforce_a_dir, bool _enforce_b_dir ) : Helical_FactorIntFunc(_distThr, _distance_offset)
+					{
+						expected_a_strand = _a_strand;
+			            expected_b_strand = _b_strand;
+
+			            assert(_enforce_a_dir || _enforce_b_dir);
+			            if(!_enforce_a_dir && !_enforce_b_dir){
+			                throw std::runtime_error("Could not construct a HelicalDirectional interaction function with both proteins as 'don't care' direction.");
+			            }
+			            enforce_a = _enforce_a_dir;
+			            enforce_b = _enforce_b_dir;
+			        }
+
+        // compute the factor interaction
+        double compFactorInt( double normalInt, double dist, bool a_strand, bool b_strand ) const;
 };
 
 #endif
