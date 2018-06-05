@@ -219,7 +219,11 @@ class SeqAnnotator
 {
     public:
         // constructors
-        SeqAnnotator( const vector< Motif >& _motifs, const vector< double >& _energyThrFactors ) : motifs( _motifs ), energyThrFactors( _energyThrFactors ) { assert( motifs.size() == energyThrFactors.size() ); }
+        SeqAnnotator( const vector< Motif >& _motifs, const vector< double >& _energyThrFactors ) : motifs( _motifs ), energyThrFactors( _energyThrFactors ) {
+			this->set_motifs(_motifs);//also initializes factorIdxMap
+			assert( motifs.size() == energyThrFactors.size() );
+			assert( motifs.size() == factorIdxMap.size() );
+		}
 
         // annotate a sequence
         int annot( const Sequence& seq, SiteVec& sites ) const;

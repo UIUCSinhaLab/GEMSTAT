@@ -616,26 +616,31 @@ int SeqAnnotator::readSites( const string& file, vector< SiteVec >& sites, vecto
             double energy = 0;
             stringstream ss( line );
             ss >> start_end >> strandChar >> factor;	//Read the line
+			if ( readEnergy ) ss >> energy;
 
+			bool strand = strandChar == '+' ? 1 : 0;//TODO: Check that strand is definitely one of +- and throw an exception otherwise.
+
+			//Which factor?
+			map<string, int>::const_iterator factor_iter = this->factorIdxMap.find( factor );
+            if(factor_iter == this->factorIdxMap.end()){
+              cerr << "The site annotation file reffered to a factor that doesn't exist. \n(Did you use one with factor numbers instead of names? The third column must be textual names.)" << endl;
+			  cerr << "Factor name was: " << factor << endl;
+			  throw std::runtime_error("annotation file specified motif that does not exist.");
+		  	}
+
+			//Location of annotation
 			//TODO: This should be done with a regular expression.
 			int start_end_sep_location = start_end.find("..");
 			if(start_end_sep_location == -1){
 				start = atoi(start_end.c_str());
-				end = -1;
+				end = start + this->get_motif(factor_iter->second).length() - 1;
 			}else{
 				start = atoi(start_end.substr(0,start_end_sep_location).c_str());
 				end = atoi(start_end.substr(start_end_sep_location+2,start_end.length()-start_end_sep_location+2).c_str());
 			}
 
 
-            if ( readEnergy ) ss >> energy;
-            bool strand = strandChar == '+' ? 1 : 0;
-            map<string, int>::const_iterator iter = factorIdxMap.find( factor );
-            if(iter == factorIdxMap.end()){
-              cerr << "The site annotation file reffered to a factor that doesn't exist. \n(Did you use one with factor numbers instead of names? The third column must be textual names.)" << endl;
-              exit(1);
-            } //TODO: Throw an exception if the factor couldn't be found!
-            currVec.push_back( Site( start - 1, end - 1, strand, iter->second , energy, 1 ) );
+            currVec.push_back( Site( start - 1, end - 1, strand, factor_iter->second , energy, 1 ) );
         }
     }
 
