@@ -1,6 +1,5 @@
 
 %{
-
 /*
 This file is adapted from the file json.y at : https://gist.github.com/justjkk/436828/
 The original license follows:
@@ -28,6 +27,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+
+
 #include <iostream>
 #include <string>
 #include <map>
@@ -45,7 +46,7 @@ using namespace gsparams;
 //-- Lexer prototype required by bison, aka getNextToken()
 DictList *last_object;
 int yylex();
-int yyerror(const char *p) { cerr << "Parse error!" << endl; }
+int yyerror(const char *p) { cerr << "Parse error!" << endl; return 0;}
 %}
 
 %require "2.3"

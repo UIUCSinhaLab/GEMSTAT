@@ -64,7 +64,7 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 31 "snot.ypp"
+#line 60 "snot.ypp"
 {
   double val;
   std::string *sym;
