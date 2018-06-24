@@ -714,6 +714,9 @@ gemstat_dp_t ChrModLimited_ExprFunc::compPartFuncOn() const
 */
 double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
 {
+	#ifdef DEBUG
+		assert( a.start <= b.start);
+	#endif
     // 	assert( !siteOverlap( a, b, motifs ) );
     double maxInt = factorIntMat( a.factorIdx, b.factorIdx );
     double dist = SITE_DISTANCE(a, b);
@@ -732,6 +735,9 @@ double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
 bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 {
     // 	assert( !siteOverlap( a, b, motifs ) );
+	#ifdef DEBUG
+		assert( a.start <= b.start);
+	#endif
 
     double dist = SITE_DISTANCE(a, b);
     return repressionMat( a.factorIdx, b.factorIdx ) && ( dist <= repressionDistThr );
