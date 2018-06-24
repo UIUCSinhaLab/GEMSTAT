@@ -69,7 +69,7 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
   cerr << "running ExprFunc::setupSitesAndBoundaries(...)" << endl;
   #endif
 
-  // store the sequence
+	
   int n = _sites.size();
   sites = SiteVec(_sites);
 
