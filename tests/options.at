@@ -26,24 +26,27 @@ AT_DATA([factor_expr.tab],
 foo	1.0	0.0
 ]])
 
+
 AT_DATA([start.par],
-[[foo	1	1	1
-basal_transcription = 0.1
-1e-50
-5
-0.4
+[[{"tfs":{"foo":{"annot_thresh":0.4,"maxbind":1.0,"alpha_a":1.0,"alpha_r":1.0}},
+"inter":{},
+"qbtm":[0.1],
+"enh":[{"pi":1e-50,"beta":5}]}
 ]])
 
 AT_DATA([fact_tr.txt],[[0.88
 ]])
 
-AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -p start.par -na 0 -o Direct -fo 0.out -po 0.par >/dev/null 2>/dev/null ; tail -n1 0.par | sed 's/	*//g'], [0], [[0.4	
+AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -p start.par -na 0 -o Direct -fo 0.out -po 0.par >/dev/null 2>/dev/null ; cat 0.par], [0],
+[[{"tfs":{"foo":{"annot_thresh":0.4,"maxbind":1,"alpha_a":1,"alpha_r":1}},"inter":{},"qbtm":[0.1],"enh":[{"pi":1e-50,"beta":5}]}
 ]])
 
-AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -p start.par -et 0.757575 -na 0 -o Direct -fo 1.out -po 1.par >/dev/null 2>/dev/null ; tail -n1 1.par | sed 's/	*//g'], [0], [[0.757575	
+AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -p start.par -et 0.757575 -na 0 -o Direct -fo 1.out -po 1.par >/dev/null 2>/dev/null ; cat 1.par], [0],
+[[{"tfs":{"foo":{"annot_thresh":0.757575,"maxbind":1,"alpha_a":1,"alpha_r":1}},"inter":{},"qbtm":[0.1],"enh":[{"pi":1e-50,"beta":5}]}
 ]])
 
-AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -p start.par -et 0.757575 -ft fact_tr.txt -na 0 -o Direct -fo 2.out -po 2.par >/dev/null 2>/dev/null ; tail -n1 2.par | sed 's/	*//g'], [0], [[0.88	
+AT_CHECK([testexec seq2expr -s seqs.fa -e expr.tab -m factors.wtmx -f factor_expr.tab -p start.par -et 0.757575 -ft fact_tr.txt -na 0 -o Direct -fo 2.out -po 2.par >/dev/null 2>/dev/null ; cat 2.par], [0],
+[[{"tfs":{"foo":{"annot_thresh":0.88,"maxbind":1,"alpha_a":1,"alpha_r":1}},"inter":{},"qbtm":[0.1],"enh":[{"pi":1e-50,"beta":5}]}
 ]])
 
 AT_CLEANUP

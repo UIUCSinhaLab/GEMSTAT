@@ -10,6 +10,7 @@
  * Expression Model and Parameters
  ******************************************************/
 
+typedef long double gemstat_dp_t;
 
 /* ExprFunc class: predict the expression (promoter occupancy) of an enhancer sequence */
 class ExprFunc
@@ -51,7 +52,7 @@ class ExprFunc
         int seq_length;
 
         // model parameters
-        const ExprPar par;//NOTE: Removing "const" here caused the copy constructor to be called. Thus the ExprFunc gets its own copy that will not have problems when the original par is changed.
+        ExprPar par;//NOTE: Removing "const" here caused the copy constructor to be called. Thus the ExprFunc gets its own copy that will not have problems when the original par is changed.
                           //NOTE: (Additional) put const back, copying is slow, and par should be constant for an ExprFunc, this also fixed a memory leak.
 
         // the sequence whose expression is to be predicted
@@ -60,7 +61,7 @@ class ExprFunc
         vector< int > boundaries;                 // left boundary of each site beyond which there is no interaction
 
         // intermediate computational results
-        vector< double > bindingWts;
+        vector< gemstat_dp_t > bindingWts;
 
 
         // compute the TF-TF interaction between two occupied sites
@@ -73,9 +74,24 @@ class ExprFunc
         bool testRepression( const Site& a, const Site& b ) const;
 
         // compute the partition function when the BTM is bound
-        virtual double compPartFuncOn() const;
+        virtual gemstat_dp_t compPartFuncOn() const;
         // compute the partition function when the basal transcriptional machinery (BTM) is not bound
-        virtual double compPartFuncOff() const;
+        virtual gemstat_dp_t compPartFuncOff() const;
+
+
+        /*
+        At setup time, this will get populated from the SNOT object.
+        */
+        // parameters
+        vector < GEMSTAT_PAR_FLOAT_T > maxBindingWts;          // binding weight of the strongest site for each TF: K(S_max) [TF_max]
+        Matrix factorIntMat;                      // (maximum) interactions between pairs of factors: omega(f,f')
+        vector < GEMSTAT_PAR_FLOAT_T > txpEffects;             // transcriptional effects: alpha for Direct and Quenching model, exp(alpha) for Logistic model (so that the same default values can be used). Equal to 1 if a TF is not an activator under the Quenching model
+        vector < GEMSTAT_PAR_FLOAT_T > repEffects;             // repression effects: beta under ChrMod models (the equlibrium constant of nucleosome association with chromatin). Equal to 0 if a TF is not a repressor.
+        //vector < GEMSTAT_PAR_FLOAT_T > pis;
+        //     double expRatio; 		// constant factor of measurement to prediction
+
+        vector < GEMSTAT_PAR_FLOAT_T > betas;
+        //vector < GEMSTAT_PAR_FLOAT_T > energyThrFactors;
 
     private:
 };
@@ -105,7 +121,7 @@ class Direct_ExprFunc : public ExprFunc {
       Direct_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
-    double compPartFuncOn() const;
+    gemstat_dp_t compPartFuncOn() const;
 
 };
 
@@ -115,7 +131,7 @@ class Quenching_ExprFunc : public ExprFunc {
       Quenching_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
-    double compPartFuncOn() const;
+    gemstat_dp_t compPartFuncOn() const;
 
 };
 
@@ -125,9 +141,9 @@ class ChrMod_ExprFunc : public ExprFunc {
       ChrMod_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
-    virtual double compPartFuncOn() const = 0;
+    virtual gemstat_dp_t compPartFuncOn() const = 0;
     // compute the partition function when the basal transcriptional machinery (BTM) is not bound
-    double compPartFuncOff() const;
+    gemstat_dp_t compPartFuncOff() const;
 
 };
 
@@ -137,7 +153,7 @@ class ChrModUnlimited_ExprFunc : public ChrMod_ExprFunc {
       ChrModUnlimited_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ChrMod_ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
-    double compPartFuncOn() const;
+    gemstat_dp_t compPartFuncOn() const;
 };
 
 class ChrModLimited_ExprFunc : public ChrMod_ExprFunc {
@@ -146,7 +162,7 @@ class ChrModLimited_ExprFunc : public ChrMod_ExprFunc {
       ChrModLimited_ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num) : ChrMod_ExprFunc( _model, _par , sites_, seq_len, seq_num){} ;
   protected:
     // compute the partition function when the BTM is bound
-    double compPartFuncOn() const;
+    gemstat_dp_t compPartFuncOn() const;
 };
 
 

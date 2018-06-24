@@ -22,6 +22,9 @@ int complement( int a )
     if ( a == 3 ) return 0;
     if ( a == MISSING ) return MISSING;
     if ( a == GAP ) return GAP;
+
+	throw std::invalid_argument("A character outside the hardcoded gapped/missing DNA Alphabet was used as a parameter to complement(). ");
+	return -1;//Makes the compiler warning go away without fiddling with pragmas.
 }
 
 
@@ -251,8 +254,13 @@ int readSequences( const string& file, vector< Sequence >& seqs, vector< string 
         // add the last sequence
         if( seq.size() ) seqs.push_back( seq );
 
+		fin.close();
         return 0;
     }
+
+	fin.close();
+	//TODO: raise an exception.
+	return RET_ERROR;//Wrong format
 }
 
 
@@ -340,7 +348,7 @@ Matrix compWtmx( const Matrix& countMatrix, double pseudoCount )
 }
 
 
-Motif::Motif( const Matrix& _pwm, const vector< double >& _background ) : pwm( _pwm ), background( _background ), LLRMat( pwm.nRows(), 4 )
+Motif::Motif( const Matrix& _pwm, const vector< double >& _background , const string& name) : name(name), pwm( _pwm ), background( _background ), LLRMat( pwm.nRows(), 4 )
 {
     assert( background.size() == 4 );
 
@@ -348,12 +356,27 @@ Motif::Motif( const Matrix& _pwm, const vector< double >& _background ) : pwm( _
 }
 
 
-Motif::Motif( const Matrix& countMatrix, double pseudoCount, const vector< double >& _background ) : background( _background ), LLRMat( countMatrix.nRows(), 4 )
+Motif::Motif( const Matrix& countMatrix, double pseudoCount, const vector< double >& _background , const string& name) : name(name), background( _background ), LLRMat( countMatrix.nRows(), 4 )
 {
     assert( background.size() == 4 );
 
     pwm = compWtmx( countMatrix, pseudoCount );
     init();
+}
+
+Motif Motif::reverse_complement() const
+{
+	//create a reverse_complement pwm
+	int N = this->pwm.nRows();
+	int M = this->pwm.nCols();
+	Matrix tmp_pwm = Matrix(N,M);
+	for(int i = 0;i<N;i++){
+		for(int j = 0;j<M;j++){
+			tmp_pwm.setElement(i,j, this->pwm.getElement(N-(i+1), M-(j+1)));
+		}
+	}
+
+	return Motif(tmp_pwm, this->background, this->name + "_rev");
 }
 
 
@@ -516,7 +539,7 @@ int readMotifs( const string& file, const vector< double >& background, vector< 
 
         // create the motif
         names.push_back( string( name ) );
-        motifs.push_back( Motif( countMat, pseudoCount, background ) );
+        motifs.push_back( Motif( countMat, pseudoCount, background , name ) );
     } while ( !fin.eof() );
 
     return 0;
@@ -533,7 +556,11 @@ int readMotifs( const string& file, const vector< double >& background, vector< 
 ostream& operator<<( ostream& os, const Site& site )
 {
     char strandChar = site.strand ? '+' : '-';
-    os << site.start + 1 << "\t" << strandChar << "\t" << site.factorIdx << "\t" << site.energy << "\t" << site.wtRatio;
+    os << site.start + 1;
+	if(site.end != -1){
+		os << ".." << site.end+1;
+	}
+	os << "\t" << strandChar << "\t" << site.factorIdx << "\t" << site.energy << "\t" << site.wtRatio;
 
     return os;
 }
@@ -548,7 +575,7 @@ bool siteOverlap( const Site& a, const Site& b, const vector< Motif >& motifs )
 }
 
 
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, vector< string >& names, bool readEnergy )
+int SeqAnnotator::readSites( const string& file, vector< SiteVec >& sites, vector< string >& names, bool readEnergy )
 {
     ifstream fin( file.c_str() );
     if ( !fin )
@@ -582,122 +609,51 @@ int readSites( const string& file, const map< string, int >& factorIdxMap, vecto
         else
         {
             int start;
+			int end = -1;
+			string start_end;
             char strandChar;
             string factor;
             double energy = 0;
             stringstream ss( line );
-            ss >> start >> strandChar >> factor;
-            if ( readEnergy ) ss >> energy;
-            bool strand = strandChar == '+' ? 1 : 0;
-            map<string, int>::const_iterator iter = factorIdxMap.find( factor );
-            if(iter == factorIdxMap.end()){
+            ss >> start_end >> strandChar >> factor;	//Read the line
+			if ( readEnergy ) ss >> energy;
+
+			bool strand = strandChar == '+' ? 1 : 0;//TODO: Check that strand is definitely one of +- and throw an exception otherwise.
+
+			//Which factor?
+			map<string, int>::const_iterator factor_iter = this->factorIdxMap.find( factor );
+            if(factor_iter == this->factorIdxMap.end()){
               cerr << "The site annotation file reffered to a factor that doesn't exist. \n(Did you use one with factor numbers instead of names? The third column must be textual names.)" << endl;
-              exit(1);
-            } //TODO: Throw an exception if the factor couldn't be found!
-            currVec.push_back( Site( start - 1, strand, iter->second , energy, 1 ) );
+			  cerr << "Factor name was: " << factor << endl;
+			  throw std::runtime_error("annotation file specified motif that does not exist.");
+		  	}
+
+			//Location of annotation
+			//TODO: This should be done with a regular expression.
+			int start_end_sep_location = start_end.find("..");
+			if(start_end_sep_location == -1){
+				start = atoi(start_end.c_str());
+				end = start + this->get_motif(factor_iter->second).length() - 1;
+			}else{
+				start = atoi(start_end.substr(0,start_end_sep_location).c_str());
+				end = atoi(start_end.substr(start_end_sep_location+2,start_end.length()-start_end_sep_location+2).c_str());
+			}
+
+
+            currVec.push_back( Site( start - 1, end - 1, strand, factor_iter->second , energy, 1 ) );
         }
     }
 
     sites.push_back( currVec );
-
+	fin.close();
     return 0;
 }
 
 
-int readSites( const string& file, const map< string, int >& factorIdxMap, vector< SiteVec >& sites, bool readEnergy )
+int SeqAnnotator::readSites( const string& file, vector< SiteVec >& sites, bool readEnergy )
 {
     vector< string > names;
-    return readSites( file, factorIdxMap, sites, names, readEnergy );
-}
-
-
-int SeqAnnotator::annot( const Sequence& seq, SiteVec& sites, const vector < double >& dnase_start, const vector < double >& dnase_end, const vector < double >& scores, const double seq_start ) const
-{
-    //cout << "start annotation:" << endl;
-    sites.clear();
-
-    // scan the sequence for the sites of all motifs
-    int dnase_data_size = dnase_start.size();
-    for ( int i = 0; i < seq.size(); i++ )
-    {
-        // test for each motif
-        for ( int k = 0; k < motifs.size(); k++ )
-        {
-            int l = motifs[ k ].length();
-            if ( i + l > seq.size() ) continue;
-            double energy;
-
-            //cout << "For motif: " << k << ", having len: " << l << ", at position: " << i << endl;
-
-            // positive strand
-            Sequence elem( seq, i, l, 1 );
-            energy = motifs[ k ].energy( elem );
-            if ( energy <= energyThrFactors[ k ] * motifs[ k ].getMaxLLR() )
-            {
-                double win_start = seq_start + i;
-                double win_end = seq_start + i + l - 1;
-                //cout << "window start: " << (long long int)win_start << ", window end: " << (long long int)win_end << endl;
-                int win_1 = 0;
-                //cout << "accessibility data: " << (long long int) dnase_start[win_1] << "\t" << (long long int)dnase_end[win_1] << endl;
-                while( win_end > dnase_end[ win_1 ] )
-                {
-                    win_1++;
-                }
-                int win_2;
-                if( dnase_start[ win_1 ] > win_start )
-                {
-                    win_2 = win_1 - 1;
-                }
-                else
-                {
-                    win_2 = win_1;
-                }
-                //cout << "window 1: " << win_1 << ", window 2: " << win_2 << endl;
-                //cout << "window 1 score: " << scores[ win_1 ] << ", window 2 score: " << scores[ win_2 ] << endl;
-
-                double score = ( scores[ win_1 ] + scores[ win_2 ] ) / 2;
-                //cout << "Score: " << score << endl;
-                double prior_prob = sigmoidal( score );
-                //cout << "prior_prob: " << prior_prob << endl;
-                sites.push_back( Site( i, 1, k, energy, prior_prob ) );
-            }
-
-            // negative strand
-            Sequence rcElem( seq, i, l, 0 );
-            energy = motifs[ k ].energy( rcElem );
-            if ( energy <= energyThrFactors[ k ]  * motifs[k].getMaxLLR() )
-            {
-                double win_start = seq_start + i;
-                double win_end = seq_start + i + l - 1;
-                //cout << "window start: " << (long long int)win_start << ", window end: " << (long long int)win_end << endl;
-                int win_1 = 0;
-                //cout << "accessibility data: " << (long long int) dnase_start[win_1] << "\t" << (long long int)dnase_end[win_1] << endl;
-                while( win_end > dnase_end[ win_1 ] )
-                {
-                    win_1++;
-                }
-                int win_2;
-                if( dnase_start[ win_1 ] > win_start )
-                {
-                    win_2 = win_1 - 1;
-                }
-                else
-                {
-                    win_2 = win_1;
-                }
-                //cout << "window 1: " << win_1 << ", window 2: " << win_2 << endl;
-                //cout << "window 1 score: " << scores[ win_1 ] << ", window 2 score: " << scores[ win_2 ] << endl;
-                double score = ( scores[ win_1 ] + scores[ win_2 ] ) / 2;
-                //cout << "Score: " << score << endl;
-                double prior_prob = sigmoidal( score );
-                //cout << "prior_prob: " << prior_prob << endl;
-                sites.push_back( Site( i, 0, k, energy, prior_prob ) );
-            }
-        }
-    }
-
-    //cout << "end annotation" << endl;
-    return sites.size();
+    return this->readSites( file, sites, names, readEnergy );
 }
 
 
@@ -721,7 +677,7 @@ int SeqAnnotator::annot( const Sequence& seq, SiteVec& sites ) const
             energy = motifs[ k ].energy( elem );
             if ( energy <= energyThrFactors[ k ] * motifs[ k ].getMaxLLR() )
             {
-                sites.push_back( Site( i, 1, k, energy, 1 ) );
+                sites.push_back( Site( i, i+l-1, 1, k, energy, 1 ) );
             }
 
             // negative strand
@@ -729,7 +685,7 @@ int SeqAnnotator::annot( const Sequence& seq, SiteVec& sites ) const
             energy = motifs[ k ].energy( rcElem );
             if ( energy <= energyThrFactors[ k ]  * motifs[k].getMaxLLR() )
             {
-                sites.push_back( Site( i, 0, k, energy, 1 ) );
+                sites.push_back( Site( i, i+l-1, 0, k, energy, 1 ) );
             }
         }
     }
