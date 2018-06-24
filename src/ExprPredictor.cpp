@@ -246,9 +246,12 @@ int ExprPredictor::predict( const ExprPar& par, const SiteVec& targetSites_, int
 		For now, we value correctness above efficiency.
 		*/
 		Matrix *weights = NULL;
-		if( NULL != dynamic_cast<const Weighted_ObjFunc_Mixin*>(this->trainingObjective) ){
-			weights = ((Weighted_ObjFunc_Mixin*)this->trainingObjective)->get_weights();
+		Weighted_ObjFunc_Mixin* tmp_weighted = NULL;
+		tmp_weighted = dynamic_cast<Weighted_ObjFunc_Mixin*>(this->trainingObjective);
+		if( NULL != tmp_weighted ) {
+			weights = tmp_weighted->get_weights();
 		}
+
 		//End of skipping code.	END_SKIPPING
 
 
