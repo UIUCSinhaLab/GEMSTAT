@@ -1,7 +1,7 @@
 
 #include "DataSet_signal.h"
 
-DataSet_Signal::DataSet_Signal(const Matrix& tf_concentrations, const Matrix& output_values, const Matrix& signaling_values) : DataSet(tf_concentrations,output_values),
+DataSet_Signal::DataSet_Signal(const Matrix& tf_concentrations, const Matrix& output_values, const Matrix& signaling_values) : TrainingDataset(tf_concentrations,output_values),
 signaling_data(signaling_values), row_names(), row_names_to_row()
 {
   assert(exprData.nCols() == factorExprData.nCols());

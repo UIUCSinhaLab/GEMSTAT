@@ -13,7 +13,7 @@
 #include "Tools.h"
 #include "ExprPar.h"
 
-class DataSet_Signal : public DataSet {
+class DataSet_Signal : public TrainingDataset {
 public:
   DataSet_Signal(const Matrix& tf_concentrations, const Matrix& output_values, const Matrix& signaling_values);
   ~DataSet_Signal(){};

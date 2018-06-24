@@ -44,15 +44,3 @@ string getSearchOptionStr( SearchType searchOption )
 
     return "Invalid";
 }
-
-/*
-PredictorTrainer::PredictorTrainer() {
-	// TODO Auto-generated constructor stub
-
-}
-
-PredictorTrainer::~PredictorTrainer() {
-	// TODO Auto-generated destructor stub
-}
-
-*/
