@@ -69,6 +69,10 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
   cerr << "running ExprFunc::setupSitesAndBoundaries(...)" << endl;
   #endif
 
+	
+  int n = _sites.size();
+  sites = SiteVec(_sites);
+
 	//Prevents crashes if there are no annotated sites in the sequence.
 	//This can happen, and it should not cause an error.
 	int pseudo_start = -1000;
