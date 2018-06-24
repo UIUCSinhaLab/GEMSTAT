@@ -213,7 +213,7 @@ Markov_ExprFunc::Markov_ExprFunc( const ExprModel* _model, const ExprPar& _par ,
         for ( j = i+1; j <= n_sites; j++ )
         {
 				//site_distance arugments backwards because we are going backwards.
-            if ( ( SITE_DISTANCE(sites[i], sites[j]) > range ) break;
+            if ( SITE_DISTANCE(sites[i], sites[j]) > range ) break;
         }//If the loop never broke, j will leak with value n+1
         int boundary = j;
         rev_bounds[i] = ( boundary );
