@@ -568,8 +568,8 @@ ostream& operator<<( ostream& os, const Site& site )
 
 bool siteOverlap( const Site& a, const Site& b, const vector< Motif >& motifs )
 {
-    if ( a.start + motifs[ a.factorIdx ].length() <= b.start ) return false;
-    if ( b.start + motifs[ b.factorIdx ].length() <= a.start ) return false;
+    if ( a.end < b.start ) return false;
+    if ( b.end < a.start ) return false;
 
     return true;
 }
