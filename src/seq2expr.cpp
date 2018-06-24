@@ -301,7 +301,7 @@ int main( int argc, char* argv[] )
         intOption = getIntOption(cmdline_interaction_option_str);
         if ( intOption == BINARY ) default_int_func = new FactorIntFuncBinary( coopDistThr );
         else if ( intOption == GAUSSIAN ) default_int_func = new FactorIntFuncGaussian( coopDistThr, factorIntSigma );
-        else if ( intOption == HELICAL ) default_int_func = new FactorIntFuncHelical( coopDistThr );
+        else if ( intOption == HELICAL ) default_int_func = new Helical_FactorIntFunc( coopDistThr, 0.0 );
         else
         {
             cerr << "Interaction Function is invalid " << endl; exit( 1 );
