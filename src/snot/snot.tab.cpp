@@ -92,6 +92,35 @@
 /* Copy the first part of user declarations.  */
 #line 2 "snot.ypp"
 
+/*
+This file is adapted from the file json.y at : https://gist.github.com/justjkk/436828/
+The original license follows:
+
+The MIT License (MIT)
+
+Copyright (c) 2015 J Kishore Kumar
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
+
+
 #include <iostream>
 #include <string>
 #include <map>
@@ -109,7 +138,7 @@ using namespace gsparams;
 //-- Lexer prototype required by bison, aka getNextToken()
 DictList *last_object;
 int yylex();
-int yyerror(const char *p) { cerr << "Parse error!" << endl; }
+int yyerror(const char *p) { cerr << "Parse error!" << endl; return 0;}
 
 
 /* Enabling traces.  */
@@ -132,7 +161,7 @@ int yyerror(const char *p) { cerr << "Parse error!" << endl; }
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 31 "snot.ypp"
+#line 60 "snot.ypp"
 {
   double val;
   std::string *sym;
@@ -141,7 +170,7 @@ typedef union YYSTYPE
   std::vector< std::pair< std::string , gsparams::DictList> > *pairlist;
 }
 /* Line 193 of yacc.c.  */
-#line 145 "snot.tab.cpp"
+#line 174 "snot.tab.cpp"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -154,7 +183,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 158 "snot.tab.cpp"
+#line 187 "snot.tab.cpp"
 
 #ifdef short
 # undef short
@@ -441,8 +470,8 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    50,    50,    52,    57,    62,    72,    78,    87,    95,
-     100,   104,   111,   123,   124,   125
+       0,    79,    79,    81,    86,    91,   101,   107,   116,   124,
+     129,   133,   140,   152,   153,   154
 };
 #endif
 
@@ -1355,13 +1384,13 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 50 "snot.ypp"
+#line 79 "snot.ypp"
     {
   ;}
     break;
 
   case 3:
-#line 52 "snot.ypp"
+#line 81 "snot.ypp"
     {
     last_object = (yyvsp[(1) - (1)].onevalue);
     //delete $1;
@@ -1369,7 +1398,7 @@ yyreduce:
     break;
 
   case 4:
-#line 57 "snot.ypp"
+#line 86 "snot.ypp"
     {
     	DictList *retval = new DictList();
 	retval->undecided_to_dict_else_error();
@@ -1378,7 +1407,7 @@ yyreduce:
     break;
 
   case 5:
-#line 62 "snot.ypp"
+#line 91 "snot.ypp"
     {
     DictList *retval = new DictList();
     std::vector< std::pair< std::string , gsparams::DictList> >::iterator itr;
@@ -1391,7 +1420,7 @@ yyreduce:
     break;
 
   case 6:
-#line 72 "snot.ypp"
+#line 101 "snot.ypp"
     {
     std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
     retptr->push_back(*(yyvsp[(1) - (1)].onepair));
@@ -1401,7 +1430,7 @@ yyreduce:
     break;
 
   case 7:
-#line 78 "snot.ypp"
+#line 107 "snot.ypp"
     {
     std::vector< std::pair< std::string , gsparams::DictList> > *retptr = new std::vector< std::pair< std::string , gsparams::DictList> >();
     *retptr = *(yyvsp[(3) - (3)].pairlist);
@@ -1413,7 +1442,7 @@ yyreduce:
     break;
 
   case 8:
-#line 87 "snot.ypp"
+#line 116 "snot.ypp"
     {
     std::pair<std::string, DictList> *retpair = new std::pair<std::string, DictList>;
     *retpair = std::make_pair(*(yyvsp[(1) - (3)].sym), *(yyvsp[(3) - (3)].onevalue));
@@ -1424,7 +1453,7 @@ yyreduce:
     break;
 
   case 9:
-#line 95 "snot.ypp"
+#line 124 "snot.ypp"
     {
     DictList *retval = new DictList();
     retval->undecided_to_list_else_error();
@@ -1433,14 +1462,14 @@ yyreduce:
     break;
 
   case 10:
-#line 100 "snot.ypp"
+#line 129 "snot.ypp"
     {
     (yyval.onevalue) = (yyvsp[(2) - (3)].onevalue);
 ;}
     break;
 
   case 11:
-#line 104 "snot.ypp"
+#line 133 "snot.ypp"
     {
     DictList *retval = new DictList();
     retval->undecided_to_list_else_error();
@@ -1451,7 +1480,7 @@ yyreduce:
     break;
 
   case 12:
-#line 111 "snot.ypp"
+#line 140 "snot.ypp"
     {
     DictList *retval = new DictList();
     retval->undecided_to_list_else_error();
@@ -1466,23 +1495,23 @@ yyreduce:
     break;
 
   case 13:
-#line 123 "snot.ypp"
+#line 152 "snot.ypp"
     {(yyval.onevalue)=new DictList(yylval.val);;}
     break;
 
   case 14:
-#line 124 "snot.ypp"
+#line 153 "snot.ypp"
     {(yyval.onevalue)=(yyvsp[(1) - (1)].onevalue);;}
     break;
 
   case 15:
-#line 125 "snot.ypp"
+#line 154 "snot.ypp"
     {(yyval.onevalue)=(yyvsp[(1) - (1)].onevalue);;}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1486 "snot.tab.cpp"
+#line 1515 "snot.tab.cpp"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1696,7 +1725,7 @@ yyreturn:
 }
 
 
-#line 127 "snot.ypp"
+#line 156 "snot.ypp"
 
 //-- FUNCTION DEFINITIONS ---------------------------------
 #include <iostream>
