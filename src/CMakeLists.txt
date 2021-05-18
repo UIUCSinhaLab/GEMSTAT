@@ -35,17 +35,6 @@ configure_file(config.h.in config.h)
 find_package(GSL REQUIRED)
 find_package(NLOPT REQUIRED)
 
-#include(ExternalProject)
-#ExternalProject_Add(nlopt_project
-#  GIT_REPOSITORY https://github.com/stevengj/nlopt.git
-#  STEP_TARGETS   build
-#  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/nlopt
-#  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-#)
-#ExternalProject_Get_Property(nlopt_project install_dir)
-#include_directories(${install_dir}/include)
-
-#message("NLOPT LIBS ")
 
 add_library(gem_everything DataSet.cpp ExprFunc.cpp ExprModel.cpp ExprPar.cpp ExprPredictor.cpp FactorIntFunc.cpp IO.cpp ObjFunc.cpp PredictorTrainer.cpp SeqAnnotator.cpp Tools.cpp)
 target_link_libraries(gem_everything "nlopt")#should get includes
