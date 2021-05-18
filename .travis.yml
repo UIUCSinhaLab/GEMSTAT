@@ -10,5 +10,4 @@ addons:
         apt:
                 packages:
                         - gsl-bin
-                        - libgsl0-dev
-                        - libgsl0ldbl
+                        - libgsl-dev
