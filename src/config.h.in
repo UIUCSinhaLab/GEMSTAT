@@ -1,5 +1,10 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+
+#define GEMSTAT_VERSION_MAJOR @GEMSTAT_VERSION_MAJOR@
+#define GEMSTAT_VERSION_MINOR @GEMSTAT_VERSION_MINOR@
+
+
 /* Define to 1 if you have the `floor' function. */
 #undef HAVE_FLOOR
 
