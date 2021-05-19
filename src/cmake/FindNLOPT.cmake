@@ -20,4 +20,8 @@
 #  STEP_TARGETS   build
 #)
 
+#TODO: detect from system, automatically download, etc. etc.
+#TODO: Make sure to statically link
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/nlopt ${CMAKE_BINARY_DIR}/nlopt)
+#what about the .hpp?
