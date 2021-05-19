@@ -32,6 +32,8 @@ See the file named [MAINTAINER_README](./MAINTAINER_README) for more hints on ho
 
 ### Builds
 
+See [Travis-Ci](https://travis-ci.com/github/UIUCSinhaLab/GEMSTAT) for continuous integration.
+
 - 'master': ![](https://api.travis-ci.com/UIUCSinhaLab/GEMSTAT.svg?branch=master)
 - 'develop': ![](https://api.travis-ci.com/UIUCSinhaLab/GEMSTAT.svg?branch=develop)
 - 'bleeding-edge': ![](https://api.travis-ci.com/UIUCSinhaLab/GEMSTAT.svg?branch=bleeding-edge)
