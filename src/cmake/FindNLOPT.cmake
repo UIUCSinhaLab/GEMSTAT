@@ -23,5 +23,7 @@
 #TODO: detect from system, automatically download, etc. etc.
 #TODO: Make sure to statically link
 
+option(NLOPT_CXX ON)
+option(BUILD_SHARED_LIBS OFF)
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/nlopt ${CMAKE_BINARY_DIR}/nlopt)
 #what about the .hpp?
