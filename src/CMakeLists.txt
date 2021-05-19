@@ -39,9 +39,10 @@ configure_file(config.h.in config.h)
 find_package(GSL REQUIRED)
 find_package(NLOPT REQUIRED)
 
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/snot")
 
 add_library(gem_everything DataSet.cpp ExprFunc.cpp ExprModel.cpp ExprPar.cpp ExprPredictor.cpp FactorIntFunc.cpp IO.cpp ObjFunc.cpp PredictorTrainer.cpp SeqAnnotator.cpp Tools.cpp)
-target_link_libraries(gem_everything "nlopt")#should get includes
+target_link_libraries(gem_everything "nlopt" snot)#should get includes
 target_include_directories(gem_everything PUBLIC ${NLOPT_INCLUDE_DIRS})
 # add the executables
 add_executable(seq2expr seq2expr.cpp)
