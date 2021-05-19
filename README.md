@@ -13,6 +13,19 @@ See the file [AUTHORS](./AUTHORS) for information about additional authors and m
 
 See the file named [README.txt](./README.txt) for documentation about building and running the program.
 
+## building
+
+After checking out the repo, do:
+
+```bash
+git submodule init
+git submodule update --recursive
+mkdir build
+cd build
+cmake ..
+make
+```
+
 ### Maintainers
 
 See the file named [MAINTAINER_README](./MAINTAINER_README) for more hints on how to maintain this software.
