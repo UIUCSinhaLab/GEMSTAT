@@ -24,6 +24,13 @@
 #TODO: Make sure to statically link
 
 option(NLOPT_CXX ON)
-option(BUILD_SHARED_LIBS OFF)
+option (NLOPT_FORTRAN OFF)
+option (BUILD_SHARED_LIBS OFF) #We want to force static linkage
+option (NLOPT_PYTHON OFF)
+option (NLOPT_OCTAVE OFF)
+option (NLOPT_MATLAB OFF)
+option (NLOPT_GUILE OFF)
+option (NLOPT_SWIG OFF)
+option (NLOPT_TESTS OFF)
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/nlopt ${CMAKE_BINARY_DIR}/nlopt)
 #what about the .hpp?
