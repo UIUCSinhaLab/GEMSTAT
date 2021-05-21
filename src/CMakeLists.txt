@@ -54,12 +54,15 @@ add_library(GS_annot STATIC SeqAnnotator.cpp SeqAnnotator.h)
 target_link_libraries(GS_tools) #TODO: Figure out how to break this dependency
 
 
+#Does this default to being an object on older CMake?
 add_library(gem_everything DataSet.cpp ExprFunc.cpp ExprModel.cpp ExprPar.cpp ExprPredictor.cpp FactorIntFunc.cpp IO.cpp ObjFunc.cpp PredictorTrainer.cpp)
 target_link_libraries(gem_everything GS_tools)
 target_link_libraries(gem_everything snot)
 target_link_libraries(gem_everything "nlopt")#should get includes
 target_include_directories(gem_everything PUBLIC ${NLOPT_INCLUDE_DIRS})
 
+#Signalling extensions
+add_library(GS_signalling DataSet_signal.cpp DataSet_signal.h)
 
 #
 ############# BINARIES ####################
@@ -67,6 +70,7 @@ target_include_directories(gem_everything PUBLIC ${NLOPT_INCLUDE_DIRS})
 # add the executables
 add_executable(seq2expr seq2expr.cpp)
 target_link_libraries(seq2expr gem_everything GS_annot GS_tools)
+target_link_libraries(seq2expr GS_signalling)
 target_link_libraries(seq2expr ${NLOPT_LIBRARIES} "nlopt")
 target_link_libraries(seq2expr ${GSL_LIBRARIES})
 
