@@ -4,6 +4,14 @@
 #include "ExprPar.h"
 
 //#define DEBUG
+
+//It is a precondition that site_a.start <= site_b.start
+#define ORDERED_SITE_OVERLAP(site_a, site_b) site_a.end < site_b.start
+
+//It is a precondition that the sites do not overlap, and that site_b comes after site_a
+#define SITE_DISTANCE(site_a, site_b) site_b.start - site_a.end
+
+
 ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num): expr_model(_model), par(_par), motifs( _model->motifs ), actIndicators( _model->actIndicators ), maxContact( _model->maxContact ), repIndicators( _model->repIndicators ), repressionMat( _model->repressionMat ), repressionDistThr( _model->repressionDistThr ), factorIntMat(_model->motifs.size(),_model->motifs.size(),1.0)
 {
     //par = _par;//NOTE: made this const, and that solved a memory leak.
@@ -69,19 +77,24 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
   cerr << "running ExprFunc::setupSitesAndBoundaries(...)" << endl;
   #endif
 
-	
+
   int n = _sites.size();
   sites = SiteVec(_sites);
 
-  int pseudo_start = -1000;
-  int pseudo_end = length+1000;
-  if(sites.size() > 0){
-	pseudo_start = _sites[0].start-1000;
-	pseudo_end = _sites[_sites.size()-1].start+1000;
-  }
 
-  sites.insert( sites.begin(), Site(pseudo_start,pseudo_start,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
-  sites.push_back( Site(pseudo_end,pseudo_end,true,-1,0.0,1.0) );       //and another pseudo-site at the end
+	//Prevents crashes if there are no annotated sites in the sequence.
+	//This can happen, and it should not cause an error.
+	int pseudo_start = -1000;
+	int pseudo_end = length+1000;
+	if(sites.size() > 0){
+		pseudo_start = _sites[0].start-1000;
+		pseudo_end = _sites[_sites.size()-1].start+1000;
+	}
+
+	sites.insert( sites.begin(), Site(pseudo_start,pseudo_start,true,-1,0.0,1.0) );        // start with a pseudo-site at position 0
+	sites.push_back( Site(pseudo_end,pseudo_end,true,-1,0.0,1.0) );       //and another pseudo-site at the end
+
+    //store the sequence
 
   boundaries.resize(n_sites+2);
   boundaries[0] = 0;//value for starting pseudosite
@@ -91,7 +104,7 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
       int j;
       for ( j = i - 1; j >= 1; j-- )
       {
-          if ( ( sites[i].start - sites[j].start ) > range ) break;
+          if ( SITE_DISTANCE(sites[j],sites[i]) > range ) break;
       }//If the loop never broke, j will leak with value 0.
       int boundary = j;
       boundaries[i] = ( boundary );
@@ -212,7 +225,8 @@ Markov_ExprFunc::Markov_ExprFunc( const ExprModel* _model, const ExprPar& _par ,
         int j;
         for ( j = i+1; j <= n_sites; j++ )
         {
-            if ( ( sites[j].start - sites[i].start) > range ) break;
+				//site_distance arugments backwards because we are going backwards.
+            if ( SITE_DISTANCE(sites[i], sites[j]) > range ) break;
         }//If the loop never broke, j will leak with value n+1
         int boundary = j;
         rev_bounds[i] = ( boundary );
@@ -259,8 +273,8 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
         gemstat_dp_t sum = Zt[boundaries[i]];
         for ( int j = boundaries[i] + 1; j < i; j++ )
         {
-            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
-            sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
+            if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
+            sum += compFactorInt( sites[ j ], sites[ i ] ) * Z[ j ];
         }
         Z[ i ] = bindingWts[ i ] * sum;
         Zt[i] = Z[i] + Zt[i - 1];
@@ -272,6 +286,7 @@ double Markov_ExprFunc::predictExpr( const vector< double >& factorConcs )
         gemstat_dp_t sum = backward_Zt[rev_bounds[i]];
         for ( int j = rev_bounds[i] - 1; j > i; j-- )
         {
+			//Arguments to siteOverlap and interaction are backwards because we go backwards.
             if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
             sum += compFactorInt( sites[ i ], sites[ j ] ) * backward_Z[ j ];
         }
@@ -387,11 +402,11 @@ gemstat_dp_t ExprFunc::compPartFuncOff() const
         //cout << "DEBUG: sum = " << n << endl;
         for ( int j = boundaries[i] + 1; j < i; j++ )
         {
-            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+            if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
             //cout << "compFactorInt: " << compFactorInt( sites[ j ], sites[ i ] ) << "\t";
             //cout << "Z[j]: " << Z[ j ] << endl;
             gemstat_dp_t old_sum = sum;
-            sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
+            sum += compFactorInt( sites[ j ], sites[ i ] ) * Z[ j ];
             if( sum != sum || isinf( sum ))
             {
                 cout << "Old sum:\t" << old_sum << endl;
@@ -442,8 +457,8 @@ gemstat_dp_t ChrMod_ExprFunc::compPartFuncOff() const
         gemstat_dp_t sum0 = sum, sum1 = sum;
         for ( int j = boundaries[i] + 1; j < i; j++ )
         {
-            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
-            gemstat_dp_t dist = sites[i].start - sites[j].start;
+            if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
+            gemstat_dp_t dist = SITE_DISTANCE(sites[i], sites[j]);
 
             // sum for Z0
             sum0 += compFactorInt( sites[j], sites[i] ) * Z0[j];
@@ -497,7 +512,7 @@ gemstat_dp_t Direct_ExprFunc::compPartFuncOn() const
         gemstat_dp_t sum = Zt[boundaries[i]];
         for ( int j = boundaries[i] + 1; j < i; j++ )
         {
-            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+            if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
             sum += compFactorInt( sites[ j ], sites[ i ] ) * Z[ j ];
         }
         //Z[i] = bindingWts[ i ] * txpEffects[ sites[i].factorIdx ] * sum;
@@ -536,7 +551,7 @@ gemstat_dp_t Quenching_ExprFunc::compPartFuncOn() const
         gemstat_dp_t sum1 = 1, sum0 = 0;
         for ( int j = 1; j < i; j++ )
         {
-            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+            if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
             bool R = testRepression( sites[j], sites[i] );
             gemstat_dp_t term = compFactorInt( sites[ j ], sites[ i ] ) * ( Z1.getElement(j,0) + Z0.getElement(j,0) );
             sum1 += ( 1 - R )* term;
@@ -560,7 +575,7 @@ gemstat_dp_t Quenching_ExprFunc::compPartFuncOn() const
             gemstat_dp_t sum1 = 0, sum0 = 0;
             for ( int j = 1; j < i; j++ )
             {
-                if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+                if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
                 bool R = testRepression( sites[j], sites[i] );
                 gemstat_dp_t effect = actIndicators[sites[j].factorIdx] * ( 1 - testRepression( sites[i], sites[j] ) ) * Z1.getElement(j,k-1) * txpEffects[sites[j].factorIdx];
                 gemstat_dp_t term = compFactorInt( sites[ j ], sites[ i ] ) * ( Z1.getElement(j,k) + Z0.getElement(j,k) + effect );
@@ -617,8 +632,9 @@ gemstat_dp_t ChrModUnlimited_ExprFunc::compPartFuncOn() const
         gemstat_dp_t sum0 = sum, sum1 = sum;
         for ( int j = boundaries[i] + 1; j < i; j++ )
         {
-            gemstat_dp_t dist = sites[i].start - sites[j].start;
-            if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+			//Remember that for current site i, we are comparing to previous sites j.
+            gemstat_dp_t dist = SITE_DISTANCE(sites[j], sites[i]);
+            if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
 
             // sum for Z0
             sum0 += compFactorInt( sites[j], sites[i] ) * Z0[j];
@@ -673,8 +689,8 @@ gemstat_dp_t ChrModLimited_ExprFunc::compPartFuncOn() const
 
             for ( int j = boundaries[i] + 1; j < i; j++ )
             {
-                double dist = sites[i].start - sites[j].start;
-                if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
+                double dist = SITE_DISTANCE(sites[j], sites[i]);//Remeber order of sites.
+                if ( siteOverlap( sites[ j ], sites[ i ], motifs ) ) continue;
 
                 // sum for Z0
                 sum0 += compFactorInt( sites[j], sites[i] ) * Z0.getElement(j,k);
@@ -706,11 +722,17 @@ gemstat_dp_t ChrModLimited_ExprFunc::compPartFuncOn() const
     return sum( Zt.getRow(n) );//And we end up with a vector anyway. See about fixing this.
 }
 
+/**
+	PRE: Site a must start at or before the same base pair as Site b.
+*/
 double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
 {
+	#ifdef DEBUG
+		assert( a.start <= b.start);
+	#endif
     // 	assert( !siteOverlap( a, b, motifs ) );
     double maxInt = factorIntMat( a.factorIdx, b.factorIdx );
-    double dist = abs( b.start - a.start );
+    double dist = SITE_DISTANCE(a, b);
     //bool orientation = ( a.strand == b.strand );
 
     FactorIntFunc* an_int_func = expr_model->coop_setup->coop_func_for(a.factorIdx, b.factorIdx);
@@ -720,11 +742,16 @@ double ExprFunc::compFactorInt( const Site& a, const Site& b ) const
     //This is going to be very slow, we should have cached it.
 }
 
-
+/**
+	PRE: Site a must start at or before the same base pair as Site b.
+*/
 bool ExprFunc::testRepression( const Site& a, const Site& b ) const
 {
     // 	assert( !siteOverlap( a, b, motifs ) );
+	#ifdef DEBUG
+		assert( a.start <= b.start);
+	#endif
 
-    double dist = abs( b.start - a.start  );
+    double dist = SITE_DISTANCE(a, b);
     return repressionMat( a.factorIdx, b.factorIdx ) && ( dist <= repressionDistThr );
 }
