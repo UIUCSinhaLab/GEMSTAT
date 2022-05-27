@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
 
 
 option(DOWNLOAD_BOOST "Use this to download boost into this directory, instead of searching the system." OFF)
@@ -9,6 +9,14 @@ option(DOWNLOAD_BOOST "Use this to download boost into this directory, instead o
 if (POLICY CMP0048)
   cmake_policy(SET CMP0048 NEW)
 endif (POLICY CMP0048)
+
+if(POLICY CMP0079)
+    cmake_policy(SET CMP0079 NEW)
+endif(POLICY CMP0079)
+
+if(POLICY CMP0022)
+    cmake_policy(SET CMP0022 NEW)
+endif(POLICY CMP0022)
 
 set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}

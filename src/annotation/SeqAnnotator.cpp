@@ -3,7 +3,7 @@
 
 #include "SeqAnnotator.h"
 
-#include "utils/gs_parsing.h"
+#include "gs_parsing.h"
 
 bool isNt( int a )
 {
