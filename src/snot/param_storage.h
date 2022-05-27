@@ -313,6 +313,7 @@ class DictList {
                 default:
                     break;
             }
+            return -1;//Should be an assertion or something.
         }
 
         inline void traverse(std::vector< dictlist_primitive_t >* target) const {
