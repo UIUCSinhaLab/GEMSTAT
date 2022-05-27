@@ -34,6 +34,7 @@ target_include_directories(gem_everything PUBLIC ${NLOPT_INCLUDE_DIRS})
 
 #Signalling extensions
 add_library(GS_signalling DataSet_signal.cpp DataSet_signal.h)
+target_link_libraries(GS_signalling GS_tools GS_annot)
 
 #
 ############# BINARIES ####################
