@@ -24,7 +24,7 @@
 
 #include <stdexcept>
 
-#include "utils/gs_errors.h"
+#include "gs_errors.h"
 
 
 #include "SeqAnnotator.h"
