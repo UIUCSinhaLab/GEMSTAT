@@ -33,6 +33,7 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in
   gsparams::DictList the_params;
   the_params["tfs"] = gsparams::DictList();
 
+  //TODO: Remove spaghetti. Having it want to know if we are using a LOGISTIC or not is stupid. Need Uniformity!
   double defaultEffect = expr_model.modelOption == LOGISTIC ? ExprPar::default_effect_Logistic : log(ExprPar::default_effect_Thermo);
   for(int i = 0;i<expr_model.motifs.size();i++){
       gsparams::DictList tmp;
@@ -68,6 +69,7 @@ ParFactory::ParFactory( const ExprModel& in_model, int in_nSeqs) : expr_model(in
 
   the_params["qbtm"] = gsparams::DictList();
 
+  //TODO: Remove spaghetti. Having it want to know if we are using a LOGISTIC or not is stupid. Need Uniformity!
   double basalTxp_val = expr_model.modelOption == LOGISTIC ? ExprPar::default_basal_Logistic : log( ExprPar::default_basal_Thermo );
 
   for(int i = 0;i<numBTMS;i++){
