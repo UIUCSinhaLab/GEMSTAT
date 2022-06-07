@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 
 #The configure file from the old autotools build...
 configure_file(config.h.in config.h)
+add_compile_definitions("BETAOPTTOGETHER=true")
 
 #required packages
 find_package(GSL REQUIRED)

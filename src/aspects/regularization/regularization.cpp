@@ -83,4 +83,41 @@ void regularization_cmndline_init(ExprPredictor *predictor, int argc, char* argv
       predictor->trainingObjective = tmp_reg_obj_func;
     }
     
+    //DONE setting up regularization. Do some checking next
+    
+    /*TODO: Break checking code into its own module.
+    * THis code is copied from main. It is absolute garbage.
+    */
+    
+    //**** CHECK that all loaded pars have the same ordering and parameter names.
+    
+    ExprPar par_init = predictor->param_factory->create_expr_par();//Should only be scoped to this function.
+    
+    vector<string> path_vector;
+    for(gsparams::DictList::iterator itr = par_init.my_pars.begin();itr != par_init.my_pars.end();++itr){
+        path_vector.push_back(itr.get_path());
+    }
+    vector< std::pair<std::string , gsparams::DictList* > > all_loaded_params;
+
+    /*Only if using l1/l2 regularization*/
+    if(setup_regularization){
+        all_loaded_params.push_back(std::make_pair("reg_centers",&(tmp_centers.my_pars)));
+        all_loaded_params.push_back(std::make_pair("l1_weights",&(tmp_l1.my_pars)));
+        all_loaded_params.push_back(std::make_pair("l2_weights",&(tmp_l2.my_pars)));
+    }
+
+    for(int i = 0;i<all_loaded_params.size();i++){
+        gsparams::DictList::iterator itr = all_loaded_params[i].second->begin();
+        int j = 0;
+        while(itr!=all_loaded_params[i].second->end()){
+            if(0 != path_vector[j].compare(itr.get_path())){
+                
+                throw std::invalid_argument("Error in one of the input parameter files (.par, free_fix, lower/upper bounds, etc.) \nTrying to compare SNOT objects, it seems that one of the inputs is misordered.  starting_parameters" + path_vector[j] + " is not " + all_loaded_params[i].first + itr.get_path() + " ");
+            }
+            ++itr;
+            j++;
+        }
+    }
+    
+    
 }

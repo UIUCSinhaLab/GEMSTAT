@@ -60,8 +60,6 @@ int main( int argc, char* argv[] )
     bool read_par_init_file = false;
 
     ObjType cmdline_obj_option = SSE;
-    double l1 = 0.0;
-    double l2 = 0.0;
 
     bool cmdline_one_qbtm_per_crm = false;
     bool cmdline_one_beta = false;
@@ -148,10 +146,6 @@ int main( int argc, char* argv[] )
 	    par_out_file = argv[ ++i ]; //output file for pars at the en
   else if ( !strcmp("-onebeta", argv[ i ]))
       cmdline_one_beta = true;
-      else if ( !strcmp("-l1", argv[ i ]))
-     l1 = atof(argv[ ++i ]);
-       else if ( !strcmp("-l2", argv[ i ]))
-      l2 = atof(argv[ ++i ]);
 	else if ( !strcmp("-lower_bound", argv[ i ]))
 	    lower_bound_file = argv[ ++i ];
   else if ( !strcmp("-upper_bound", argv[ i ]))
@@ -346,6 +340,7 @@ int main( int argc, char* argv[] )
 		cerr << "Loading initial parameters...";
         try{
           par_init = param_factory->load( parFile );
+          param_factory->prototype = gsparams::DictList(par_init.my_pars);
           read_par_init_file = true;
 	  }catch (exception& e){
             cerr << "Cannot read parameters from " << parFile << endl;
@@ -602,6 +597,8 @@ int main( int argc, char* argv[] )
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames );
     //And setup parameters from the commandline
+    delete predictor->param_factory;
+    predictor->param_factory = param_factory;
     predictor->search_option = cmdline_search_option;
     predictor->set_objective_option(cmdline_obj_option);
     predictor->n_alternations = cmdline_n_alternations;
@@ -623,7 +620,8 @@ int main( int argc, char* argv[] )
 
     //Regularization Aspect
     regularization_cmndline_init(predictor, argc, argv );
-
+    
+    //optimization bounds
     if(upper_bound_par_read){
     	predictor->param_factory->setMaximums(upper_bound_par);
     }
@@ -642,14 +640,7 @@ int main( int argc, char* argv[] )
     all_loaded_params.push_back(std::make_pair("lower_bounds",&(lower_bound_par.my_pars)));
     all_loaded_params.push_back(std::make_pair("upper_bounds",&(upper_bound_par.my_pars)));
     
-    /*Only if using l1/l2 regularization*/
-    /*
-    if(setup_regularization){
-        all_loaded_params.push_back(std::make_pair("reg_centers",&(tmp_centers.my_pars)));
-        all_loaded_params.push_back(std::make_pair("l1_weights",&(tmp_l1.my_pars)));
-        all_loaded_params.push_back(std::make_pair("l2_weights",&(tmp_l2.my_pars)));
-    }
-    */
+    //regularization related par files are checked in the appropriate function.
 
     for(int i = 0;i<all_loaded_params.size();i++){
         gsparams::DictList::iterator itr = all_loaded_params[i].second->begin();

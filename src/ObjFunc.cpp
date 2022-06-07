@@ -1,5 +1,9 @@
 #include "ObjFunc.h"
 
+#ifndef BETAOPTTOGETHER
+#error At this point, you should never build without -DBETAOPTTOGETHER but we have not stripped that from code yet.
+#endif
+
 double RMSEObjFunc::eval(const vector<vector<double> >& ground_truth, const vector<vector<double> >& prediction,
   const ExprPar* par){
 
