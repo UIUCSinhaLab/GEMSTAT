@@ -1,5 +1,5 @@
 #include <cstring>
-
+#include <string>
 
 #include "regularization.hpp"
 
@@ -44,36 +44,64 @@ double RegularizedObjFunc::eval(const vector<vector<double> >& ground_truth, con
 void regularization_cmndline_init(ExprPredictor *predictor, int argc, char* argv[] ){
     
     
-    double l1 = 0.0;
-    double l2 = 0.0;
-    
+    double l1 = 0.0; bool parsed_l1 = false;
+    double l2 = 0.0; bool parsed_l2 = false;
+    string reg_centers_filename;  bool parsed_reg_centers  = false;
+    string l1_strengths_filename; bool parsed_l1_strengths = false;
+    string l2_strengths_filename; bool parsed_l2_strengths = false;
     
     for ( int i = 1; i < argc; i++ )
     {
-        if ( !strcmp("-l1", argv[ i ]))         { l1 = atof(argv[ ++i ]); }
-        else if ( !strcmp("-l2", argv[ i ]))    { l2 = atof(argv[ ++i ]); }
+        if ( !strcmp("-l1", argv[ i ]))         { l1 = atof(argv[ ++i ]); parsed_l1 = true; }
+        else if ( !strcmp("-l2", argv[ i ]))    { l2 = atof(argv[ ++i ]); parsed_l2 = true; }
+        else if ( !strcmp("-reg_centers", argv[ i ])) { reg_centers_filename = argv[ ++i ]; parsed_reg_centers = true; }
+        else if ( !strcmp("-l1_weights", argv[ i ])) { l1_strengths_filename = argv[ ++i ]; parsed_l1_strengths = true; }
+        else if ( !strcmp("-l2_weights", argv[ i ])) { l2_strengths_filename = argv[ ++i ]; parsed_l2_strengths = true; }
     }
     
     //Setup regularization objective function
     ExprPar tmp_centers, tmp_l1, tmp_l2;
     bool setup_regularization = false;
-    if(0.0 != l1 || 0.0 != l2){
+    if(0.0 != l1 || 0.0 != l2 || parsed_reg_centers || parsed_l1_strengths || parsed_l2_strengths ){
         setup_regularization = true;
       cerr << "INFO: Regularization was turned on and will be used. l1 = " << l1 << " l2 = " << l2 << " ."<< endl;
 
       tmp_centers = predictor->param_factory->create_expr_par();
       tmp_l1 = predictor->param_factory->create_expr_par();
       tmp_l2 = predictor->param_factory->create_expr_par();
-
+      
+      //input regularization centers
+      if( parsed_reg_centers ){
+          tmp_centers = predictor->param_factory->load( reg_centers_filename );
+          cerr << "DEBUG: Parsed regularization centers." << endl;
+          //cerr.setf( ios::fixed );
+          //cerr.precision( 8 );
+          //cerr << tmp_centers.my_pars;
+          //cerr << flush;
+      }
+      
       //TODO: add an option to read l1 and l2 values from a file.
       vector< double > tmp_l12_vector;
+      
+      //L1
       tmp_l1.getRawPars(tmp_l12_vector);
       std::fill(tmp_l12_vector.begin(),tmp_l12_vector.end(),l1);
       tmp_l1 = predictor->param_factory->create_expr_par(tmp_l12_vector, ENERGY_SPACE);
+      if( parsed_l1_strengths ){
+          tmp_l1 = predictor->param_factory->load( l1_strengths_filename );
+          cerr << "DEBUG: Parsed per-parameter l1 strengths." << endl;
+      }
+      
 
+      //L2
       tmp_l2.getRawPars(tmp_l12_vector);
       std::fill(tmp_l12_vector.begin(),tmp_l12_vector.end(),l2);
       tmp_l2 = predictor->param_factory->create_expr_par(tmp_l12_vector, ENERGY_SPACE);
+      if( parsed_l2_strengths ){
+          tmp_l2 = predictor->param_factory->load( l2_strengths_filename );
+          cerr << "DEBUG: Parsed per-parameter l2 strengths." << endl;
+      }
+      
 
       RegularizedObjFunc *tmp_reg_obj_func = new RegularizedObjFunc(predictor->trainingObjective,
                                               tmp_centers,
