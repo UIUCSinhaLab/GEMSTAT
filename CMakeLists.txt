@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
 
 option(DOWNLOAD_BOOST "Use this to download boost into this directory, instead of searching the system." OFF)
