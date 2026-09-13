@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
 add_library(GS_annot STATIC SeqAnnotator.cpp SeqAnnotator.h)
 target_link_libraries(GS_annot PRIVATE GS_tools) #TODO: Figure out how to break this dependency
