@@ -178,7 +178,7 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                         forward_func = int_funcs.size()-1;
                         backward_func = int_funcs.size()-1;
                         interaction_setup_done = true;
-                    }//END DIMER PARSING
+                    }//END SIMPLE PARSING
 
                     if(0 == tokens[2].compare("DIMER")){
                         assert(tokens.size() >= 6);
