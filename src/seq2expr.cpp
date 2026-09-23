@@ -346,6 +346,7 @@ int main( int argc, char* argv[] )
 		cerr << "Loading initial parameters...";
         try{
           par_init = param_factory->load( parFile );
+          param_factory->prototype = gsparams::DictList(par_init.my_pars);
           read_par_init_file = true;
 	  }catch (exception& e){
             cerr << "Cannot read parameters from " << parFile << endl;
@@ -602,6 +603,8 @@ int main( int argc, char* argv[] )
     // create the expression predictor
     ExprPredictor* predictor = new ExprPredictor( seqs, seqSites, seqLengths, training_dataset, motifs, expr_model, indicator_bool, motifNames );
     //And setup parameters from the commandline
+    delete predictor->param_factory;
+    predictor->param_factory = param_factory;
     predictor->search_option = cmdline_search_option;
     predictor->set_objective_option(cmdline_obj_option);
     predictor->n_alternations = cmdline_n_alternations;
