@@ -168,7 +168,19 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                         assert(false); //Sorry, not implemented
                     }
 
-                    if(0 == tokens[2].compare("DIMER")){
+                if(0 == tokens[2].compare("SIMPLE")){
+                        assert(tokens.size() >= 4);
+                        //setup a dimer interaction
+
+                        int dist_thr = atoi(tokens[3].c_str());
+
+                        int_funcs.push_back(new FactorIntFuncBinary(dist_thr));
+                        forward_func = int_funcs.size()-1;
+                        backward_func = int_funcs.size()-1;
+                        interaction_setup_done = true;
+                }//END SIMPLE PARSING
+
+                if(0 == tokens[2].compare("DIMER")){
                         assert(tokens.size() >= 6);
                         //setup a dimer interaction
 
@@ -196,10 +208,10 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
 
 
                         interaction_setup_done = true;
-                    }//END DIMER PARSING
+                }//END DIMER PARSING
 
-                    //HALF DIRECTION, should really be handled by changing the line for dimer, but, blah.
-                    if(0 == tokens[2].compare("HALF_DIRECTIONAL")){
+                //HALF DIRECTION, should really be handled by changing the line for dimer, but, blah.
+                if(0 == tokens[2].compare("HALF_DIRECTIONAL")){
                         assert(tokens.size() >= 6);
                         //setup a dimer interaction
 
@@ -223,7 +235,7 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                             first_orientation = false;
                             first_cares = true;
                         }else{
-                            throw std::runtime_error("There was invalid input when reading the coop file. (HALF_DIR)");
+                            throw std::runtime_error("There was invalid input when reading the coop file. (HALF_DIRECTIONAL)");
                         }
 
                         //direction for second subunit
@@ -236,11 +248,11 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                             second_orientation = false;
                             second_cares = true;
                         }else{
-                            throw std::runtime_error("There was invalid input when reading the coop file. (HALF_DIR)");
+                            throw std::runtime_error("There was invalid input when reading the coop file. (HALF_DIRECTIONAL)");
                         }
 
                         if( !first_cares && !second_cares){
-                            throw std::runtime_error("At least one subunit should care about its direction. (HALF_DIR)");
+                            throw std::runtime_error("At least one subunit should care about its direction. (HALF_DIRECTIONAL)");
                         }
 
                         int_funcs.push_back(new HalfDirectional_FactorIntFunc(dist_thr, first_orientation, second_orientation, first_cares, second_cares));
