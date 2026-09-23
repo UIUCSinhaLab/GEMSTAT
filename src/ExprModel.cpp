@@ -168,7 +168,7 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
                         assert(false); //Sorry, not implemented
                     }
 
-					if(0 == tokens[2].compare("SIMPLE")){
+                if(0 == tokens[2].compare("SIMPLE")){
                         assert(tokens.size() >= 4);
                         //setup a dimer interaction
 
@@ -208,10 +208,10 @@ void CoopInfo::read_coop_file(string filename, map<string, int> factorIdxMap){
 
 
                         interaction_setup_done = true;
-                    }//END DIMER PARSING
+                }//END DIMER PARSING
 
-                    //HALF DIRECTION, should really be handled by changing the line for dimer, but, blah.
-                    if(0 == tokens[2].compare("HALF_DIRECTIONAL")){
+                //HALF DIRECTION, should really be handled by changing the line for dimer, but, blah.
+                if(0 == tokens[2].compare("HALF_DIRECTIONAL")){
                         assert(tokens.size() >= 6);
                         //setup a dimer interaction
 
