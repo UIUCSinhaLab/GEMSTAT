@@ -3,6 +3,8 @@
 #include "ExprPredictor.h"
 #include "ExprPar.h"
 
+#include <cmath>
+
 //#define DEBUG
 ExprFunc::ExprFunc( const ExprModel* _model, const ExprPar& _par , const SiteVec& sites_, const int seq_len, const int seq_num): expr_model(_model), par(_par), motifs( _model->motifs ), actIndicators( _model->actIndicators ), maxContact( _model->maxContact ), repIndicators( _model->repIndicators ), repressionMat( _model->repressionMat ), repressionDistThr( _model->repressionDistThr ), factorIntMat(_model->motifs.size(),_model->motifs.size(),1.0)
 {
@@ -69,7 +71,7 @@ void ExprFunc::setupSitesAndBoundaries(const SiteVec& _sites, int length, int se
   cerr << "running ExprFunc::setupSitesAndBoundaries(...)" << endl;
   #endif
 
-	
+
   int n = _sites.size();
   sites = SiteVec(_sites);
 
@@ -125,12 +127,16 @@ void ExprFunc::setupBindingWeights(const vector< double >& factorConcs){
 
 double ExprFunc::predictExpr(const Condition& in_condition){
   double to_return = this->predictExpr( in_condition.concs );
+
+
   if(to_return < 0.0 || to_return != to_return){
 	cerr << "returning a nonsense expression prediction " << to_return << endl;
 	exit(1);
   }
   assert(to_return >= 0.0); //Positive expression
   assert(!(to_return != to_return)); //not NaN
+
+
   return to_return;
 }
 
@@ -383,20 +389,28 @@ gemstat_dp_t ExprFunc::compPartFuncOff() const
     for ( int i = 1; i <= n; i++ )
     {
         gemstat_dp_t sum = Zt[boundaries[i]];
-        if( sum != sum )
+				#ifdef SAMEE_DEBUG
+				if(!std::isfinite(sum))
         {
             cout << "DEBUG: sum nan" << "\t" << Zt[ boundaries[i] ] <<  endl;
             exit(1);
         }
+				#endif
         //cout << "DEBUG: sum = " << n << endl;
         for ( int j = boundaries[i] + 1; j < i; j++ )
         {
             if ( siteOverlap( sites[ i ], sites[ j ], motifs ) ) continue;
             //cout << "compFactorInt: " << compFactorInt( sites[ j ], sites[ i ] ) << "\t";
             //cout << "Z[j]: " << Z[ j ] << endl;
-            gemstat_dp_t old_sum = sum;
+
+						#ifdef SAMEE_DEBUG
+						gemstat_dp_t old_sum = sum;//in prepration for the ouput section below.
+						#endif
+
             sum += compFactorInt( sites[ i ], sites[ j ] ) * Z[ j ];
-            if( sum != sum || isinf( sum ))
+
+						#ifdef SAMEE_DEBUG
+						if(!std::isfinite(sum))
             {
                 cout << "Old sum:\t" << old_sum << endl;
                 cout << "Factors:\t" << sites[ i ].factorIdx << "\t" << sites[ j ].factorIdx << endl;
@@ -406,14 +420,19 @@ gemstat_dp_t ExprFunc::compPartFuncOff() const
                 cout << "DEBUG: sum nan/inf\t"<< sum << endl;
                 exit(1);
             }
+						#endif
         }
 
         Z[i] = bindingWts[ i ] * sum;
-        if( Z[i]!=Z[i] )
+
+				#ifdef SAMEE_DEBUG
+				if( !std::isfinite( Z[i] ) )
         {
             cout << "DEBUG: Z bindingWts[i]: " << sites[i].factorIdx << "\t" << bindingWts[ sites[i].factorIdx ] <<"\t" << sum << endl;
             exit(1);
         }
+				#endif
+
         Zt[i] = Z[i] + Zt[i - 1];
         //cout << "debug: Zt[i] = " << Zt[i] << endl;
     }
